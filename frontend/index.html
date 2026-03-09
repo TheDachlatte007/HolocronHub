@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Personal Hub</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0}
+    .wrap{max-width:1280px;margin:0 auto;padding:20px}
+    h1{margin:0 0 20px;font-size:1.4rem;color:#f1f5f9}
+    h2{margin:0 0 10px;font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.07em}
+    .card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;margin-bottom:16px}
+    input,select,textarea{padding:8px 11px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#e2e8f0;font-size:13px}
+    textarea{resize:vertical;min-height:60px}
+    button{padding:8px 14px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:13px;cursor:pointer;transition:background .15s,border-color .15s}
+    button:hover{background:#334155}
+    button.primary{background:#1d4ed8;border-color:#2563eb;color:#fff}
+    button.primary:hover{background:#2563eb}
+    button.danger{background:#7f1d1d;border-color:#991b1b;color:#fca5a5}
+    button.danger:hover{background:#991b1b}
+    button.sm{padding:4px 10px;font-size:12px}
+    button.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+    .muted{color:#64748b;font-size:13px}
+    a{color:#60a5fa;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+    .pill{font-size:11px;padding:2px 8px;border-radius:999px;background:#1f2937;color:#94a3b8;white-space:nowrap}
+    .pill.breaking{background:#7f1d1d;color:#fca5a5}
+    .pill.act{background:#14532d;color:#86efac}
+    .pill.read{background:#0f172a;color:#475569}
+
+    /* nav */
+    .nav{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid #334155;padding-bottom:0;flex-wrap:wrap}
+    .nav-tab{padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;border:1px solid transparent;border-bottom:none;font-size:14px;background:none;color:#64748b;margin-bottom:-1px}
+    .nav-tab.active{background:#1e293b;border-color:#334155;color:#e2e8f0}
+
+    /* tool cards */
+    .tool-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:5px}
+    .tool-card .card-actions{display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap}
+    /* star rating */
+    .stars{display:flex;gap:2px;cursor:pointer}
+    .star{font-size:16px;color:#374151;line-height:1;transition:color .1s}
+    .star.on{color:#facc15}
+    .star:hover,.star:hover~.star{color:#374151}
+    .stars:hover .star{color:#facc15}
+    .stars .star:hover~.star{color:#374151}
+
+    /* edit form */
+    .edit-form{background:#0b1220;border:1px solid #2563eb;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
+    .edit-form input,.edit-form select,.edit-form textarea{width:100%}
+    .edit-form .row{margin-bottom:0}
+
+    /* feed */
+    .feed-list{display:flex;flex-direction:column;gap:8px}
+    .feed-item{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:12px;transition:border-color .15s}
+    .feed-item:hover{border-color:#475569}
+    .feed-item.read{opacity:.5}
+    .feed-item .title{font-size:14px;font-weight:600;margin-bottom:4px;line-height:1.4}
+    .feed-item .summary{font-size:13px;color:#64748b;margin-bottom:7px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .feed-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .feed-actions{display:flex;gap:6px;margin-top:8px}
+    .cat-badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+    .cat-ai{background:#1e3a5f;color:#93c5fd}
+    .cat-gaming,.cat-warframe{background:#3b1f5e;color:#d8b4fe}
+    .cat-finance{background:#1a3025;color:#6ee7b7}
+    .cat-world{background:#1f2937;color:#9ca3af}
+    .cat-politics{background:#2d1f1f;color:#fca5a5}
+
+    /* digest */
+    .digest-section{margin-bottom:20px}
+    .digest-section>h3{font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin:0 0 8px}
+    .digest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px}
+    .finance-summary{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:14px;margin-bottom:16px}
+    .finance-summary h3{font-size:.75rem;color:#6ee7b7;text-transform:uppercase;letter-spacing:.07em;margin:0 0 10px}
+    .watchlist-item{padding:8px 0;border-bottom:1px solid #1e293b;display:flex;flex-direction:column;gap:3px}
+    .watchlist-item:last-child{border-bottom:none}
+    .driver-pills{display:flex;gap:4px;flex-wrap:wrap}
+    .driver-pill{font-size:10px;padding:1px 7px;border-radius:999px;background:#1a3025;color:#6ee7b7}
+
+    /* sources */
+    .source-row{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .source-row.disabled{opacity:.45}
+    .toggle{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0}
+    .toggle input{opacity:0;width:0;height:0}
+    .toggle-slider{position:absolute;inset:0;background:#374151;border-radius:999px;transition:.2s;cursor:pointer}
+    .toggle-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+    .toggle input:checked+.toggle-slider{background:#2563eb}
+    .toggle input:checked+.toggle-slider:before{transform:translateX(16px)}
+
+    /* schedule panel */
+    .schedule-panel{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:12px;background:#0b1220;border:1px solid #334155;border-radius:10px;margin-bottom:14px}
+    .schedule-panel label{font-size:13px;display:flex;align-items:center;gap:6px}
+
+    /* ingest bar */
+    .ingest-bar{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    .ingest-dot{width:8px;height:8px;border-radius:50%;background:#374151;flex-shrink:0;transition:background .3s}
+    .ingest-dot.running{background:#facc15;animation:pulse 1s infinite}
+    .ingest-dot.ok{background:#22c55e}
+    .ingest-dot.error{background:#ef4444}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* saved */
+    .saved-item{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:5px}
+    .saved-item .title{font-size:14px;font-weight:600;line-height:1.4}
+    .saved-item .summary{font-size:13px;color:#64748b;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+    /* empty / error */
+    .empty{color:#475569;font-size:14px;padding:24px 0;text-align:center}
+    .err-msg{color:#f87171}
+    
+    /* settings modal */
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100}
+    .modal{background:#0b1220;border:1px solid #334155;border-radius:12px;width:90%;max-width:400px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.5)}
+    .modal h2{margin-top:0;color:#f1f5f9;font-size:1.1rem;margin-bottom:15px;text-transform:none;letter-spacing:normal}
+    .modal .form-row{margin-bottom:12px}
+    .modal .form-row label{display:block;margin-bottom:4px;font-size:13px;color:#cbd5e1}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AI Personal Hub</h1>
+
+  <div class="nav" style="align-items:center">
+    <button class="nav-tab active" onclick="showTab('tools',this)">Tool Hub</button>
+    <button class="nav-tab" onclick="showTab('feed',this)">Feed</button>
+    <button class="nav-tab" onclick="showTab('digest',this)">Morning Digest</button>
+    <button class="nav-tab" onclick="showTab('saved',this)">Saved</button>
+    <button class="nav-tab" onclick="showTab('sources',this)">Sources</button>
+    <div style="flex:1"></div>
+    <button class="sm" onclick="openSettings()" title="Settings" style="margin-bottom:8px">⚙️ Setting</button>
+  </div>
+
+  <!-- ═══ TOOLS ═══ -->
+  <div id="tab-tools">
+    <div class="card">
+      <h2>Tool Hub</h2>
+      <div class="row" id="cat-tabs"><button class="active" onclick="setCategory('',this)">All</button></div>
+      <div class="row">
+        <input id="q" placeholder="Search name, tags, provider…" style="flex:1;min-width:180px" />
+        <select id="tool-sort" onchange="loadTools()">
+          <option value="">Default order</option>
+          <option value="rating">By rating</option>
+          <option value="last_used">Recently used</option>
+        </select>
+        <button class="primary" onclick="loadTools()">Search</button>
+      </div>
+      <div id="ai-tools-section" style="margin-top:20px;">
+        <h3 style="font-size:1rem;color:#e2e8f0;margin-bottom:12px;border-bottom:1px solid #334155;padding-bottom:5px;">AI Tools</h3>
+        <div id="tools-ai" class="grid"><div class="empty">No AI tools.</div></div>
+      </div>
+      <div id="home-tools-section" style="margin-top:24px;">
+        <h3 style="font-size:1rem;color:#e2e8f0;margin-bottom:12px;border-bottom:1px solid #334155;padding-bottom:5px;">Home Network</h3>
+        <div id="tools-home" class="grid"><div class="empty">No Home Network tools.</div></div>
+      </div>
+      <div id="other-tools-section" style="margin-top:24px;display:none;">
+        <h3 style="font-size:1rem;color:#e2e8f0;margin-bottom:12px;border-bottom:1px solid #334155;padding-bottom:5px;">Other Tools</h3>
+        <div id="tools-other" class="grid"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Add Tool</h2>
+      <div class="row">
+        <input id="new_name" placeholder="Name" style="flex:1" />
+        <input id="new_provider" placeholder="Provider" style="flex:1" />
+        <select id="new_category"><option value="">— category —</option></select>
+        <input id="new_link" placeholder="https://…" style="flex:2;min-width:180px" />
+      </div>
+      <div class="row">
+        <input id="new_tags" placeholder="tags, comma-separated" style="flex:1" />
+        <select id="new_loc"><option value="cloud">cloud</option><option value="local">local</option></select>
+        <select id="new_auth"><option value="none">none</option><option value="api-key">api-key</option><option value="oauth">oauth</option><option value="subscription">subscription</option><option value="token">token</option><option value="local">local</option></select>
+        <input id="new_cost" placeholder="cost" style="width:90px" />
+        <button class="primary" onclick="addTool()">Add</button>
+      </div>
+      <div id="addResult" class="muted"></div>
+    </div>
+  </div>
+
+  <!-- ═══ FEED ═══ -->
+  <div id="tab-feed" style="display:none">
+    <div class="card">
+      <h2>Feed</h2>
+      <div class="ingest-bar">
+        <div id="ingest-dot" class="ingest-dot"></div>
+        <button onclick="triggerIngest()">Run Ingest</button>
+        <span id="ingest-status" class="muted"></span>
+        <button class="sm" onclick="markAllRead('feed')" style="margin-left:auto">Mark all read</button>
+      </div>
+      <div class="row">
+        <input id="feed-q" placeholder="Search…" style="flex:1;min-width:180px" />
+        <select id="feed-cat" onchange="loadFeed()">
+          <option value="">All categories</option>
+          <option value="AI">AI</option>
+          <option value="Gaming">Gaming</option>
+          <option value="Warframe">Warframe</option>
+          <option value="Finance">Finance</option>
+          <option value="World">World</option>
+          <option value="Politics">Politics</option>
+        </select>
+        <button onclick="loadFeed()">Filter</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="hide-read" onchange="loadFeed()" /> Hide read
+        </label>
+      </div>
+      <div id="feed-meta" class="muted" style="margin-bottom:8px"></div>
+      <div id="feed-list" class="feed-list"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ DIGEST ═══ -->
+  <div id="tab-digest" style="display:none">
+    <div class="card">
+      <h2>Morning Digest</h2>
+      <div class="row">
+        <button class="primary" onclick="loadDigest()">Refresh</button>
+        <button class="sm" onclick="markAllRead('digest')">Mark all read</button>
+        <span id="digest-meta" class="muted" style="margin-left:8px"></span>
+      </div>
+      <div id="digest-content"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ SAVED ═══ -->
+  <div id="tab-saved" style="display:none">
+    <div class="card">
+      <h2>Saved Items</h2>
+      <div id="saved-list" class="feed-list"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ SOURCES ═══ -->
+  <div id="tab-sources" style="display:none">
+    <div class="card">
+      <h2>Auto-Ingest Schedule</h2>
+      <div class="schedule-panel">
+        <label class="toggle" title="Enable/disable auto-schedule">
+          <input type="checkbox" id="sched-enabled" onchange="saveSchedule()" />
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:13px">Auto-ingest every</span>
+        <input id="sched-hours" type="number" min="1" max="24" value="2" style="width:60px" onchange="saveSchedule()" />
+        <span style="font-size:13px">hours</span>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="sched-startup" onchange="saveSchedule()" /> Run on startup
+        </label>
+        <span id="sched-next" class="muted"></span>
+      </div>
+
+      <h2>Feed Sources</h2>
+      <div class="row" style="margin-bottom:12px">
+        <select id="src-cat-filter" onchange="renderSourcesFiltered()">
+          <option value="">All categories</option>
+          <option value="AI">AI</option><option value="Finance">Finance</option>
+          <option value="Gaming">Gaming</option><option value="Warframe">Warframe</option>
+          <option value="World">World</option><option value="Politics">Politics</option>
+          <option value="DevOps">DevOps</option><option value="Security">Security</option>
+        </select>
+        <input id="src-q" placeholder="Search sources…" style="flex:1" oninput="renderSourcesFiltered()" />
+      </div>
+      <div id="sources-list"><div class="empty">Loading…</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Add RSS Source</h2>
+      <div class="row">
+        <input id="src_name" placeholder="Name" style="flex:1" />
+        <input id="src_url" placeholder="https://…/rss" style="flex:2;min-width:200px" />
+        <select id="src_category">
+          <option value="">— category —</option>
+          <option value="AI">AI</option><option value="Finance">Finance</option>
+          <option value="Gaming">Gaming</option><option value="Warframe">Warframe</option>
+          <option value="World">World</option><option value="Politics">Politics</option>
+          <option value="DevOps">DevOps</option><option value="Security">Security</option>
+        </select>
+      </div>
+      <div class="row">
+        <input id="src_tags" placeholder="tags, comma-separated" style="flex:1" />
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px">
+          trust <input id="src_trust" type="number" min="0" max="1" step="0.05" value="0.7" style="width:60px" />
+        </label>
+        <button class="primary" onclick="addSource()">Add Source</button>
+      </div>
+      <div id="src-add-result" class="muted"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS MODAL ═══ -->
+<div id="settingsModal" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <h2>Global Settings</h2>
+    <div class="form-row">
+      <label>Language</label>
+      <select id="ux_lang" style="width:100%">
+        <option value="EN">English</option>
+        <option value="DE">Deutsch</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Default Feed Category</label>
+      <select id="ux_def_cat" style="width:100%">
+        <option value="">All categories</option>
+        <option value="AI">AI</option>
+        <option value="Finance">Finance</option>
+        <option value="Gaming">Gaming</option>
+        <option value="Warframe">Warframe</option>
+        <option value="World">World</option>
+        <option value="Politics">Politics</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="ux_show_disabled" /> Show disabled sources in lists
+      </label>
+    </div>
+    <div class="row" style="margin-top:20px;justify-content:flex-end">
+      <button onclick="closeSettings()" style="margin-right:8px">Cancel</button>
+      <button class="primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8787/api';
+
+// ══ helpers ══════════════════════════════════════════════════
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function catClass(cat) {
+  const map = {ai:'cat-ai',gaming:'cat-gaming',warframe:'cat-warframe',finance:'cat-finance',world:'cat-world',politics:'cat-politics'};
+  return map[String(cat).toLowerCase()] || '';
+}
+function relTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const diff = Date.now() - d;
+  const h = Math.floor(diff / 3600000);
+  if (h < 1) return `${Math.max(0,Math.floor(diff/60000))}m ago`;
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+
+// ══ read/unread (LocalStorage) ════════════════════════════════
+
+const READ_KEY = 'hub_read_items';
+function getRead() { try { return new Set(JSON.parse(localStorage.getItem(READ_KEY)||'[]')); } catch { return new Set(); } }
+function markRead(id) { const s=getRead(); s.add(id); localStorage.setItem(READ_KEY, JSON.stringify([...s])); }
+function isRead(id) { return getRead().has(id); }
+function markAllRead(scope) {
+  const sel = scope==='feed' ? '#feed-list .feed-item' : '#digest-content .feed-item';
+  document.querySelectorAll(sel).forEach(el => { markRead(el.dataset.id); el.classList.add('read'); });
+}
+
+// ══ tab nav ═══════════════════════════════════════════════════
+
+const tabLoaded = {};
+function showTab(name, btn) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).style.display='';
+  if (btn) btn.classList.add('active');
+  if (!tabLoaded[name]) {
+    tabLoaded[name] = true;
+    if (name==='feed') {
+      const gSet = loadGlobalSettings();
+      if(gSet.default_category) document.getElementById('feed-cat').value = gSet.default_category;
+      loadFeed();
+    }
+    if (name==='digest') loadDigest();
+    if (name==='saved') loadSaved();
+    if (name==='sources') { loadSources(); loadSchedule(); }
+  }
+}
+
+// ══ categories ════════════════════════════════════════════════
+
+let _categories = [];
+async function loadCategories() {
+  try {
+    const d = await fetch(`${API}/categories`).then(r=>r.json());
+    _categories = d.categories || [];
+  } catch { _categories = ['code','image','video','research','orchestration']; }
+
+  const tabsEl = document.getElementById('cat-tabs');
+  tabsEl.innerHTML = `<button class="active" onclick="setCategory('',this)">All</button>`;
+  _categories.forEach(c => {
+    const b = document.createElement('button');
+    b.textContent = c;
+    b.onclick = function(){ setCategory(c,this); };
+    tabsEl.appendChild(b);
+  });
+
+  const sel = document.getElementById('new_category');
+  sel.innerHTML = '<option value="">— category —</option>';
+  _categories.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+}
+
+// ══ tools ════════════════════════════════════════════════════
+
+let activeCategory = '';
+function setCategory(cat, btn) {
+  activeCategory = cat;
+  document.querySelectorAll('#cat-tabs button').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  loadTools();
+}
+
+async function loadTools() {
+  const q = document.getElementById('q').value.trim();
+  const sort = document.getElementById('tool-sort').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (activeCategory) params.set('category', activeCategory);
+  if (sort) params.set('sort', sort);
+
+  const elAi = document.getElementById('tools-ai');
+  const elHome = document.getElementById('tools-home');
+  const elOther = document.getElementById('tools-other');
+  const secOther = document.getElementById('other-tools-section');
+
+  elAi.innerHTML = '<div class="empty">Loading…</div>';
+  elHome.innerHTML = '<div class="empty">Loading…</div>';
+  elOther.innerHTML = '';
+  secOther.style.display = 'none';
+
+  try {
+    const data = await fetch(`${API}/tools?${params}`).then(r=>r.json());
+    elAi.innerHTML = '';
+    elHome.innerHTML = '';
+    
+    let cntAi = 0, cntHome = 0, cntOther = 0;
+    
+    data.forEach(t => {
+      const cat = (t.category || '').toLowerCase();
+      const card = buildToolCard(t);
+      if (cat.includes('home') || cat.includes('network') || t.tags?.includes('local') && cat !== 'ai services') {
+         elHome.appendChild(card);
+         cntHome++;
+      } else if (cat.includes('ai') || cat.includes('code') || cat.includes('image') || cat.includes('orchestration')) {
+         elAi.appendChild(card);
+         cntAi++;
+      } else {
+         elOther.appendChild(card);
+         cntOther++;
+      }
+    });
+    
+    if (cntAi === 0) elAi.innerHTML = '<div class="empty">No AI tools found.</div>';
+    if (cntHome === 0) elHome.innerHTML = '<div class="empty">No Home Network tools found.</div>';
+    if (cntOther > 0) secOther.style.display = 'block';
+
+  } catch(e) {
+    elAi.innerHTML = `<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
+    elHome.innerHTML = '';
+  }
+}
+
+function buildStars(toolId, currentRating) {
+  const wrap = document.createElement('div');
+  wrap.className = 'stars';
+  wrap.title = 'Your rating';
+  for (let i=1; i<=5; i++) {
+    const s = document.createElement('span');
+    s.className = 'star' + (i <= (currentRating||0) ? ' on' : '');
+    s.textContent = '★';
+    s.dataset.val = i;
+    s.addEventListener('click', async () => {
+      const newRating = parseInt(s.dataset.val);
+      await fetch(`${API}/tools/${encodeURIComponent(toolId)}`, {
+        method:'PATCH', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({rating: newRating}),
+      });
+      wrap.querySelectorAll('.star').forEach((st,idx) => st.classList.toggle('on', idx < newRating));
+    });
+    wrap.appendChild(s);
+  }
+  return wrap;
+}
+
+function buildToolCard(t) {
+  const d = document.createElement('div');
+  d.className = 'tool-card';
+  d.dataset.id = t.id;
+  d.innerHTML = `
+    <strong>${esc(t.name)}</strong>
+    <div class="muted">${esc(t.provider)} · ${esc(t.category)}</div>
+    <div class="meta">
+      <span class="pill">${esc(t.local_or_cloud)}</span>
+      <span class="pill">${esc(t.auth_type)}</span>
+      <span class="pill">${esc(t.cost_hint)}</span>
+      ${(t.tags||[]).map(tag=>`<span class="pill">${esc(tag)}</span>`).join('')}
+    </div>
+    ${t.notes ? `<div class="muted">${esc(t.notes)}</div>` : ''}
+    ${t.last_used ? `<div class="muted" style="font-size:11px">Last used: ${relTime(t.last_used)}</div>` : ''}
+    <div><a href="${esc(t.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">Open ↗</a></div>
+    <div class="card-actions">
+      <button class="sm" onclick="showEditForm('${esc(t.id)}')">Edit</button>
+      <button class="sm danger" onclick="deleteTool('${esc(t.id)}',this)">Delete</button>
+    </div>`;
+  d.querySelector('.card-actions').prepend(buildStars(t.id, t.rating));
+  return d;
+}
+
+async function markToolUsed(toolId) {
+  await fetch(`${API}/tools/${encodeURIComponent(toolId)}/use`, {method:'POST'}).catch(()=>{});
+}
+
+function showEditForm(toolId) {
+  const existing = document.querySelector('.edit-form');
+  if (existing && existing.dataset.for === toolId) { existing.remove(); return; }
+  if (existing) existing.remove();
+  const card = document.querySelector(`.tool-card[data-id="${toolId}"]`);
+  if (!card) return;
+  fetch(`${API}/tools`).then(r=>r.json()).then(tools => {
+    const t = tools.find(x=>x.id===toolId);
+    if (!t) return;
+    const form = document.createElement('div');
+    form.className = 'edit-form';
+    form.dataset.for = toolId;
+    const catOpts = _categories.map(c=>`<option value="${esc(c)}" ${c===t.category?'selected':''}>${esc(c)}</option>`).join('');
+    const locOpts = ['cloud','local'].map(v=>`<option ${v===t.local_or_cloud?'selected':''}>${v}</option>`).join('');
+    const authOpts = ['none','api-key','oauth','subscription','token','local'].map(v=>`<option ${v===t.auth_type?'selected':''}>${v}</option>`).join('');
+    form.innerHTML = `
+      <div class="row">
+        <input id="e_name" value="${esc(t.name)}" placeholder="Name" style="flex:1"/>
+        <input id="e_provider" value="${esc(t.provider)}" placeholder="Provider" style="flex:1"/>
+        <select id="e_cat">${catOpts}</select>
+      </div>
+      <div class="row">
+        <input id="e_link" value="${esc(t.link)}" placeholder="https://…" style="flex:2;min-width:180px"/>
+        <input id="e_tags" value="${esc((t.tags||[]).join(', '))}" placeholder="tags" style="flex:1"/>
+        <select id="e_loc">${locOpts}</select>
+        <select id="e_auth">${authOpts}</select>
+        <input id="e_cost" value="${esc(t.cost_hint)}" placeholder="cost" style="width:80px"/>
+      </div>
+      <textarea id="e_notes" placeholder="Notes…">${esc(t.notes||'')}</textarea>
+      <div class="row">
+        <button class="primary" onclick="saveEdit('${esc(toolId)}')">Save</button>
+        <button onclick="this.closest('.edit-form').remove()">Cancel</button>
+      </div>
+      <div id="edit-result-${esc(toolId)}" class="muted"></div>`;
+    card.insertAdjacentElement('afterend', form);
+  });
+}
+
+async function saveEdit(toolId) {
+  const patch = {
+    name: document.getElementById('e_name').value.trim(),
+    provider: document.getElementById('e_provider').value.trim(),
+    category: document.getElementById('e_cat').value,
+    link: document.getElementById('e_link').value.trim(),
+    tags: document.getElementById('e_tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    local_or_cloud: document.getElementById('e_loc').value,
+    auth_type: document.getElementById('e_auth').value,
+    cost_hint: document.getElementById('e_cost').value.trim() || 'unknown',
+    notes: document.getElementById('e_notes').value.trim(),
+  };
+  const res = await fetch(`${API}/tools/${encodeURIComponent(toolId)}`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(patch),
+  });
+  if (res.ok) { document.querySelector('.edit-form')?.remove(); loadTools(); }
+  else {
+    const err = await res.json().catch(()=>({detail:'Error'}));
+    const el = document.getElementById(`edit-result-${toolId}`);
+    if (el) el.textContent = 'Error: '+(err.detail||res.status);
+  }
+}
+
+async function deleteTool(toolId, btn) {
+  if (!confirm(`Delete "${toolId}"?`)) return;
+  btn.disabled = true;
+  const res = await fetch(`${API}/tools/${encodeURIComponent(toolId)}`, {method:'DELETE'});
+  if (res.ok) loadTools(); else { btn.disabled=false; alert('Delete failed: '+res.status); }
+}
+
+async function addTool() {
+  const name = document.getElementById('new_name').value.trim();
+  const provider = document.getElementById('new_provider').value.trim();
+  const link = document.getElementById('new_link').value.trim();
+  const resultEl = document.getElementById('addResult');
+  if (!name||!provider||!link) { resultEl.textContent='Name, Provider and Link are required.'; return; }
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const payload = {
+    id, name, provider, link,
+    category: document.getElementById('new_category').value||'other',
+    local_or_cloud: document.getElementById('new_loc').value,
+    auth_type: document.getElementById('new_auth').value,
+    cost_hint: document.getElementById('new_cost').value.trim()||'unknown',
+    notes: '', tags: document.getElementById('new_tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+  };
+  const res = await fetch(`${API}/tools`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if (res.ok) {
+    resultEl.textContent='Tool added.';
+    ['new_name','new_provider','new_link','new_tags','new_cost'].forEach(id=>document.getElementById(id).value='');
+    loadTools(); loadCategories();
+  } else {
+    const err = await res.json().catch(()=>({detail:'Unknown error'}));
+    resultEl.textContent='Error: '+(err.detail||res.status);
+  }
+}
+
+// ══ ingest ═══════════════════════════════════════════════════
+
+let _ingestPoll = null;
+
+async function triggerIngest() {
+  const statusEl = document.getElementById('ingest-status');
+  const dot = document.getElementById('ingest-dot');
+  const res = await fetch(`${API}/ingest`,{method:'POST'});
+  if (res.status===409) { statusEl.textContent='Already running…'; return; }
+  if (!res.ok) { statusEl.textContent='Failed to start.'; return; }
+  dot.className='ingest-dot running';
+  statusEl.textContent='Running…';
+  if (_ingestPoll) clearInterval(_ingestPoll);
+  _ingestPoll = setInterval(pollIngestStatus, 2000);
+}
+
+async function pollIngestStatus() {
+  try {
+    const data = await fetch(`${API}/ingest/status`).then(r=>r.json());
+    const statusEl = document.getElementById('ingest-status');
+    const dot = document.getElementById('ingest-dot');
+    if (!data.running) {
+      clearInterval(_ingestPoll); _ingestPoll=null;
+      const r = data.last_result;
+      if (!r) { dot.className='ingest-dot'; return; }
+      if (r.ok) {
+        dot.className='ingest-dot ok';
+        statusEl.textContent=`Done — ${r.count} items, ${r.error_count} errors, ${r.breaking_count} breaking`;
+        if (tabLoaded['feed']) loadFeed();
+      } else {
+        dot.className='ingest-dot error';
+        statusEl.textContent=`Error: ${r.error}`;
+      }
+    }
+  } catch {}
+}
+
+// ══ feed ════════════════════════════════════════════════════
+
+function renderFeedItem(item, opts={}) {
+  const id = item.url||item.id;
+  const read = isRead(id);
+  const showSave = opts.showSave !== false;
+  const el = document.createElement('div');
+  el.className = 'feed-item'+(read?' read':'');
+  el.dataset.id = id;
+
+  const badges = [];
+  if (item.breaking) badges.push(`<span class="pill breaking">BREAKING</span>`);
+  if (item.actionability==='act') badges.push(`<span class="pill act">ACT</span>`);
+  badges.push(`<span class="cat-badge ${catClass(item.category)}">${esc(item.category)}</span>`);
+  if (item.source_name) badges.push(`<span class="muted">${esc(item.source_name)}</span>`);
+  badges.push(`<span class="muted">${relTime(item.published_at)}</span>`);
+  if (read) badges.push(`<span class="pill read">read</span>`);
+
+  el.innerHTML = `
+    <div class="title"><a href="${esc(item.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(item.title)}</a></div>
+    ${item.summary?`<div class="summary">${esc(item.summary)}</div>`:''}
+    <div class="feed-meta">${badges.join('')}</div>
+    ${showSave?`<div class="feed-actions">
+      <button class="sm" onclick="event.stopPropagation();saveItem(${JSON.stringify(esc(item.url||item.id))},this,${JSON.stringify(esc(item.title))},${JSON.stringify(esc(item.summary||''))},${JSON.stringify(esc(item.category))})">Save</button>
+    </div>`:''}`;
+
+  el.addEventListener('click', () => {
+    markRead(id); el.classList.add('read');
+    if (document.getElementById('hide-read')?.checked) loadFeed();
+  });
+  return el;
+}
+
+async function loadFeed() {
+  const q = document.getElementById('feed-q').value.trim();
+  const cat = document.getElementById('feed-cat').value;
+  const hideRead = document.getElementById('hide-read')?.checked;
+  const params = new URLSearchParams({limit:'100'});
+  if (q) params.set('q',q);
+  if (cat) params.set('category',cat);
+  const listEl = document.getElementById('feed-list');
+  listEl.innerHTML='<div class="empty">Loading…</div>';
+  try {
+    const data = await fetch(`${API}/feed?${params}`).then(r=>r.json());
+    let items = data.items||[];
+    if (hideRead) items = items.filter(i=>!isRead(i.url||i.id));
+    document.getElementById('feed-meta').textContent =
+      `${items.length} items · updated ${relTime(data.generated_at)}`+
+      (data.errors?.length?` · ⚠ ${data.errors.length} source error(s)`:'');
+    listEl.innerHTML='';
+    if (!items.length) { listEl.innerHTML='<div class="empty">No items.</div>'; return; }
+    items.forEach(item=>listEl.appendChild(renderFeedItem(item)));
+  } catch(e) {
+    listEl.innerHTML=`<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
+  }
+}
+
+// ══ digest ═══════════════════════════════════════════════════
+
+async function loadDigest() {
+  const contentEl = document.getElementById('digest-content');
+  contentEl.innerHTML='<div class="empty">Loading…</div>';
+  try {
+    const data = await fetch(`${API}/digest/morning?total_limit=15&per_category=4`).then(r=>r.json());
+    document.getElementById('digest-meta').textContent=
+      `${data.selected_count} items · ${data.breaking_count} breaking · ${relTime(data.generated_at)}`;
+
+    const fs = data.finance_summary;
+    let html='';
+    if (fs&&(fs.watchlist?.length||fs.top_drivers?.length)) {
+      html+=`<div class="finance-summary"><h3>Finance Watchlist</h3>`;
+      if (fs.top_drivers?.length) {
+        html+=`<div class="driver-pills" style="margin-bottom:10px">`;
+        fs.top_drivers.slice(0,6).forEach(d=>{html+=`<span class="driver-pill">${esc(d.driver)} ×${d.count}</span>`;});
+        html+=`</div>`;
+      }
+      fs.watchlist?.slice(0,5).forEach(w=>{
+        html+=`<div class="watchlist-item">
+          <a href="${esc(w.url)}" target="_blank" rel="noopener" style="font-size:13px;font-weight:600">${esc(w.title)}</a>
+          <div class="muted">${esc(w.source)} · ${relTime(w.published_at)}</div>
+          <div class="driver-pills">
+            ${(w.drivers||[]).map(d=>`<span class="driver-pill">${esc(d)}</span>`).join('')}
+            ${(w.themes||[]).map(t=>`<span class="driver-pill" style="background:#1e3a5f;color:#93c5fd">${esc(t)}</span>`).join('')}
+          </div></div>`;
+      });
+      html+=`</div>`;
+    }
+    contentEl.innerHTML=html;
+
+    for (const cat of ['AI','World','Politics','Gaming','Finance']) {
+      const items = (data.by_category||{})[cat]||[];
+      if (!items.length) continue;
+      const section=document.createElement('div'); section.className='digest-section';
+      section.innerHTML=`<h3>${esc(cat)}</h3><div class="digest-grid"></div>`;
+      const grid=section.querySelector('.digest-grid');
+      items.forEach(item=>grid.appendChild(renderFeedItem(item)));
+      contentEl.appendChild(section);
+    }
+    if (!contentEl.children.length) contentEl.innerHTML='<div class="empty">No digest items.</div>';
+  } catch(e) {
+    contentEl.innerHTML=`<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
+  }
+}
+
+// ══ saved items ═══════════════════════════════════════════════
+
+async function saveItem(url, btn, title, summary, category) {
+  btn.disabled=true;
+  const res = await fetch(`${API}/saved`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({url, title, summary, category}),
+  });
+  if (res.ok) { btn.textContent='Saved ✓'; }
+  else if (res.status===409) { btn.textContent='Already saved'; }
+  else { btn.disabled=false; btn.textContent='Failed'; }
+}
+
+async function loadSaved() {
+  const listEl = document.getElementById('saved-list');
+  listEl.innerHTML='<div class="empty">Loading…</div>';
+  try {
+    const items = await fetch(`${API}/saved`).then(r=>r.json());
+    listEl.innerHTML='';
+    if (!items.length) { listEl.innerHTML='<div class="empty">No saved items yet.</div>'; return; }
+    items.forEach(item=>{
+      const el=document.createElement('div'); el.className='saved-item';
+      el.innerHTML=`
+        <div class="title"><a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.title)}</a></div>
+        ${item.summary?`<div class="summary">${esc(item.summary)}</div>`:''}
+        <div class="feed-meta">
+          <span class="cat-badge ${catClass(item.category)}">${esc(item.category||'')}</span>
+          <span class="muted">saved ${relTime(item.saved_at)}</span>
+          <button class="sm danger" onclick="deleteSaved('${esc(item.url||item.id)}',this)">Remove</button>
+        </div>`;
+      listEl.appendChild(el);
+    });
+  } catch(e) {
+    listEl.innerHTML=`<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
+  }
+}
+
+async function deleteSaved(id, btn) {
+  btn.disabled=true;
+  const res = await fetch(`${API}/saved/${encodeURIComponent(id)}`,{method:'DELETE'});
+  if (res.ok) loadSaved(); else { btn.disabled=false; }
+}
+
+// ══ schedule ══════════════════════════════════════════════════
+
+async function loadSchedule() {
+  try {
+    const d = await fetch(`${API}/schedule`).then(r=>r.json());
+    document.getElementById('sched-enabled').checked = !!d.enabled;
+    document.getElementById('sched-hours').value = d.interval_hours||2;
+    document.getElementById('sched-startup').checked = !!d.run_at_startup;
+    document.getElementById('sched-next').textContent = d.next_run
+      ? `Next run: ${relTime(d.next_run)}`
+      : (d.enabled ? 'Scheduled' : 'Disabled');
+  } catch {}
+}
+
+async function saveSchedule() {
+  const cfg = {
+    enabled: document.getElementById('sched-enabled').checked,
+    interval_hours: parseInt(document.getElementById('sched-hours').value)||2,
+    run_at_startup: document.getElementById('sched-startup').checked,
+  };
+  try {
+    const d = await fetch(`${API}/schedule`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)}).then(r=>r.json());
+    document.getElementById('sched-next').textContent = d.next_run
+      ? `Next run: ${relTime(d.next_run)}`
+      : (d.enabled ? 'Scheduled' : 'Disabled');
+  } catch {}
+}
+
+// ══ sources ══════════════════════════════════════════════════
+
+let _allSources = [];
+
+async function loadSources() {
+  const listEl = document.getElementById('sources-list');
+  listEl.innerHTML='<div class="empty">Loading…</div>';
+  try {
+    _allSources = await fetch(`${API}/sources?enabled_only=false`).then(r=>r.json());
+    renderSourcesFiltered();
+  } catch(e) {
+    listEl.innerHTML=`<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderSourcesFiltered() {
+  const q=(document.getElementById('src-q')?.value||'').toLowerCase();
+  const cat=document.getElementById('src-cat-filter')?.value||'';
+  let sources=_allSources;
+  if (cat) sources=sources.filter(s=>s.category?.toLowerCase()===cat.toLowerCase());
+  if (q) sources=sources.filter(s=>s.name?.toLowerCase().includes(q)||s.id?.toLowerCase().includes(q)||s.url?.toLowerCase().includes(q));
+
+  const listEl=document.getElementById('sources-list');
+  listEl.innerHTML='';
+  if (!sources.length) { listEl.innerHTML='<div class="empty">No sources found.</div>'; return; }
+
+  const groups={};
+  sources.forEach(s=>{ const c=s.category||'Uncategorized'; (groups[c]=groups[c]||[]).push(s); });
+  Object.entries(groups).sort(([a],[b])=>a.localeCompare(b)).forEach(([cat,srcs])=>{
+    const hdr=document.createElement('div');
+    hdr.style.cssText='font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.07em;margin:12px 0 6px;padding-left:2px';
+    hdr.textContent=cat; listEl.appendChild(hdr);
+    srcs.forEach(src=>{
+      if (!src.enabled && !loadGlobalSettings().show_disabled_sources) return;
+      const row=document.createElement('div');
+      row.className='source-row'+(src.enabled?'':' disabled');
+      row.dataset.id=src.id;
+      row.innerHTML=`
+        <label class="toggle">
+          <input type="checkbox" ${src.enabled?'checked':''} onchange="toggleSource('${esc(src.id)}',this.checked,this)" />
+          <span class="toggle-slider"></span>
+        </label>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${esc(src.name)}</div>
+          <div class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(src.url)}</div>
+        </div>
+        <span class="pill">${esc(src.type||'rss')}</span>
+        <span class="muted" style="font-size:12px">trust ${esc(src.trust_weight??'?')}</span>
+        <button class="sm danger" onclick="deleteSource('${esc(src.id)}',this)">Remove</button>`;
+      listEl.appendChild(row);
+    });
+  });
+}
+
+async function toggleSource(sourceId, enabled, checkbox) {
+  checkbox.disabled=true;
+  const res=await fetch(`${API}/sources/${encodeURIComponent(sourceId)}`,{
+    method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled}),
+  });
+  checkbox.disabled=false;
+  if (res.ok) {
+    const src=_allSources.find(s=>s.id===sourceId);
+    if (src) { src.enabled=enabled; const row=document.querySelector(`.source-row[data-id="${sourceId}"]`); if(row) row.className='source-row'+(enabled?'':' disabled'); }
+  } else { checkbox.checked=!enabled; alert('Failed to update source.'); }
+}
+
+async function deleteSource(sourceId, btn) {
+  if (!confirm(`Remove source "${sourceId}"?`)) return;
+  btn.disabled=true;
+  const res=await fetch(`${API}/sources/${encodeURIComponent(sourceId)}`,{method:'DELETE'});
+  if (res.ok) loadSources(); else { btn.disabled=false; alert('Delete failed: '+res.status); }
+}
+
+async function addSource() {
+  const name=document.getElementById('src_name').value.trim();
+  const url=document.getElementById('src_url').value.trim();
+  const category=document.getElementById('src_category').value;
+  const resultEl=document.getElementById('src-add-result');
+  if (!name||!url) { resultEl.textContent='Name and URL are required.'; return; }
+  const id=(category+'-'+name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const payload={id,name,url,category:category||'General',type:'rss',enabled:true,
+    trust_weight:parseFloat(document.getElementById('src_trust').value)||0.7,
+    tags:document.getElementById('src_tags').value.split(',').map(s=>s.trim()).filter(Boolean)};
+  const res=await fetch(`${API}/sources`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if (res.ok) {
+    resultEl.textContent='Source added.';
+    ['src_name','src_url','src_tags'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('src_trust').value='0.7';
+    loadSources();
+  } else {
+    const err=await res.json().catch(()=>({detail:'Unknown error'}));
+    resultEl.textContent='Error: '+(err.detail||res.status);
+  }
+}
+
+// ══ keyboard shortcuts ════════════════════════════════════════
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')loadTools();});
+document.getElementById('feed-q').addEventListener('keydown',e=>{if(e.key==='Enter')loadFeed();});
+
+// ══ Settings (Local Storage v1.1) ═════════════════════════════
+const SETTINGS_KEY = 'hub_global_settings';
+function loadGlobalSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); } catch { return {}; }
+}
+function openSettings() {
+  const s = loadGlobalSettings();
+  document.getElementById('ux_lang').value = s.language || 'EN';
+  document.getElementById('ux_def_cat').value = s.default_category || '';
+  document.getElementById('ux_show_disabled').checked = s.show_disabled_sources === true;
+  document.getElementById('settingsModal').style.display = 'flex';
+}
+function closeSettings() {
+  document.getElementById('settingsModal').style.display = 'none';
+}
+function saveSettings() {
+  const s = {
+    language: document.getElementById('ux_lang').value,
+    default_category: document.getElementById('ux_def_cat').value,
+    show_disabled_sources: document.getElementById('ux_show_disabled').checked
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  closeSettings();
+  if (tabLoaded['sources']) renderSourcesFiltered(); // re-render list with disabled check
+}
+
+// ══ init ═════════════════════════════════════════════════════
+loadCategories().then(()=>loadTools());
+</script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+[
+  {
+    "id": "ai-openai-blog",
+    "name": "OpenAI News",
+    "category": "AI",
+    "type": "rss",
+    "url": "https://openai.com/blog/rss.xml",
+    "enabled": true,
+    "trust_weight": 0.9,
+    "tags": [
+      "ai",
+      "models",
+      "product"
+    ]
+  },
+  {
+    "id": "ai-anthropic-news",
+    "name": "Anthropic News",
+    "category": "AI",
+    "type": "rss",
+    "url": "https://www.anthropic.com/news/rss.xml",
+    "enabled": true,
+    "trust_weight": 0.9,
+    "tags": [
+      "ai",
+      "claude"
+    ]
+  },
+  {
+    "id": "ai-google-ai-blog",
+    "name": "Google AI Blog",
+    "category": "AI",
+    "type": "rss",
+    "url": "https://blog.google/technology/ai/rss/",
+    "enabled": true,
+    "trust_weight": 0.85,
+    "tags": [
+      "ai",
+      "research"
+    ]
+  },
+  {
+    "id": "finance-marketaux",
+    "name": "Marketaux News API",
+    "category": "Finance",
+    "type": "api",
+    "url": "https://www.marketaux.com/",
+    "enabled": true,
+    "trust_weight": 0.8,
+    "tags": [
+      "stocks",
+      "news"
+    ]
+  },
+  {
+    "id": "finance-finnhub",
+    "name": "Finnhub",
+    "category": "Finance",
+    "type": "api",
+    "url": "https://finnhub.io/",
+    "enabled": true,
+    "trust_weight": 0.85,
+    "tags": [
+      "fundamentals",
+      "quotes"
+    ]
+  },
+  {
+    "id": "finance-alpha-vantage",
+    "name": "Alpha Vantage",
+    "category": "Finance",
+    "type": "api",
+    "url": "https://www.alphavantage.co/",
+    "enabled": true,
+    "trust_weight": 0.8,
+    "tags": [
+      "timeseries",
+      "indicators"
+    ]
+  },
+  {
+    "id": "gaming-ign",
+    "name": "IGN News",
+    "category": "Gaming",
+    "type": "rss",
+    "url": "https://feeds.ign.com/ign/all",
+    "enabled": true,
+    "trust_weight": 0.7,
+    "tags": [
+      "gaming",
+      "news"
+    ]
+  },
+  {
+    "id": "gaming-pcgamer",
+    "name": "PC Gamer",
+    "category": "Gaming",
+    "type": "rss",
+    "url": "https://www.pcgamer.com/rss/",
+    "enabled": true,
+    "trust_weight": 0.75,
+    "tags": [
+      "pc",
+      "upcoming"
+    ]
+  },
+  {
+    "id": "gaming-eurogamer",
+    "name": "Eurogamer",
+    "category": "Gaming",
+    "type": "rss",
+    "url": "https://www.eurogamer.net/?format=rss",
+    "enabled": true,
+    "trust_weight": 0.75,
+    "tags": [
+      "gaming",
+      "industry"
+    ]
+  },
+  {
+    "id": "warframe-news",
+    "name": "Warframe Official News",
+    "category": "Warframe",
+    "type": "rss",
+    "url": "https://www.warframe.com/rss",
+    "enabled": true,
+    "trust_weight": 0.95,
+    "tags": [
+      "warframe",
+      "official"
+    ]
+  },
+  {
+    "id": "warframe-forums",
+    "name": "Warframe Forums Announcements",
+    "category": "Warframe",
+    "type": "rss",
+    "url": "https://forums.warframe.com/forum/3-announcements.xml/",
+    "enabled": true,
+    "trust_weight": 0.9,
+    "tags": [
+      "warframe",
+      "announcements"
+    ]
+  },
+  {
+    "id": "devops-docker-blog",
+    "name": "Docker Blog",
+    "category": "DevOps",
+    "type": "rss",
+    "url": "https://www.docker.com/blog/feed/",
+    "enabled": false,
+    "trust_weight": 0.7,
+    "tags": [
+      "docker",
+      "infra"
+    ]
+  },
+  {
+    "id": "security-krebs",
+    "name": "Krebs on Security",
+    "category": "Security",
+    "type": "rss",
+    "url": "https://krebsonsecurity.com/feed/",
+    "enabled": false,
+    "trust_weight": 0.8,
+    "tags": [
+      "security",
+      "threats"
+    ]
+  },
+  {
+    "id": "world-reuters-world",
+    "name": "Reuters World",
+    "category": "World",
+    "type": "rss",
+    "url": "https://www.reuters.com/world/rss",
+    "enabled": true,
+    "trust_weight": 0.9,
+    "tags": [
+      "world",
+      "geopolitics"
+    ]
+  },
+  {
+    "id": "world-ap-world",
+    "name": "AP World News",
+    "category": "World",
+    "type": "rss",
+    "url": "https://apnews.com/hub/world-news/rss",
+    "enabled": true,
+    "trust_weight": 0.88,
+    "tags": [
+      "world",
+      "breaking"
+    ]
+  },
+  {
+    "id": "world-bbc-world",
+    "name": "BBC World",
+    "category": "World",
+    "type": "rss",
+    "url": "http://feeds.bbci.co.uk/news/world/rss.xml",
+    "enabled": true,
+    "trust_weight": 0.85,
+    "tags": [
+      "world",
+      "analysis"
+    ]
+  },
+  {
+    "id": "world-dw",
+    "name": "DW World",
+    "category": "World",
+    "type": "rss",
+    "url": "https://rss.dw.com/rdf/rss-en-world",
+    "enabled": true,
+    "trust_weight": 0.82,
+    "tags": [
+      "world",
+      "europe"
+    ]
+  },
+  {
+    "id": "politics-reuters-worldnews",
+    "name": "Reuters World Politics",
+    "category": "Politics",
+    "type": "rss",
+    "url": "https://www.reutersagency.com/feed/?best-topics=political-general&post_type=best",
+    "enabled": true,
+    "trust_weight": 0.9,
+    "tags": [
+      "politics",
+      "policy"
+    ]
+  },
+  {
+    "id": "politics-ap-politics",
+    "name": "AP Politics",
+    "category": "Politics",
+    "type": "rss",
+    "url": "https://apnews.com/hub/politics/rss",
+    "enabled": true,
+    "trust_weight": 0.88,
+    "tags": [
+      "politics",
+      "elections"
+    ]
+  },
+  {
+    "id": "politics-tagesschau",
+    "name": "Tagesschau Politik",
+    "category": "Politics",
+    "type": "rss",
+    "url": "https://www.tagesschau.de/xml/rss2",
+    "enabled": true,
+    "trust_weight": 0.86,
+    "tags": [
+      "politik",
+      "de"
+    ]
+  },
+  {
+    "id": "politics-politico-eu",
+    "name": "POLITICO Europe",
+    "category": "Politics",
+    "type": "rss",
+    "url": "https://www.politico.eu/feed/",
+    "enabled": true,
+    "trust_weight": 0.8,
+    "tags": [
+      "politics",
+      "eu"
+    ]
+  }
+]

@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  ai-personal-hub:
+    build: .
+    container_name: ai-personal-hub
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

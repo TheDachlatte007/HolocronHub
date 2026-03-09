@@ -1,0 +1,110 @@
+[
+  {
+    "id": "nanobanana-pro",
+    "name": "NanoBanana Pro",
+    "category": "image",
+    "provider": "NanoBanana",
+    "link": "https://nanobanana.example",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Image generation",
+    "tags": ["image", "creative"]
+  },
+  {
+    "id": "claude-code",
+    "name": "Claude Code",
+    "category": "code",
+    "provider": "Anthropic",
+    "link": "https://claude.ai/code",
+    "local_or_cloud": "local",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Local coding assistant",
+    "tags": ["coding", "agent"]
+  },
+  {
+    "id": "openclaw",
+    "name": "OpenClaw",
+    "category": "orchestration",
+    "provider": "OpenClaw",
+    "link": "https://docs.openclaw.ai",
+    "local_or_cloud": "local",
+    "auth_type": "none",
+    "cost_hint": "self-hosted",
+    "notes": "Agent orchestration",
+    "tags": ["agent", "automation"]
+  },
+  {
+    "id": "pi-hole",
+    "name": "Pi-hole",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "http://pi.hole/admin",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Network-wide ad blocking",
+    "tags": ["dns", "security", "local"]
+  },
+  {
+    "id": "home-assistant",
+    "name": "Home Assistant",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "http://homeassistant.local:8123",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Home automation platform",
+    "tags": ["smarthome", "automation", "local"]
+  },
+  {
+    "id": "proxmox",
+    "name": "Proxmox VE",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "https://proxmox.local:8006",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Virtualization management",
+    "tags": ["vm", "containers", "local"]
+  },
+  {
+    "id": "ollama",
+    "name": "Ollama",
+    "category": "AI Services",
+    "provider": "Local",
+    "link": "http://localhost:11434",
+    "local_or_cloud": "local",
+    "auth_type": "none",
+    "cost_hint": "self-hosted",
+    "notes": "Run LLMs locally",
+    "tags": ["llm", "local", "ai"]
+  },
+  {
+    "id": "open-webui",
+    "name": "Open WebUI",
+    "category": "AI Services",
+    "provider": "Local",
+    "link": "http://localhost:8080",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Feature-rich UI for local LLMs",
+    "tags": ["ui", "llm", "local"]
+  },
+  {
+    "id": "midjourney",
+    "name": "Midjourney",
+    "category": "AI Services",
+    "provider": "Midjourney",
+    "link": "https://www.midjourney.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "High-quality AI image generation",
+    "tags": ["image", "ai", "cloud"]
+  }
+]

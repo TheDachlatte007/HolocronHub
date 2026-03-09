@@ -54,7 +54,7 @@ class AppStatus(BaseModel):
 
 # ── app + state ───────────────────────────────────────────────────────────────
 
-app = FastAPI(title="AI Personal Hub", version="0.2.0")
+app = FastAPI(title="Holocron API", version="0.2.0")
 
 _ingest_state: dict = {"running": False, "last_result": None, "started_at": None}
 
@@ -614,7 +614,7 @@ def status():
     current_model = os.getenv("OPENCLAW_MODEL", "unknown")
     now = datetime.now().isoformat(timespec="seconds")
     return AppStatus(
-        app="ai-personal-hub",
+        app="holocron",
         mode="single-user-local",
         tools_count=len(tools),
         agents=[

@@ -1,8 +1,8 @@
-# AI Personal Hub (MVP v1)
+# Holocron (MVP v1.1)
 
-Local single-user dashboard for curated AI tools + simple agent status panel.
+Local single-user dashboard for curated AI tools, home network services, and a unified feed.
 
-## Features (v1)
+## Features (v1.1)
 - Tool catalog with search + category filter
 - Clickable tool links
 - Quick Add Tool panel (seed editor)

@@ -9,7 +9,10 @@
     "auth_type": "oauth",
     "cost_hint": "subscription",
     "notes": "Image generation",
-    "tags": ["image", "creative"]
+    "tags": [
+      "image",
+      "creative"
+    ]
   },
   {
     "id": "claude-code",
@@ -21,7 +24,10 @@
     "auth_type": "oauth",
     "cost_hint": "subscription",
     "notes": "Local coding assistant",
-    "tags": ["coding", "agent"]
+    "tags": [
+      "coding",
+      "agent"
+    ]
   },
   {
     "id": "openclaw",
@@ -33,7 +39,10 @@
     "auth_type": "none",
     "cost_hint": "self-hosted",
     "notes": "Agent orchestration",
-    "tags": ["agent", "automation"]
+    "tags": [
+      "agent",
+      "automation"
+    ]
   },
   {
     "id": "pi-hole",
@@ -45,7 +54,11 @@
     "auth_type": "local",
     "cost_hint": "self-hosted",
     "notes": "Network-wide ad blocking",
-    "tags": ["dns", "security", "local"]
+    "tags": [
+      "dns",
+      "security",
+      "local"
+    ]
   },
   {
     "id": "home-assistant",
@@ -57,7 +70,11 @@
     "auth_type": "local",
     "cost_hint": "self-hosted",
     "notes": "Home automation platform",
-    "tags": ["smarthome", "automation", "local"]
+    "tags": [
+      "smarthome",
+      "automation",
+      "local"
+    ]
   },
   {
     "id": "proxmox",
@@ -69,7 +86,11 @@
     "auth_type": "local",
     "cost_hint": "self-hosted",
     "notes": "Virtualization management",
-    "tags": ["vm", "containers", "local"]
+    "tags": [
+      "vm",
+      "containers",
+      "local"
+    ]
   },
   {
     "id": "ollama",
@@ -81,7 +102,11 @@
     "auth_type": "none",
     "cost_hint": "self-hosted",
     "notes": "Run LLMs locally",
-    "tags": ["llm", "local", "ai"]
+    "tags": [
+      "llm",
+      "local",
+      "ai"
+    ]
   },
   {
     "id": "open-webui",
@@ -93,7 +118,11 @@
     "auth_type": "local",
     "cost_hint": "self-hosted",
     "notes": "Feature-rich UI for local LLMs",
-    "tags": ["ui", "llm", "local"]
+    "tags": [
+      "ui",
+      "llm",
+      "local"
+    ]
   },
   {
     "id": "midjourney",
@@ -105,6 +134,393 @@
     "auth_type": "oauth",
     "cost_hint": "subscription",
     "notes": "High-quality AI image generation",
-    "tags": ["image", "ai", "cloud"]
+    "tags": [
+      "image",
+      "ai",
+      "cloud"
+    ]
+  },
+  {
+    "id": "chatgpt",
+    "name": "ChatGPT",
+    "category": "AI Services",
+    "provider": "OpenAI",
+    "link": "https://chatgpt.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/plus",
+    "notes": "General AI assistant",
+    "tags": [
+      "chat",
+      "assistant",
+      "ai"
+    ]
+  },
+  {
+    "id": "claude",
+    "name": "Claude",
+    "category": "AI Services",
+    "provider": "Anthropic",
+    "link": "https://claude.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "General AI assistant",
+    "tags": [
+      "chat",
+      "assistant",
+      "ai"
+    ]
+  },
+  {
+    "id": "gemini",
+    "name": "Gemini",
+    "category": "AI Services",
+    "provider": "Google",
+    "link": "https://gemini.google.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "General AI assistant",
+    "tags": [
+      "chat",
+      "assistant",
+      "ai"
+    ]
+  },
+  {
+    "id": "perplexity",
+    "name": "Perplexity",
+    "category": "AI Services",
+    "provider": "Perplexity",
+    "link": "https://www.perplexity.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "AI search and research assistant",
+    "tags": [
+      "search",
+      "research",
+      "ai"
+    ]
+  },
+  {
+    "id": "mistral-le-chat",
+    "name": "Mistral Le Chat",
+    "category": "AI Services",
+    "provider": "Mistral AI",
+    "link": "https://chat.mistral.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "General AI assistant",
+    "tags": [
+      "chat",
+      "assistant",
+      "ai"
+    ]
+  },
+  {
+    "id": "microsoft-copilot",
+    "name": "Microsoft Copilot",
+    "category": "AI Services",
+    "provider": "Microsoft",
+    "link": "https://copilot.microsoft.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Web assistant and chat",
+    "tags": [
+      "assistant",
+      "ai"
+    ]
+  },
+  {
+    "id": "github-copilot",
+    "name": "GitHub Copilot",
+    "category": "Code",
+    "provider": "GitHub",
+    "link": "https://github.com/features/copilot",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Coding assistant in IDE",
+    "tags": [
+      "code",
+      "assistant",
+      "dev"
+    ]
+  },
+  {
+    "id": "cursor",
+    "name": "Cursor",
+    "category": "Code",
+    "provider": "Cursor",
+    "link": "https://www.cursor.com",
+    "local_or_cloud": "local",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "AI-first code editor",
+    "tags": [
+      "code",
+      "editor",
+      "ai"
+    ]
+  },
+  {
+    "id": "windsurf",
+    "name": "Windsurf",
+    "category": "Code",
+    "provider": "Codeium",
+    "link": "https://windsurf.com",
+    "local_or_cloud": "local",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "AI coding environment",
+    "tags": [
+      "code",
+      "editor",
+      "ai"
+    ]
+  },
+  {
+    "id": "replit",
+    "name": "Replit",
+    "category": "Code",
+    "provider": "Replit",
+    "link": "https://replit.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Cloud coding workspace",
+    "tags": [
+      "code",
+      "cloud",
+      "agent"
+    ]
+  },
+  {
+    "id": "ideogram",
+    "name": "Ideogram",
+    "category": "Image",
+    "provider": "Ideogram",
+    "link": "https://ideogram.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Text-to-image generation",
+    "tags": [
+      "image",
+      "generation",
+      "ai"
+    ]
+  },
+  {
+    "id": "leonardo-ai",
+    "name": "Leonardo AI",
+    "category": "Image",
+    "provider": "Leonardo",
+    "link": "https://leonardo.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Image generation and assets",
+    "tags": [
+      "image",
+      "generation",
+      "design"
+    ]
+  },
+  {
+    "id": "adobe-firefly",
+    "name": "Adobe Firefly",
+    "category": "Image",
+    "provider": "Adobe",
+    "link": "https://firefly.adobe.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Generative creative tools",
+    "tags": [
+      "image",
+      "creative",
+      "design"
+    ]
+  },
+  {
+    "id": "runway",
+    "name": "Runway",
+    "category": "Video",
+    "provider": "Runway",
+    "link": "https://runwayml.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "AI video generation/editing",
+    "tags": [
+      "video",
+      "generation",
+      "ai"
+    ]
+  },
+  {
+    "id": "pika",
+    "name": "Pika",
+    "category": "Video",
+    "provider": "Pika",
+    "link": "https://pika.art",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "AI video generation",
+    "tags": [
+      "video",
+      "generation",
+      "ai"
+    ]
+  },
+  {
+    "id": "huggingface",
+    "name": "Hugging Face",
+    "category": "AI Research",
+    "provider": "Hugging Face",
+    "link": "https://huggingface.co",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Models, datasets, and demos",
+    "tags": [
+      "models",
+      "research",
+      "ml"
+    ]
+  },
+  {
+    "id": "notebooklm",
+    "name": "NotebookLM",
+    "category": "AI Research",
+    "provider": "Google",
+    "link": "https://notebooklm.google.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Research notebook assistant",
+    "tags": [
+      "research",
+      "notes",
+      "ai"
+    ]
+  },
+  {
+    "id": "semantic-scholar",
+    "name": "Semantic Scholar",
+    "category": "AI Research",
+    "provider": "Allen Institute",
+    "link": "https://www.semanticscholar.org",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "free",
+    "notes": "Scientific paper search",
+    "tags": [
+      "papers",
+      "research",
+      "science"
+    ]
+  },
+  {
+    "id": "consensus",
+    "name": "Consensus",
+    "category": "AI Research",
+    "provider": "Consensus",
+    "link": "https://consensus.app",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Evidence-focused research assistant",
+    "tags": [
+      "research",
+      "papers",
+      "assistant"
+    ]
+  },
+  {
+    "id": "elicit",
+    "name": "Elicit",
+    "category": "AI Research",
+    "provider": "Elicit",
+    "link": "https://elicit.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Literature review assistant",
+    "tags": [
+      "research",
+      "papers",
+      "assistant"
+    ]
+  },
+  {
+    "id": "n8n",
+    "name": "n8n",
+    "category": "Orchestration",
+    "provider": "n8n",
+    "link": "https://n8n.io",
+    "local_or_cloud": "local",
+    "auth_type": "none",
+    "cost_hint": "self-hosted",
+    "notes": "Workflow orchestration",
+    "tags": [
+      "automation",
+      "workflows",
+      "self-hosted"
+    ]
+  },
+  {
+    "id": "zapier",
+    "name": "Zapier",
+    "category": "Orchestration",
+    "provider": "Zapier",
+    "link": "https://zapier.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Automation platform",
+    "tags": [
+      "automation",
+      "workflows",
+      "integrations"
+    ]
+  },
+  {
+    "id": "make",
+    "name": "Make",
+    "category": "Orchestration",
+    "provider": "Make",
+    "link": "https://www.make.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Visual automation workflows",
+    "tags": [
+      "automation",
+      "workflows",
+      "integrations"
+    ]
+  },
+  {
+    "id": "flowise",
+    "name": "Flowise",
+    "category": "Orchestration",
+    "provider": "Flowise",
+    "link": "https://flowiseai.com",
+    "local_or_cloud": "local",
+    "auth_type": "none",
+    "cost_hint": "self-hosted",
+    "notes": "LLM flow builder",
+    "tags": [
+      "orchestration",
+      "llm",
+      "self-hosted"
+    ]
   }
 ]

@@ -1,0 +1,5 @@
+# Local secrets/runtime state
+backend/.env
+data/settings.json
+data/saved_items.json
+data/schedule.json

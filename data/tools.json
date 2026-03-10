@@ -1,146 +1,5 @@
 [
   {
-    "id": "nanobanana-pro",
-    "name": "NanoBanana Pro",
-    "category": "image",
-    "provider": "NanoBanana",
-    "link": "https://nanobanana.example",
-    "local_or_cloud": "cloud",
-    "auth_type": "oauth",
-    "cost_hint": "subscription",
-    "notes": "Image generation",
-    "tags": [
-      "image",
-      "creative"
-    ]
-  },
-  {
-    "id": "claude-code",
-    "name": "Claude Code",
-    "category": "code",
-    "provider": "Anthropic",
-    "link": "https://claude.ai/code",
-    "local_or_cloud": "local",
-    "auth_type": "oauth",
-    "cost_hint": "subscription",
-    "notes": "Local coding assistant",
-    "tags": [
-      "coding",
-      "agent"
-    ]
-  },
-  {
-    "id": "openclaw",
-    "name": "OpenClaw",
-    "category": "orchestration",
-    "provider": "OpenClaw",
-    "link": "https://docs.openclaw.ai",
-    "local_or_cloud": "local",
-    "auth_type": "none",
-    "cost_hint": "self-hosted",
-    "notes": "Agent orchestration",
-    "tags": [
-      "agent",
-      "automation"
-    ]
-  },
-  {
-    "id": "pi-hole",
-    "name": "Pi-hole",
-    "category": "Home Network",
-    "provider": "Local",
-    "link": "http://pi.hole/admin",
-    "local_or_cloud": "local",
-    "auth_type": "local",
-    "cost_hint": "self-hosted",
-    "notes": "Network-wide ad blocking",
-    "tags": [
-      "dns",
-      "security",
-      "local"
-    ]
-  },
-  {
-    "id": "home-assistant",
-    "name": "Home Assistant",
-    "category": "Home Network",
-    "provider": "Local",
-    "link": "http://homeassistant.local:8123",
-    "local_or_cloud": "local",
-    "auth_type": "local",
-    "cost_hint": "self-hosted",
-    "notes": "Home automation platform",
-    "tags": [
-      "smarthome",
-      "automation",
-      "local"
-    ]
-  },
-  {
-    "id": "proxmox",
-    "name": "Proxmox VE",
-    "category": "Home Network",
-    "provider": "Local",
-    "link": "https://proxmox.local:8006",
-    "local_or_cloud": "local",
-    "auth_type": "local",
-    "cost_hint": "self-hosted",
-    "notes": "Virtualization management",
-    "tags": [
-      "vm",
-      "containers",
-      "local"
-    ]
-  },
-  {
-    "id": "ollama",
-    "name": "Ollama",
-    "category": "AI Services",
-    "provider": "Local",
-    "link": "http://localhost:11434",
-    "local_or_cloud": "local",
-    "auth_type": "none",
-    "cost_hint": "self-hosted",
-    "notes": "Run LLMs locally",
-    "tags": [
-      "llm",
-      "local",
-      "ai"
-    ]
-  },
-  {
-    "id": "open-webui",
-    "name": "Open WebUI",
-    "category": "AI Services",
-    "provider": "Local",
-    "link": "http://localhost:8080",
-    "local_or_cloud": "local",
-    "auth_type": "local",
-    "cost_hint": "self-hosted",
-    "notes": "Feature-rich UI for local LLMs",
-    "tags": [
-      "ui",
-      "llm",
-      "local"
-    ]
-  },
-  {
-    "id": "midjourney",
-    "name": "Midjourney",
-    "category": "AI Services",
-    "provider": "Midjourney",
-    "link": "https://www.midjourney.com",
-    "local_or_cloud": "cloud",
-    "auth_type": "oauth",
-    "cost_hint": "subscription",
-    "notes": "High-quality AI image generation",
-    "tags": [
-      "image",
-      "ai",
-      "cloud"
-    ]
-  },
-  {
     "id": "chatgpt",
     "name": "ChatGPT",
     "category": "AI Services",
@@ -148,13 +7,14 @@
     "link": "https://chatgpt.com",
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
-    "cost_hint": "free/plus",
-    "notes": "General AI assistant",
+    "cost_hint": "free/plus/pro",
+    "notes": "General assistant",
     "tags": [
       "chat",
-      "assistant",
-      "ai"
-    ]
+      "assistant"
+    ],
+    "usage_count": 220,
+    "rating": 5
   },
   {
     "id": "claude",
@@ -165,12 +25,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "General AI assistant",
+    "notes": "General assistant",
     "tags": [
       "chat",
-      "assistant",
-      "ai"
-    ]
+      "assistant"
+    ],
+    "usage_count": 180,
+    "rating": 5
   },
   {
     "id": "gemini",
@@ -181,12 +42,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "General AI assistant",
+    "notes": "General assistant",
     "tags": [
       "chat",
-      "assistant",
-      "ai"
-    ]
+      "multimodal"
+    ],
+    "usage_count": 170,
+    "rating": 4
   },
   {
     "id": "perplexity",
@@ -197,12 +59,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "AI search and research assistant",
+    "notes": "AI search",
     "tags": [
       "search",
-      "research",
-      "ai"
-    ]
+      "research"
+    ],
+    "usage_count": 160,
+    "rating": 4
   },
   {
     "id": "mistral-le-chat",
@@ -213,12 +76,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "General AI assistant",
+    "notes": "General assistant",
     "tags": [
       "chat",
-      "assistant",
-      "ai"
-    ]
+      "assistant"
+    ],
+    "usage_count": 95,
+    "rating": 4
   },
   {
     "id": "microsoft-copilot",
@@ -229,11 +93,200 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "Web assistant and chat",
+    "notes": "Web assistant",
     "tags": [
       "assistant",
-      "ai"
-    ]
+      "web"
+    ],
+    "usage_count": 100,
+    "rating": 4
+  },
+  {
+    "id": "meta-ai",
+    "name": "Meta AI",
+    "category": "AI Services",
+    "provider": "Meta",
+    "link": "https://www.meta.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free",
+    "notes": "General assistant",
+    "tags": [
+      "chat",
+      "assistant"
+    ],
+    "usage_count": 70,
+    "rating": 3
+  },
+  {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "category": "AI Services",
+    "provider": "DeepSeek",
+    "link": "https://chat.deepseek.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Reasoning assistant",
+    "tags": [
+      "chat",
+      "reasoning"
+    ],
+    "usage_count": 85,
+    "rating": 4
+  },
+  {
+    "id": "grok",
+    "name": "Grok",
+    "category": "AI Services",
+    "provider": "xAI",
+    "link": "https://grok.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Assistant",
+    "tags": [
+      "chat",
+      "assistant"
+    ],
+    "usage_count": 60,
+    "rating": 3
+  },
+  {
+    "id": "poe",
+    "name": "Poe",
+    "category": "AI Services",
+    "provider": "Quora",
+    "link": "https://poe.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Multi-model chat",
+    "tags": [
+      "chat",
+      "models"
+    ],
+    "usage_count": 65,
+    "rating": 3
+  },
+  {
+    "id": "openrouter",
+    "name": "OpenRouter",
+    "category": "AI Services",
+    "provider": "OpenRouter",
+    "link": "https://openrouter.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "api-key",
+    "cost_hint": "pay-as-you-go",
+    "notes": "Unified model gateway",
+    "tags": [
+      "api",
+      "models"
+    ],
+    "usage_count": 75,
+    "rating": 4
+  },
+  {
+    "id": "openai-platform",
+    "name": "OpenAI Platform",
+    "category": "AI Services",
+    "provider": "OpenAI",
+    "link": "https://platform.openai.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "api-key",
+    "cost_hint": "pay-as-you-go",
+    "notes": "Model API console",
+    "tags": [
+      "api",
+      "dev"
+    ],
+    "usage_count": 110,
+    "rating": 4
+  },
+  {
+    "id": "anthropic-console",
+    "name": "Anthropic Console",
+    "category": "AI Services",
+    "provider": "Anthropic",
+    "link": "https://console.anthropic.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "api-key",
+    "cost_hint": "pay-as-you-go",
+    "notes": "Model API console",
+    "tags": [
+      "api",
+      "dev"
+    ],
+    "usage_count": 72,
+    "rating": 4
+  },
+  {
+    "id": "google-ai-studio",
+    "name": "Google AI Studio",
+    "category": "AI Services",
+    "provider": "Google",
+    "link": "https://aistudio.google.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/payg",
+    "notes": "Gemini API studio",
+    "tags": [
+      "api",
+      "dev"
+    ],
+    "usage_count": 78,
+    "rating": 4
+  },
+  {
+    "id": "ollama",
+    "name": "Ollama",
+    "category": "AI Services",
+    "provider": "Local",
+    "link": "http://localhost:11434",
+    "local_or_cloud": "local",
+    "auth_type": "none",
+    "cost_hint": "self-hosted",
+    "notes": "Run local models",
+    "tags": [
+      "local",
+      "llm"
+    ],
+    "usage_count": 125,
+    "rating": 5
+  },
+  {
+    "id": "open-webui",
+    "name": "Open WebUI",
+    "category": "AI Services",
+    "provider": "Local",
+    "link": "http://localhost:8080",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Local model UI",
+    "tags": [
+      "local",
+      "ui"
+    ],
+    "usage_count": 98,
+    "rating": 4
+  },
+  {
+    "id": "claude-code",
+    "name": "Claude Code",
+    "category": "Code",
+    "provider": "Anthropic",
+    "link": "https://claude.ai/code",
+    "local_or_cloud": "local",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Coding assistant",
+    "tags": [
+      "code",
+      "agent"
+    ],
+    "usage_count": 130,
+    "rating": 5
   },
   {
     "id": "github-copilot",
@@ -244,12 +297,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "subscription",
-    "notes": "Coding assistant in IDE",
+    "notes": "IDE assistant",
     "tags": [
       "code",
-      "assistant",
-      "dev"
-    ]
+      "assistant"
+    ],
+    "usage_count": 140,
+    "rating": 5
   },
   {
     "id": "cursor",
@@ -260,12 +314,13 @@
     "local_or_cloud": "local",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "AI-first code editor",
+    "notes": "AI code editor",
     "tags": [
-      "code",
       "editor",
-      "ai"
-    ]
+      "code"
+    ],
+    "usage_count": 150,
+    "rating": 5
   },
   {
     "id": "windsurf",
@@ -278,10 +333,11 @@
     "cost_hint": "free/pro",
     "notes": "AI coding environment",
     "tags": [
-      "code",
       "editor",
-      "ai"
-    ]
+      "code"
+    ],
+    "usage_count": 90,
+    "rating": 4
   },
   {
     "id": "replit",
@@ -294,10 +350,130 @@
     "cost_hint": "free/pro",
     "notes": "Cloud coding workspace",
     "tags": [
-      "code",
       "cloud",
-      "agent"
-    ]
+      "code"
+    ],
+    "usage_count": 88,
+    "rating": 4
+  },
+  {
+    "id": "aider",
+    "name": "Aider",
+    "category": "Code",
+    "provider": "Aider",
+    "link": "https://aider.chat",
+    "local_or_cloud": "local",
+    "auth_type": "api-key",
+    "cost_hint": "open-source",
+    "notes": "Terminal coding agent",
+    "tags": [
+      "terminal",
+      "code"
+    ],
+    "usage_count": 60,
+    "rating": 4
+  },
+  {
+    "id": "continue",
+    "name": "Continue",
+    "category": "Code",
+    "provider": "Continue",
+    "link": "https://continue.dev",
+    "local_or_cloud": "local",
+    "auth_type": "api-key",
+    "cost_hint": "open-source",
+    "notes": "Open-source IDE copilot",
+    "tags": [
+      "ide",
+      "code"
+    ],
+    "usage_count": 54,
+    "rating": 4
+  },
+  {
+    "id": "sourcegraph-cody",
+    "name": "Sourcegraph Cody",
+    "category": "Code",
+    "provider": "Sourcegraph",
+    "link": "https://sourcegraph.com/cody",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Codebase assistant",
+    "tags": [
+      "codebase",
+      "assistant"
+    ],
+    "usage_count": 42,
+    "rating": 3
+  },
+  {
+    "id": "bolt-new",
+    "name": "Bolt.new",
+    "category": "Code",
+    "provider": "StackBlitz",
+    "link": "https://bolt.new",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "credits",
+    "notes": "Prompt to full-stack app",
+    "tags": [
+      "fullstack",
+      "builder"
+    ],
+    "usage_count": 58,
+    "rating": 4
+  },
+  {
+    "id": "v0",
+    "name": "v0",
+    "category": "Code",
+    "provider": "Vercel",
+    "link": "https://v0.dev",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "UI code generation",
+    "tags": [
+      "ui",
+      "frontend"
+    ],
+    "usage_count": 64,
+    "rating": 4
+  },
+  {
+    "id": "nanobanana-pro",
+    "name": "NanoBanana Pro",
+    "category": "Image",
+    "provider": "Nano Banana",
+    "link": "https://nanobananapro.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Image generation and edit",
+    "tags": [
+      "image",
+      "creative"
+    ],
+    "usage_count": 66,
+    "rating": 4
+  },
+  {
+    "id": "midjourney",
+    "name": "Midjourney",
+    "category": "Image",
+    "provider": "Midjourney",
+    "link": "https://www.midjourney.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "High-quality image generation",
+    "tags": [
+      "image",
+      "creative"
+    ],
+    "usage_count": 120,
+    "rating": 5
   },
   {
     "id": "ideogram",
@@ -308,12 +484,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "Text-to-image generation",
+    "notes": "Text-first image generation",
     "tags": [
       "image",
-      "generation",
-      "ai"
-    ]
+      "text"
+    ],
+    "usage_count": 73,
+    "rating": 4
   },
   {
     "id": "leonardo-ai",
@@ -324,12 +501,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "Image generation and assets",
+    "notes": "Image assets and generation",
     "tags": [
       "image",
-      "generation",
-      "design"
-    ]
+      "assets"
+    ],
+    "usage_count": 68,
+    "rating": 4
   },
   {
     "id": "adobe-firefly",
@@ -340,12 +518,98 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "subscription",
-    "notes": "Generative creative tools",
+    "notes": "Creative generation tools",
+    "tags": [
+      "design",
+      "image"
+    ],
+    "usage_count": 61,
+    "rating": 4
+  },
+  {
+    "id": "playground-ai",
+    "name": "Playground AI",
+    "category": "Image",
+    "provider": "Playground",
+    "link": "https://playground.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Fast image generation",
     "tags": [
       "image",
-      "creative",
       "design"
-    ]
+    ],
+    "usage_count": 46,
+    "rating": 3
+  },
+  {
+    "id": "recraft",
+    "name": "Recraft",
+    "category": "Image",
+    "provider": "Recraft",
+    "link": "https://www.recraft.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Vector and brand images",
+    "tags": [
+      "vector",
+      "image"
+    ],
+    "usage_count": 49,
+    "rating": 4
+  },
+  {
+    "id": "dreamstudio",
+    "name": "DreamStudio",
+    "category": "Image",
+    "provider": "Stability AI",
+    "link": "https://dreamstudio.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "credits",
+    "notes": "Stable diffusion studio",
+    "tags": [
+      "image",
+      "sd"
+    ],
+    "usage_count": 47,
+    "rating": 3
+  },
+  {
+    "id": "black-forest-labs",
+    "name": "Black Forest Labs",
+    "category": "Image",
+    "provider": "BFL",
+    "link": "https://blackforestlabs.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "mixed",
+    "notes": "FLUX image models",
+    "tags": [
+      "flux",
+      "image"
+    ],
+    "usage_count": 41,
+    "rating": 4
+  },
+  {
+    "id": "canva-magic-media",
+    "name": "Canva Magic Media",
+    "category": "Image",
+    "provider": "Canva",
+    "link": "https://www.canva.com/magic-media/",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Design-native image tools",
+    "tags": [
+      "design",
+      "image"
+    ],
+    "usage_count": 40,
+    "rating": 3
   },
   {
     "id": "runway",
@@ -356,12 +620,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "subscription",
-    "notes": "AI video generation/editing",
+    "notes": "AI video generation",
     "tags": [
       "video",
-      "generation",
-      "ai"
-    ]
+      "generation"
+    ],
+    "usage_count": 92,
+    "rating": 4
   },
   {
     "id": "pika",
@@ -372,12 +637,149 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "AI video generation",
+    "notes": "Text to video",
     "tags": [
       "video",
-      "generation",
-      "ai"
-    ]
+      "generation"
+    ],
+    "usage_count": 74,
+    "rating": 4
+  },
+  {
+    "id": "luma-dream-machine",
+    "name": "Luma Dream Machine",
+    "category": "Video",
+    "provider": "Luma",
+    "link": "https://dream-machine.lumalabs.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Video generation",
+    "tags": [
+      "video",
+      "generation"
+    ],
+    "usage_count": 70,
+    "rating": 4
+  },
+  {
+    "id": "kling",
+    "name": "Kling AI",
+    "category": "Video",
+    "provider": "Kuaishou",
+    "link": "https://klingai.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "credits",
+    "notes": "Video generation",
+    "tags": [
+      "video",
+      "generation"
+    ],
+    "usage_count": 52,
+    "rating": 3
+  },
+  {
+    "id": "sora",
+    "name": "Sora",
+    "category": "Video",
+    "provider": "OpenAI",
+    "link": "https://sora.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "included/credits",
+    "notes": "Text to video",
+    "tags": [
+      "video",
+      "generation"
+    ],
+    "usage_count": 56,
+    "rating": 4
+  },
+  {
+    "id": "elevenlabs",
+    "name": "ElevenLabs",
+    "category": "Voice",
+    "provider": "ElevenLabs",
+    "link": "https://elevenlabs.io",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Voice synthesis",
+    "tags": [
+      "voice",
+      "tts"
+    ],
+    "usage_count": 82,
+    "rating": 4
+  },
+  {
+    "id": "suno",
+    "name": "Suno",
+    "category": "Voice",
+    "provider": "Suno",
+    "link": "https://suno.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Music generation",
+    "tags": [
+      "music",
+      "voice"
+    ],
+    "usage_count": 76,
+    "rating": 4
+  },
+  {
+    "id": "udio",
+    "name": "Udio",
+    "category": "Voice",
+    "provider": "Udio",
+    "link": "https://www.udio.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Music generation",
+    "tags": [
+      "music",
+      "audio"
+    ],
+    "usage_count": 62,
+    "rating": 4
+  },
+  {
+    "id": "descript",
+    "name": "Descript",
+    "category": "Voice",
+    "provider": "Descript",
+    "link": "https://www.descript.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Audio and voice editing",
+    "tags": [
+      "audio",
+      "editing"
+    ],
+    "usage_count": 45,
+    "rating": 3
+  },
+  {
+    "id": "playht",
+    "name": "PlayHT",
+    "category": "Voice",
+    "provider": "PlayHT",
+    "link": "https://play.ht",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "subscription",
+    "notes": "Voice API and cloning",
+    "tags": [
+      "voice",
+      "api"
+    ],
+    "usage_count": 39,
+    "rating": 3
   },
   {
     "id": "huggingface",
@@ -388,12 +790,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "Models, datasets, and demos",
+    "notes": "Models and datasets",
     "tags": [
       "models",
-      "research",
-      "ml"
-    ]
+      "research"
+    ],
+    "usage_count": 105,
+    "rating": 5
   },
   {
     "id": "notebooklm",
@@ -407,9 +810,10 @@
     "notes": "Research notebook assistant",
     "tags": [
       "research",
-      "notes",
-      "ai"
-    ]
+      "notes"
+    ],
+    "usage_count": 97,
+    "rating": 5
   },
   {
     "id": "semantic-scholar",
@@ -420,12 +824,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "none",
     "cost_hint": "free",
-    "notes": "Scientific paper search",
+    "notes": "Paper search",
     "tags": [
       "papers",
-      "research",
-      "science"
-    ]
+      "search"
+    ],
+    "usage_count": 57,
+    "rating": 4
   },
   {
     "id": "consensus",
@@ -436,12 +841,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "free/pro",
-    "notes": "Evidence-focused research assistant",
+    "notes": "Evidence-first search",
     "tags": [
-      "research",
       "papers",
       "assistant"
-    ]
+    ],
+    "usage_count": 50,
+    "rating": 4
   },
   {
     "id": "elicit",
@@ -455,9 +861,61 @@
     "notes": "Literature review assistant",
     "tags": [
       "research",
+      "papers"
+    ],
+    "usage_count": 48,
+    "rating": 4
+  },
+  {
+    "id": "paperswithcode",
+    "name": "Papers with Code",
+    "category": "AI Research",
+    "provider": "Papers with Code",
+    "link": "https://paperswithcode.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "free",
+    "notes": "Benchmarks and papers",
+    "tags": [
+      "benchmarks",
+      "papers"
+    ],
+    "usage_count": 44,
+    "rating": 4
+  },
+  {
+    "id": "arxiv",
+    "name": "arXiv",
+    "category": "AI Research",
+    "provider": "Cornell",
+    "link": "https://arxiv.org",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "free",
+    "notes": "Preprint archive",
+    "tags": [
       "papers",
-      "assistant"
-    ]
+      "archive"
+    ],
+    "usage_count": 53,
+    "rating": 4
+  },
+  {
+    "id": "openclaw",
+    "name": "OpenClaw",
+    "category": "Orchestration",
+    "provider": "OpenClaw",
+    "link": "https://docs.openclaw.ai",
+    "local_or_cloud": "local",
+    "auth_type": "none",
+    "cost_hint": "self-hosted",
+    "notes": "Agent orchestration",
+    "tags": [
+      "agents",
+      "automation"
+    ],
+    "usage_count": 68,
+    "rating": 4
   },
   {
     "id": "n8n",
@@ -468,12 +926,13 @@
     "local_or_cloud": "local",
     "auth_type": "none",
     "cost_hint": "self-hosted",
-    "notes": "Workflow orchestration",
+    "notes": "Workflow automation",
     "tags": [
       "automation",
-      "workflows",
-      "self-hosted"
-    ]
+      "workflows"
+    ],
+    "usage_count": 84,
+    "rating": 5
   },
   {
     "id": "zapier",
@@ -484,12 +943,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "subscription",
-    "notes": "Automation platform",
+    "notes": "Workflow automation",
     "tags": [
       "automation",
-      "workflows",
-      "integrations"
-    ]
+      "workflows"
+    ],
+    "usage_count": 58,
+    "rating": 4
   },
   {
     "id": "make",
@@ -500,12 +960,13 @@
     "local_or_cloud": "cloud",
     "auth_type": "oauth",
     "cost_hint": "subscription",
-    "notes": "Visual automation workflows",
+    "notes": "Visual automations",
     "tags": [
       "automation",
-      "workflows",
       "integrations"
-    ]
+    ],
+    "usage_count": 55,
+    "rating": 4
   },
   {
     "id": "flowise",
@@ -518,9 +979,180 @@
     "cost_hint": "self-hosted",
     "notes": "LLM flow builder",
     "tags": [
-      "orchestration",
       "llm",
-      "self-hosted"
-    ]
+      "flows"
+    ],
+    "usage_count": 46,
+    "rating": 4
+  },
+  {
+    "id": "langchain",
+    "name": "LangChain",
+    "category": "Orchestration",
+    "provider": "LangChain",
+    "link": "https://www.langchain.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "open-source",
+    "notes": "LLM orchestration framework",
+    "tags": [
+      "framework",
+      "agents"
+    ],
+    "usage_count": 63,
+    "rating": 4
+  },
+  {
+    "id": "langflow",
+    "name": "Langflow",
+    "category": "Orchestration",
+    "provider": "Langflow",
+    "link": "https://www.langflow.org",
+    "local_or_cloud": "local",
+    "auth_type": "none",
+    "cost_hint": "open-source",
+    "notes": "Visual flow builder",
+    "tags": [
+      "flows",
+      "ui"
+    ],
+    "usage_count": 43,
+    "rating": 4
+  },
+  {
+    "id": "dify",
+    "name": "Dify",
+    "category": "Orchestration",
+    "provider": "Dify",
+    "link": "https://dify.ai",
+    "local_or_cloud": "local",
+    "auth_type": "none",
+    "cost_hint": "open-source",
+    "notes": "LLM app platform",
+    "tags": [
+      "apps",
+      "orchestration"
+    ],
+    "usage_count": 41,
+    "rating": 4
+  },
+  {
+    "id": "comfyui",
+    "name": "ComfyUI",
+    "category": "Orchestration",
+    "provider": "Comfy",
+    "link": "https://www.comfy.org",
+    "local_or_cloud": "local",
+    "auth_type": "none",
+    "cost_hint": "open-source",
+    "notes": "Node workflows for image models",
+    "tags": [
+      "image",
+      "workflows"
+    ],
+    "usage_count": 38,
+    "rating": 4
+  },
+  {
+    "id": "pi-hole",
+    "name": "Pi-hole",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "http://pi.hole/admin",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Network DNS blocker",
+    "tags": [
+      "dns",
+      "security"
+    ],
+    "usage_count": 80,
+    "rating": 5
+  },
+  {
+    "id": "home-assistant",
+    "name": "Home Assistant",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "http://homeassistant.local:8123",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Smart home control",
+    "tags": [
+      "automation",
+      "smarthome"
+    ],
+    "usage_count": 88,
+    "rating": 5
+  },
+  {
+    "id": "proxmox",
+    "name": "Proxmox VE",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "https://proxmox.local:8006",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Virtualization platform",
+    "tags": [
+      "vm",
+      "infra"
+    ],
+    "usage_count": 75,
+    "rating": 5
+  },
+  {
+    "id": "truenas",
+    "name": "TrueNAS",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "http://truenas.local",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Storage and NAS",
+    "tags": [
+      "nas",
+      "storage"
+    ],
+    "usage_count": 67,
+    "rating": 5
+  },
+  {
+    "id": "portainer",
+    "name": "Portainer",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "http://portainer.local:9000",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Container management",
+    "tags": [
+      "docker",
+      "infra"
+    ],
+    "usage_count": 72,
+    "rating": 5
+  },
+  {
+    "id": "grafana",
+    "name": "Grafana",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "http://grafana.local:3000",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Dashboards and monitoring",
+    "tags": [
+      "monitoring",
+      "dashboard"
+    ],
+    "usage_count": 50,
+    "rating": 4
   }
 ]

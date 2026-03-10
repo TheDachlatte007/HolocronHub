@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import requests
+from urllib.parse import quote, quote_plus
 from statistics import median
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -44,6 +45,7 @@ class Tool(BaseModel):
     tags: List[str] = Field(default_factory=list)
     rating: Optional[int] = None        # 1-5, personal score
     last_used: Optional[str] = None     # ISO timestamp
+    usage_count: int = 0
 
 
 class AgentStatus(BaseModel):
@@ -259,6 +261,63 @@ def _fetch_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list
     return out, errors
 
 
+def _fetch_market_history(symbol: str, *, range_key: str = "1mo", interval: str = "1d") -> tuple[list[dict[str, Any]], Optional[str]]:
+    safe_symbol = quote(symbol, safe="")
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{safe_symbol}"
+    data, err = _http_get_json(url, params={"range": range_key, "interval": interval}, timeout=15)
+    if err:
+        return [], err
+
+    result = _dig(data, "chart", "result") or []
+    if not isinstance(result, list) or not result:
+        return [], "empty_chart_result"
+
+    r0 = result[0] if isinstance(result[0], dict) else {}
+    timestamps = r0.get("timestamp") or []
+    closes = _dig(r0, "indicators", "quote") or []
+    q0 = closes[0] if isinstance(closes, list) and closes else {}
+    close_list = q0.get("close") if isinstance(q0, dict) else []
+
+    points: list[dict[str, Any]] = []
+    for idx, ts in enumerate(timestamps):
+        try:
+            ts_int = int(ts)
+        except Exception:
+            continue
+        close_val = close_list[idx] if isinstance(close_list, list) and idx < len(close_list) else None
+        if close_val is None:
+            continue
+        try:
+            close_float = float(close_val)
+        except Exception:
+            continue
+        points.append(
+            {
+                "datetime": datetime.fromtimestamp(ts_int, timezone.utc).isoformat(),
+                "close": close_float,
+            }
+        )
+
+    return points, None
+
+
+def _fetch_markets_history(
+    symbols: list[str],
+    *,
+    range_key: str = "1mo",
+    interval: str = "1d",
+    max_symbols: int = 15,
+) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
+    out: dict[str, list[dict[str, Any]]] = {}
+    errors: list[str] = []
+    for sym in symbols[:max_symbols]:
+        series, err = _fetch_market_history(sym, range_key=range_key, interval=interval)
+        out[sym] = series
+        if err:
+            errors.append(f"{sym}:{err}")
+    return out, errors
+
+
 def _safe_iso_utc(date_raw: Optional[str], time_raw: Optional[str]) -> Optional[str]:
     if not date_raw:
         return None
@@ -278,7 +337,38 @@ def _dig(data: Any, *path: str) -> Any:
     return cur
 
 
-def _fetch_f1_overview(season: str) -> tuple[list[dict[str, Any]], Optional[dict[str, Any]], list[dict[str, Any]], list[str], str]:
+def _build_f1_circuit_links(circuit: Optional[str], locality: Optional[str], country: Optional[str]) -> dict[str, Optional[str]]:
+    parts = [str(x).strip() for x in [circuit, locality, country] if str(x or "").strip()]
+    if not parts:
+        return {"map_url": None, "layout_url": None, "wiki_url": None}
+
+    query = " ".join(parts)
+    layout_query = quote_plus(f"{query} circuit layout")
+    map_query = quote_plus(query)
+    wiki_name = str(circuit or "").strip().replace(" ", "_")
+    wiki_url = f"https://en.wikipedia.org/wiki/{quote(wiki_name, safe='_')}" if wiki_name else None
+
+    return {
+        "map_url": f"https://www.google.com/maps/search/?api=1&query={map_query}",
+        "layout_url": f"https://www.google.com/search?q={layout_query}",
+        "wiki_url": wiki_url,
+    }
+
+
+def _f1_status_is_finish(status: str) -> bool:
+    st = str(status or "").strip().lower()
+    if not st:
+        return False
+    if st.startswith("finished"):
+        return True
+    return "lap" in st and "retired" not in st
+
+
+def _f1_driver_key(driver: dict[str, Any]) -> str:
+    return str(driver.get("driverId") or driver.get("code") or driver.get("familyName") or "unknown").strip().lower()
+
+
+def _fetch_f1_overview(season: str) -> tuple[dict[str, Any], list[str], str]:
     errors: list[str] = []
     source = "unknown"
 
@@ -292,9 +382,15 @@ def _fetch_f1_overview(season: str) -> tuple[list[dict[str, Any]], Optional[dict
         ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}.json"),
         ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/races/"),
     ]
+    results_urls = [
+        ("ergast", f"https://ergast.com/api/f1/{season}/results.json?limit=500"),
+        ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/results.json?limit=500"),
+        ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/results/?limit=500"),
+    ]
 
     standings_payload: Optional[dict[str, Any]] = None
     schedule_payload: Optional[dict[str, Any]] = None
+    results_payload: Optional[dict[str, Any]] = None
 
     for src, url in standings_urls:
         data, err = _http_get_json(url, timeout=15)
@@ -319,6 +415,18 @@ def _fetch_f1_overview(season: str) -> tuple[list[dict[str, Any]], Optional[dict
             break
         errors.append(f"schedule:{src}:invalid_payload")
 
+    for src, url in results_urls:
+        data, err = _http_get_json(url, timeout=15)
+        if err:
+            errors.append(f"results:{src}:{err}")
+            continue
+        if isinstance(_dig(data, "MRData", "RaceTable"), dict):
+            results_payload = data
+            if source == "unknown":
+                source = src
+            break
+        errors.append(f"results:{src}:invalid_payload")
+
     standings_out: list[dict[str, Any]] = []
     standings_lists = _dig(standings_payload, "MRData", "StandingsTable", "StandingsLists") or []
     first_list = standings_lists[0] if isinstance(standings_lists, list) and standings_lists else {}
@@ -330,33 +438,47 @@ def _fetch_f1_overview(season: str) -> tuple[list[dict[str, Any]], Optional[dict
             if isinstance(constructors, list) and constructors:
                 c0 = constructors[0] if isinstance(constructors[0], dict) else {}
                 team = str(c0.get("name", ""))
+
             standings_out.append(
                 {
                     "position": row.get("position"),
                     "driver": f"{drv.get('givenName', '')} {drv.get('familyName', '')}".strip(),
                     "code": drv.get("code"),
+                    "driver_id": drv.get("driverId"),
+                    "nationality": drv.get("nationality"),
+                    "date_of_birth": drv.get("dateOfBirth"),
                     "team": team,
                     "points": row.get("points"),
                     "wins": row.get("wins"),
+                    "profile_key": _f1_driver_key(drv),
                 }
             )
 
     races = _dig(schedule_payload, "MRData", "RaceTable", "Races") or []
     upcoming: list[dict[str, Any]] = []
+    track_guide: list[dict[str, Any]] = []
     now_utc = datetime.now(timezone.utc)
     next_race: Optional[dict[str, Any]] = None
+
     for race in races:
         if not isinstance(race, dict):
             continue
         iso = _safe_iso_utc(race.get("date"), race.get("time"))
+        circuit_name = _dig(race, "Circuit", "circuitName")
+        locality = _dig(race, "Circuit", "Location", "locality")
+        country = _dig(race, "Circuit", "Location", "country")
         race_item = {
             "round": race.get("round"),
             "race_name": race.get("raceName"),
             "datetime_utc": iso,
-            "circuit": _dig(race, "Circuit", "circuitName"),
-            "locality": _dig(race, "Circuit", "Location", "locality"),
-            "country": _dig(race, "Circuit", "Location", "country"),
+            "circuit": circuit_name,
+            "circuit_id": _dig(race, "Circuit", "circuitId"),
+            "locality": locality,
+            "country": country,
+            "links": _build_f1_circuit_links(circuit_name, locality, country),
         }
+
+        track_guide.append(race_item)
         if iso:
             try:
                 dt = datetime.fromisoformat(iso)
@@ -366,10 +488,227 @@ def _fetch_f1_overview(season: str) -> tuple[list[dict[str, Any]], Optional[dict
                     upcoming.append(race_item)
             except Exception:
                 pass
+
     if not next_race and upcoming:
         next_race = upcoming[0]
 
-    return standings_out, next_race, upcoming[:5], errors[:12], source
+    results_races = _dig(results_payload, "MRData", "RaceTable", "Races") or []
+    latest_race_raw = results_races[-1] if isinstance(results_races, list) and results_races else None
+
+    driver_profiles: dict[str, dict[str, Any]] = {}
+    latest_by_driver: dict[str, dict[str, Any]] = {}
+
+    for race in results_races:
+        if not isinstance(race, dict):
+            continue
+
+        try:
+            round_num = int(race.get("round") or 0)
+        except Exception:
+            round_num = 0
+
+        for res in race.get("Results", []) or []:
+            if not isinstance(res, dict):
+                continue
+            drv = res.get("Driver", {}) if isinstance(res.get("Driver"), dict) else {}
+            constructor = res.get("Constructor", {}) if isinstance(res.get("Constructor"), dict) else {}
+            key = _f1_driver_key(drv)
+
+            profile = driver_profiles.setdefault(
+                key,
+                {
+                    "profile_key": key,
+                    "driver": f"{drv.get('givenName', '')} {drv.get('familyName', '')}".strip(),
+                    "code": drv.get("code"),
+                    "driver_id": drv.get("driverId"),
+                    "nationality": drv.get("nationality"),
+                    "date_of_birth": drv.get("dateOfBirth"),
+                    "team": constructor.get("name"),
+                    "points": None,
+                    "wins": 0,
+                    "podiums": 0,
+                    "top10": 0,
+                    "dnf_count": 0,
+                    "finish_count": 0,
+                    "race_count": 0,
+                    "avg_grid": None,
+                    "avg_finish": None,
+                    "finish_rate": None,
+                    "championship_position": None,
+                    "recent_results": [],
+                    "points_history": [],
+                    "_sum_grid": 0.0,
+                    "_cnt_grid": 0,
+                    "_sum_finish": 0.0,
+                    "_cnt_finish": 0,
+                    "_season_points_acc": 0.0,
+                },
+            )
+
+            status = str(res.get("status") or "")
+            try:
+                points_gain = float(res.get("points") or 0.0)
+            except Exception:
+                points_gain = 0.0
+
+            profile["_season_points_acc"] += points_gain
+            profile["race_count"] = int(profile.get("race_count") or 0) + 1
+
+            pos_raw = res.get("position")
+            try:
+                pos_int = int(pos_raw)
+            except Exception:
+                pos_int = None
+
+            grid_raw = res.get("grid")
+            try:
+                grid_int = int(grid_raw)
+            except Exception:
+                grid_int = None
+
+            if pos_int is not None:
+                if pos_int <= 3:
+                    profile["podiums"] = int(profile.get("podiums") or 0) + 1
+                if pos_int <= 10:
+                    profile["top10"] = int(profile.get("top10") or 0) + 1
+                profile["_sum_finish"] += pos_int
+                profile["_cnt_finish"] = int(profile.get("_cnt_finish") or 0) + 1
+
+            if grid_int is not None and grid_int >= 0:
+                profile["_sum_grid"] += grid_int
+                profile["_cnt_grid"] = int(profile.get("_cnt_grid") or 0) + 1
+
+            if _f1_status_is_finish(status):
+                profile["finish_count"] = int(profile.get("finish_count") or 0) + 1
+            else:
+                profile["dnf_count"] = int(profile.get("dnf_count") or 0) + 1
+
+            result_item = {
+                "round": race.get("round"),
+                "race_name": race.get("raceName"),
+                "position": res.get("position"),
+                "grid": res.get("grid"),
+                "status": status,
+                "points": res.get("points"),
+                "time": _dig(res, "Time", "time"),
+            }
+            profile["recent_results"].append(result_item)
+            profile["points_history"].append({"round": round_num, "points": round(profile["_season_points_acc"], 1)})
+            latest_by_driver[key] = result_item
+
+    latest_race_out: Optional[dict[str, Any]] = None
+    if isinstance(latest_race_raw, dict):
+        latest_results = []
+        for res in latest_race_raw.get("Results", []) or []:
+            if not isinstance(res, dict):
+                continue
+            drv = res.get("Driver", {}) if isinstance(res.get("Driver"), dict) else {}
+            constructor = res.get("Constructor", {}) if isinstance(res.get("Constructor"), dict) else {}
+            latest_results.append(
+                {
+                    "position": res.get("position"),
+                    "driver": f"{drv.get('givenName', '')} {drv.get('familyName', '')}".strip(),
+                    "code": drv.get("code"),
+                    "team": constructor.get("name"),
+                    "grid": res.get("grid"),
+                    "status": res.get("status"),
+                    "points": res.get("points"),
+                    "time": _dig(res, "Time", "time"),
+                }
+            )
+
+        latest_race_out = {
+            "round": latest_race_raw.get("round"),
+            "race_name": latest_race_raw.get("raceName"),
+            "date": latest_race_raw.get("date"),
+            "time": latest_race_raw.get("time"),
+            "circuit": _dig(latest_race_raw, "Circuit", "circuitName"),
+            "locality": _dig(latest_race_raw, "Circuit", "Location", "locality"),
+            "country": _dig(latest_race_raw, "Circuit", "Location", "country"),
+            "results": latest_results[:20],
+        }
+
+    for row in standings_out:
+        key = str(row.get("profile_key") or "")
+        if not key:
+            continue
+        profile = driver_profiles.setdefault(
+            key,
+            {
+                "profile_key": key,
+                "driver": row.get("driver"),
+                "code": row.get("code"),
+                "driver_id": row.get("driver_id"),
+                "nationality": row.get("nationality"),
+                "date_of_birth": row.get("date_of_birth"),
+                "team": row.get("team"),
+                "points": None,
+                "wins": 0,
+                "podiums": 0,
+                "top10": 0,
+                "dnf_count": 0,
+                "finish_count": 0,
+                "race_count": 0,
+                "avg_grid": None,
+                "avg_finish": None,
+                "finish_rate": None,
+                "championship_position": None,
+                "recent_results": [],
+                "points_history": [],
+                "_sum_grid": 0.0,
+                "_cnt_grid": 0,
+                "_sum_finish": 0.0,
+                "_cnt_finish": 0,
+                "_season_points_acc": 0.0,
+            },
+        )
+
+        profile["points"] = row.get("points")
+        profile["wins"] = int(row.get("wins") or 0)
+        profile["team"] = row.get("team") or profile.get("team")
+        try:
+            profile["championship_position"] = int(row.get("position") or 999)
+        except Exception:
+            profile["championship_position"] = 999
+
+    driver_profiles_list: list[dict[str, Any]] = []
+    for profile in driver_profiles.values():
+        race_count = int(profile.get("race_count") or 0)
+        cnt_grid = int(profile.get("_cnt_grid") or 0)
+        cnt_finish = int(profile.get("_cnt_finish") or 0)
+        finish_count = int(profile.get("finish_count") or 0)
+
+        profile["avg_grid"] = round(profile["_sum_grid"] / cnt_grid, 2) if cnt_grid else None
+        profile["avg_finish"] = round(profile["_sum_finish"] / cnt_finish, 2) if cnt_finish else None
+        profile["finish_rate"] = round((finish_count / race_count) * 100.0, 1) if race_count else None
+        profile["latest_result"] = latest_by_driver.get(str(profile.get("profile_key") or ""))
+        profile["recent_results"] = list(reversed(profile.get("recent_results", [])[-5:]))
+
+        profile.pop("_sum_grid", None)
+        profile.pop("_cnt_grid", None)
+        profile.pop("_sum_finish", None)
+        profile.pop("_cnt_finish", None)
+        profile.pop("_season_points_acc", None)
+
+        driver_profiles_list.append(profile)
+
+    driver_profiles_list = sorted(
+        driver_profiles_list,
+        key=lambda x: (
+            int(x.get("championship_position") or 999),
+            -float(x.get("points") or 0.0),
+            x.get("driver") or "",
+        ),
+    )
+
+    return {
+        "standings": standings_out,
+        "next_race": next_race,
+        "upcoming_races": upcoming[:8],
+        "track_guide": track_guide[:14],
+        "latest_race": latest_race_out,
+        "driver_profiles": driver_profiles_list,
+    }, errors[:20], source
 
 
 def _normalize_warframe_item_name(item: str) -> str:
@@ -382,22 +721,36 @@ def _normalize_warframe_item_name(item: str) -> str:
 def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]]:
     data, err = _http_get_json(f"https://api.warframestat.us/{platform}", timeout=15)
     if err or not isinstance(data, dict):
-        return {"platform": platform, "news": [], "alerts": [], "fissures": []}, [err or "invalid_worldstate_payload"]
+        return {
+            "platform": platform,
+            "timestamp": None,
+            "news": [],
+            "alerts": [],
+            "fissures": [],
+            "invasions": [],
+            "events": [],
+            "sortie": {},
+            "nightwave": {},
+            "world_cycles": {},
+        }, [err or "invalid_worldstate_payload"]
 
     news_out: list[dict[str, Any]] = []
-    for n in (data.get("news") or [])[:6]:
+    for n in (data.get("news") or [])[:10]:
         if not isinstance(n, dict):
             continue
+        title = n.get("message") or n.get("title") or _dig(n, "translations", "en") or "News"
         news_out.append(
             {
-                "title": n.get("message") or n.get("title") or "News",
-                "url": n.get("link"),
-                "published_at": n.get("date"),
+                "title": title,
+                "url": n.get("link") or n.get("url"),
+                "published_at": n.get("date") or n.get("eta"),
+                "eta": n.get("eta"),
+                "importance": n.get("priority"),
             }
         )
 
     alerts_out: list[dict[str, Any]] = []
-    for a in (data.get("alerts") or [])[:8]:
+    for a in (data.get("alerts") or [])[:12]:
         if not isinstance(a, dict):
             continue
         mission = a.get("mission", {}) if isinstance(a.get("mission"), dict) else {}
@@ -405,7 +758,8 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
         reward_name = (
             reward.get("asString")
             or reward.get("itemString")
-            or ", ".join(x.get("itemType", "") for x in reward.get("items", []) if isinstance(x, dict))
+            or ", ".join(x.get("itemType", "") for x in reward.get("items", []) if isinstance(x, dict) and x.get("itemType"))
+            or reward.get("credits")
             or "Reward"
         )
         alerts_out.append(
@@ -419,7 +773,7 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
         )
 
     fissures_out: list[dict[str, Any]] = []
-    for f in (data.get("fissures") or [])[:8]:
+    for f in (data.get("fissures") or [])[:12]:
         if not isinstance(f, dict):
             continue
         if f.get("expired"):
@@ -429,9 +783,49 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
                 "tier": f.get("tier"),
                 "mission_type": f.get("missionType"),
                 "node": f.get("node"),
+                "is_storm": f.get("isStorm"),
+                "is_hard": f.get("isHard"),
                 "eta": f.get("eta"),
             }
         )
+
+    invasions_out: list[dict[str, Any]] = []
+    for inv in (data.get("invasions") or [])[:10]:
+        if not isinstance(inv, dict) or inv.get("completed"):
+            continue
+        attacker = inv.get("attacker", {}) if isinstance(inv.get("attacker"), dict) else {}
+        defender = inv.get("defender", {}) if isinstance(inv.get("defender"), dict) else {}
+        invasions_out.append(
+            {
+                "node": inv.get("node"),
+                "attacker": attacker.get("faction"),
+                "defender": defender.get("faction"),
+                "attacker_reward": _dig(attacker, "reward", "asString") or _dig(attacker, "reward", "itemString"),
+                "defender_reward": _dig(defender, "reward", "asString") or _dig(defender, "reward", "itemString"),
+                "eta": inv.get("eta"),
+            }
+        )
+
+    events_out: list[dict[str, Any]] = []
+    for ev in (data.get("events") or [])[:6]:
+        if not isinstance(ev, dict):
+            continue
+        if ev.get("expired"):
+            continue
+        events_out.append(
+            {
+                "id": ev.get("id"),
+                "description": ev.get("description") or ev.get("tooltip"),
+                "eta": ev.get("eta"),
+                "progress": ev.get("progress"),
+            }
+        )
+
+    world_cycles = {
+        "cetus": {"is_day": _dig(data, "cetusCycle", "isDay"), "state": _dig(data, "cetusCycle", "state"), "eta": _dig(data, "cetusCycle", "timeLeft") or _dig(data, "cetusCycle", "shortString")},
+        "vallis": {"is_warm": _dig(data, "vallisCycle", "isWarm"), "state": _dig(data, "vallisCycle", "state"), "eta": _dig(data, "vallisCycle", "timeLeft") or _dig(data, "vallisCycle", "shortString")},
+        "cambion": {"active": _dig(data, "cambionCycle", "active"), "state": _dig(data, "cambionCycle", "state"), "eta": _dig(data, "cambionCycle", "timeLeft") or _dig(data, "cambionCycle", "shortString")},
+    }
 
     return {
         "platform": platform,
@@ -439,8 +833,13 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
         "news": news_out,
         "alerts": alerts_out,
         "fissures": fissures_out,
+        "invasions": invasions_out,
+        "events": events_out,
         "sortie": data.get("sortie", {}),
         "nightwave": data.get("nightwave", {}),
+        "arbitration": data.get("arbitration", {}),
+        "steel_path": data.get("steelPath", {}),
+        "world_cycles": world_cycles,
     }, []
 
 
@@ -449,28 +848,33 @@ def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
     if not slug:
         return {"item": item, "slug": "", "best_sell": None, "best_buy": None}, ["invalid_item"]
 
+    req_headers = {"Accept": "application/json", "Language": "en", "User-Agent": "HolocronHub/0.3"}
     data, err = _http_get_json(
         f"https://api.warframe.market/v1/items/{slug}/orders",
-        headers={"Accept": "application/json", "Language": "en"},
+        headers=req_headers,
         timeout=15,
     )
     if err or not isinstance(data, dict):
         return {"item": item, "slug": slug, "best_sell": None, "best_buy": None}, [err or "invalid_market_payload"]
 
     orders = _dig(data, "payload", "orders") or []
-    sells: list[int] = []
-    buys: list[int] = []
-    live_sell_orders: list[dict[str, Any]] = []
-    live_buy_orders: list[dict[str, Any]] = []
+    sells_live: list[int] = []
+    buys_live: list[int] = []
+    sells_all: list[int] = []
+    buys_all: list[int] = []
+    sell_rows_live: list[dict[str, Any]] = []
+    buy_rows_live: list[dict[str, Any]] = []
+
     for o in orders:
         if not isinstance(o, dict):
             continue
         if not o.get("visible", True):
             continue
+
         user = o.get("user", {}) if isinstance(o.get("user"), dict) else {}
         status = str(user.get("status", "")).lower()
-        if status not in {"ingame", "online"}:
-            continue
+        is_live = status in {"ingame", "online"}
+
         plat = o.get("platinum")
         if plat is None:
             continue
@@ -482,32 +886,70 @@ def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
         row = {
             "price": plat_int,
             "user": user.get("ingame_name"),
-            "status": status,
+            "status": status or "offline",
             "quantity": o.get("quantity"),
+            "mod_rank": o.get("mod_rank"),
         }
         order_type = str(o.get("order_type", "")).lower()
-        if order_type == "sell":
-            sells.append(plat_int)
-            live_sell_orders.append(row)
-        elif order_type == "buy":
-            buys.append(plat_int)
-            live_buy_orders.append(row)
 
-    sells_sorted = sorted(sells)
-    buys_sorted = sorted(buys, reverse=True)
+        if order_type == "sell":
+            sells_all.append(plat_int)
+            if is_live:
+                sells_live.append(plat_int)
+                sell_rows_live.append(row)
+        elif order_type == "buy":
+            buys_all.append(plat_int)
+            if is_live:
+                buys_live.append(plat_int)
+                buy_rows_live.append(row)
+
+    sell_base = sorted(sells_live) if sells_live else sorted(sells_all)
+    buy_base = sorted(buys_live, reverse=True) if buys_live else sorted(buys_all, reverse=True)
+
+    stats_data, stats_err = _http_get_json(
+        f"https://api.warframe.market/v1/items/{slug}/statistics",
+        headers=req_headers,
+        timeout=15,
+    )
+    stats_closed = _dig(stats_data, "payload", "statistics_closed") or {}
+    period_key = "48hours" if isinstance(stats_closed, dict) and stats_closed.get("48hours") else ("90days" if isinstance(stats_closed, dict) and stats_closed.get("90days") else None)
+    history_raw = stats_closed.get(period_key, []) if period_key else []
+    history: list[dict[str, Any]] = []
+    for point in history_raw[-40:]:
+        if not isinstance(point, dict):
+            continue
+        avg_price = point.get("avg_price")
+        if avg_price is None:
+            continue
+        history.append(
+            {
+                "datetime": point.get("datetime"),
+                "avg_price": avg_price,
+                "volume": point.get("volume"),
+            }
+        )
+
+    errors: list[str] = []
+    if stats_err:
+        errors.append(f"statistics:{stats_err}")
 
     return {
         "item": item,
         "slug": slug,
-        "best_sell": sells_sorted[0] if sells_sorted else None,
-        "best_buy": buys_sorted[0] if buys_sorted else None,
-        "median_sell": float(median(sells_sorted[:20])) if sells_sorted else None,
-        "median_buy": float(median(buys_sorted[:20])) if buys_sorted else None,
-        "sample_sell_orders": sorted(live_sell_orders, key=lambda x: x["price"])[:6],
-        "sample_buy_orders": sorted(live_buy_orders, key=lambda x: x["price"], reverse=True)[:6],
-        "sell_count_live": len(sells_sorted),
-        "buy_count_live": len(buys_sorted),
-    }, []
+        "best_sell": sell_base[0] if sell_base else None,
+        "best_buy": buy_base[0] if buy_base else None,
+        "median_sell": float(median(sell_base[:20])) if sell_base else None,
+        "median_buy": float(median(buy_base[:20])) if buy_base else None,
+        "sample_sell_orders": sorted(sell_rows_live, key=lambda x: x["price"])[:8],
+        "sample_buy_orders": sorted(buy_rows_live, key=lambda x: x["price"], reverse=True)[:8],
+        "sell_count_live": len(sells_live),
+        "buy_count_live": len(buys_live),
+        "sell_count_total": len(sells_all),
+        "buy_count_total": len(buys_all),
+        "history_period": period_key,
+        "history": history,
+        "selected_scope": "live" if sells_live or buys_live else "all_visible",
+    }, errors
 
 
 def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
@@ -750,6 +1192,12 @@ def list_tools(
         tools = sorted(tools, key=lambda t: t.get("rating") or 0, reverse=True)
     elif sort == "last_used":
         tools = sorted(tools, key=lambda t: t.get("last_used") or "", reverse=True)
+    elif sort == "popular":
+        tools = sorted(
+            tools,
+            key=lambda t: (int(t.get("usage_count") or 0), t.get("last_used") or ""),
+            reverse=True,
+        )
     return tools
 
 
@@ -784,8 +1232,9 @@ def mark_tool_used(tool_id: str):
     if idx is None:
         raise HTTPException(status_code=404, detail="Tool not found")
     tools[idx]["last_used"] = datetime.now().isoformat(timespec="seconds")
+    tools[idx]["usage_count"] = int(tools[idx].get("usage_count") or 0) + 1
     _save_tools(tools)
-    return {"ok": True}
+    return {"ok": True, "usage_count": tools[idx]["usage_count"]}
 
 
 @app.delete("/api/tools/{tool_id}")
@@ -1093,15 +1542,30 @@ async def update_settings(request: Request):
 # ── markets ───────────────────────────────────────────────────────────────────
 
 @app.get("/api/markets/overview")
-def markets_overview(symbols: Optional[str] = None):
+def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", history_interval: str = "1d"):
     symbol_list = _coerce_symbol_list(symbols)
     quotes, errors = _fetch_market_quotes(symbol_list)
+
+    range_key = str(history_range or "1mo").strip().lower()
+    if range_key not in {"5d", "1mo", "3mo", "6mo", "1y"}:
+        range_key = "1mo"
+
+    interval_key = str(history_interval or "1d").strip().lower()
+    if interval_key not in {"15m", "30m", "1h", "1d", "1wk"}:
+        interval_key = "1d"
+
+    history, history_errors = _fetch_markets_history(symbol_list, range_key=range_key, interval=interval_key)
+
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "count": len(quotes),
         "requested_symbols": symbol_list,
         "errors": errors,
+        "history_errors": history_errors,
         "quotes": quotes,
+        "history": history,
+        "history_range": range_key,
+        "history_interval": interval_key,
     }
 
 
@@ -1111,15 +1575,14 @@ def f1_overview(season: Optional[str] = None):
     if season_key != "current" and (not season_key.isdigit() or len(season_key) != 4):
         raise HTTPException(status_code=422, detail="season must be 'current' or YYYY")
 
-    standings, next_race, upcoming, errors, source = _fetch_f1_overview(season_key)
+    overview, errors, source = _fetch_f1_overview(season_key)
+    standings = overview.get("standings", [])
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "season": season_key,
         "source": source,
         "standings_count": len(standings),
-        "standings": standings,
-        "next_race": next_race,
-        "upcoming_races": upcoming,
+        **overview,
         "errors": errors,
     }
 

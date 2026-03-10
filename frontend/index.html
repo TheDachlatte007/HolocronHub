@@ -126,6 +126,21 @@
     .small-list{display:flex;flex-direction:column;gap:8px}
     .small-row{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px}
 
+    .tool-minor{font-size:12px;color:#94a3b8}
+    .tool-summary{font-size:13px;line-height:1.45;color:#cbd5e1;min-height:36px}
+    .chart-wrap{margin-top:6px;padding-top:6px;border-top:1px solid #1f2937}
+    .sparkline{width:100%;height:56px;display:block}
+    .sparkline-line{fill:none;stroke:#60a5fa;stroke-width:2}
+    .sparkline-fill{fill:rgba(59,130,246,.15)}
+    .sparkline-muted .sparkline-line{stroke:#94a3b8}
+    .sparkline-muted .sparkline-fill{fill:rgba(148,163,184,.15)}
+    .sparkline-label{font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;margin-top:4px}
+    .f1-driver-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+    .f1-driver-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:11px;display:flex;flex-direction:column;gap:6px}
+    .f1-driver-card .actions{display:flex;gap:6px;flex-wrap:wrap}
+    .f1-track-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .wf-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+
     /* empty / error */
     .empty{color:#475569;font-size:14px;padding:24px 0;text-align:center}
     .err-msg{color:#f87171}
@@ -168,6 +183,7 @@
         <input id="q" placeholder="Search name, tags, provider…" style="flex:1;min-width:180px" />
         <select id="tool-sort" onchange="loadTools()">
           <option value="">Default order</option>
+          <option value="popular">Most used</option>
           <option value="rating">By rating</option>
           <option value="last_used">Recently used</option>
         </select>
@@ -279,7 +295,12 @@
       </div>
       <div id="f1-meta" class="muted" style="margin-bottom:10px"></div>
       <div id="f1-next" class="card" style="margin-bottom:10px;background:#0b1220"></div>
-      <div id="f1-standings" class="overview-grid"><div class="empty">Loading.</div></div>
+      <div id="f1-last-race" class="stat-card" style="margin-bottom:10px"></div>
+      <div id="f1-driver-detail" class="stat-card" style="margin-bottom:10px"></div>
+      <div id="f1-standings" class="f1-driver-cards"><div class="empty">Loading.</div></div>
+      <div style="height:10px"></div>
+      <h2 style="margin:0 0 8px">Tracks & Layout Quick Access</h2>
+      <div id="f1-tracks" class="overview-grid"><div class="empty">Loading track guide...</div></div>
     </div>
   </div>
 
@@ -298,19 +319,34 @@
         <button class="primary" onclick="loadWarframe()">Refresh</button>
       </div>
       <div id="wf-meta" class="muted" style="margin-bottom:10px"></div>
-      <div class="overview-grid" style="margin-bottom:10px">
+      <div class="wf-grid-3" style="margin-bottom:10px">
         <div class="stat-card">
           <h2 style="margin:0 0 6px">Market Snapshot</h2>
           <div id="wf-market" class="small-list"></div>
+          <div id="wf-market-chart" class="chart-wrap"></div>
         </div>
         <div class="stat-card">
           <h2 style="margin:0 0 6px">Active Alerts</h2>
           <div id="wf-alerts" class="small-list"></div>
         </div>
+        <div class="stat-card">
+          <h2 style="margin:0 0 6px">Void Fissures</h2>
+          <div id="wf-fissures" class="small-list"></div>
+        </div>
       </div>
-      <div class="stat-card">
-        <h2 style="margin:0 0 6px">Warframe News</h2>
-        <div id="wf-news" class="small-list"></div>
+      <div class="wf-grid-3" style="margin-bottom:10px">
+        <div class="stat-card">
+          <h2 style="margin:0 0 6px">Invasions & Events</h2>
+          <div id="wf-invasions" class="small-list"></div>
+        </div>
+        <div class="stat-card">
+          <h2 style="margin:0 0 6px">World State</h2>
+          <div id="wf-world" class="small-list"></div>
+        </div>
+        <div class="stat-card">
+          <h2 style="margin:0 0 6px">Warframe News</h2>
+          <div id="wf-news" class="small-list"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -526,14 +562,38 @@ function relTime(iso) {
   return `${Math.floor(h/24)}d ago`;
 }
 
+function isPrivateHost(host) {
+  const h = String(host || '').toLowerCase();
+  if (!h) return true;
+  if (h === 'localhost' || h.endsWith('.local')) return true;
+  if (!h.includes('.')) return true;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
+    const p = h.split('.').map(n => parseInt(n, 10));
+    if (p[0] === 10) return true;
+    if (p[0] === 127) return true;
+    if (p[0] === 192 && p[1] === 168) return true;
+    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
+  }
+  return false;
+}
+
 function deriveToolIcon(link) {
   try {
-    const host = new URL(link).hostname;
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+    const u = new URL(link);
+    if (!/^https?:$/.test(u.protocol)) return '';
+    if (isPrivateHost(u.hostname)) return '';
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(u.hostname)}&sz=64`;
   } catch {
     return '';
   }
 }
+
+function normalizeToolCategory(cat) {
+  const raw = String(cat || 'General').replace(/[_-]+/g, ' ').trim();
+  if (!raw) return 'General';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 
 // ══ read/unread (LocalStorage) ════════════════════════════════
 
@@ -640,15 +700,17 @@ async function loadTools() {
     data.forEach(t => {
       const cat = (t.category || '').toLowerCase();
       const card = buildToolCard(t);
-      if (cat.includes('home') || cat.includes('network') || t.tags?.includes('local') && cat !== 'ai services') {
-         elHome.appendChild(card);
-         cntHome++;
-      } else if (cat.includes('ai') || cat.includes('code') || cat.includes('image') || cat.includes('orchestration')) {
-         elAi.appendChild(card);
-         cntAi++;
+      const isHome = cat.includes('home') || cat.includes('network') || cat.includes('nas') || cat.includes('infra');
+      const isAi = ['ai','code','image','video','voice','audio','research','orchestration','automation'].some(k => cat.includes(k));
+      if (isHome) {
+        elHome.appendChild(card);
+        cntHome++;
+      } else if (isAi) {
+        elAi.appendChild(card);
+        cntAi++;
       } else {
-         elOther.appendChild(card);
-         cntOther++;
+        elOther.appendChild(card);
+        cntOther++;
       }
     });
     
@@ -689,19 +751,21 @@ function buildToolCard(t) {
   d.className = 'tool-card';
   d.dataset.id = t.id;
   const icon = t.icon_url || deriveToolIcon(t.link);
+  const category = normalizeToolCategory(t.category);
+  const summary = (t.notes || '').trim() || `${category} tool`;
+  const usage = Number(t.usage_count || 0);
   d.innerHTML = `
     <div class="tool-head">
       ${icon ? `<img class="tool-icon" src="${esc(icon)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ''}
       <strong>${esc(t.name)}</strong>
     </div>
-    <div class="muted">${esc(t.provider)} | ${esc(t.category)}</div>
+    <div class="tool-minor">${esc(t.provider)} • ${esc(category)}</div>
+    <div class="tool-summary">${esc(summary)}</div>
     <div class="meta">
-      <span class="pill">${esc(t.local_or_cloud)}</span>
-      <span class="pill">${esc(t.auth_type)}</span>
-      <span class="pill">${esc(t.cost_hint)}</span>
-      ${(t.tags||[]).map(tag=>`<span class="pill">${esc(tag)}</span>`).join('')}
+      <span class="pill">${esc(t.local_or_cloud || 'unknown')}</span>
+      <span class="pill">${esc(t.cost_hint || 'unknown')}</span>
+      ${usage > 0 ? `<span class="pill">used ${esc(usage)}x</span>` : ''}
     </div>
-    ${t.notes ? `<div class="muted">${esc(t.notes)}</div>` : ''}
     ${t.last_used ? `<div class="muted" style="font-size:11px">Last used: ${relTime(t.last_used)}</div>` : ''}
     <div><a href="${esc(t.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">Open ↗</a></div>
     <div class="card-actions">
@@ -997,6 +1061,35 @@ async function loadDigest() {
 
 const DEFAULT_MARKET_SYMBOLS = '^GSPC,^IXIC,^DJI,BTC-USD,ETH-USD,EURUSD=X,GC=F,CL=F';
 
+
+function buildSparklineSvg(points, cls = '') {
+  const vals = (points || []).map(v => Number(v)).filter(v => Number.isFinite(v));
+  if (vals.length < 2) return '<div class="muted">No chart data.</div>';
+
+  const w = 260;
+  const h = 56;
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = max - min || 1;
+
+  const coords = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * w;
+    const y = h - ((v - min) / span) * h;
+    return [x, y];
+  });
+
+  const line = coords.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+  const fill = `0,${h} ${line} ${w},${h}`;
+
+  return `<svg class="sparkline ${esc(cls)}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polygon class="sparkline-fill" points="${fill}" /><polyline class="sparkline-line" points="${line}" /></svg>`;
+}
+
+function pctChangeFromSeries(points) {
+  const vals = (points || []).map(v => Number(v)).filter(v => Number.isFinite(v));
+  if (vals.length < 2 || vals[0] === 0) return null;
+  return ((vals[vals.length - 1] - vals[0]) / Math.abs(vals[0])) * 100;
+}
+
 function fmtMarketNum(v, digits=2) {
   if (v==null || Number.isNaN(Number(v))) return '—';
   return Number(v).toLocaleString(undefined, {maximumFractionDigits: digits});
@@ -1015,11 +1108,16 @@ async function loadMarkets() {
   try {
     const params = new URLSearchParams();
     if (symbols) params.set('symbols', symbols);
+    params.set('history_range', '1mo');
+    params.set('history_interval', '1d');
+
     const data = await fetch(`${API}/markets/overview?${params}`).then(r=>r.json());
 
-    metaEl.textContent = `${data.count||0} quotes | updated ${relTime(data.generated_at)}` + (data.errors?.length ? ` | WARN ${data.errors.length} warning(s)` : '');
+    const warnings = (data.errors?.length || 0) + (data.history_errors?.length || 0);
+    metaEl.textContent = `${data.count||0} quotes | ${data.history_range || '1mo'} trend | updated ${relTime(data.generated_at)}` + (warnings ? ` | WARN ${warnings}` : '');
 
     const quotes = data.quotes || [];
+    const history = data.history || {};
     gridEl.innerHTML = '';
     if (!quotes.length) {
       gridEl.innerHTML = '<div class="empty">No market data.</div>';
@@ -1030,6 +1128,10 @@ async function loadMarkets() {
       const ch = Number(q.change || 0);
       const pct = Number(q.change_pct || 0);
       const cls = ch > 0 ? 'up' : (ch < 0 ? 'down' : 'flat');
+      const series = (history[q.symbol] || []).map(p => Number(p.close)).filter(v => Number.isFinite(v));
+      const trendPct = pctChangeFromSeries(series);
+      const trendCls = trendPct == null ? 'flat' : (trendPct > 0 ? 'up' : (trendPct < 0 ? 'down' : 'flat'));
+
       const card = document.createElement('div');
       card.className = 'market-card';
       card.innerHTML = `
@@ -1037,6 +1139,13 @@ async function loadMarkets() {
         <div class="muted">${esc(q.symbol)}${q.currency ? ` | ${esc(q.currency)}` : ''}</div>
         <div class="market-price">${fmtMarketNum(q.price, 4)}</div>
         <div class="market-change ${cls}">${ch>=0?'+':''}${fmtMarketNum(ch,4)} (${pct>=0?'+':''}${fmtMarketNum(pct,2)}%)</div>
+        <div class="chart-wrap sparkline-muted">
+          ${buildSparklineSvg(series)}
+          <div class="sparkline-label">
+            <span>30d trend</span>
+            <span class="market-change ${trendCls}">${trendPct == null ? 'n/a' : `${trendPct >= 0 ? '+' : ''}${fmtMarketNum(trendPct,2)}%`}</span>
+          </div>
+        </div>
       `;
       gridEl.appendChild(card);
     });
@@ -1047,16 +1156,47 @@ async function loadMarkets() {
 
 // ══ saved items ═══════════════════════════════════════════════
 
+let _f1Profiles = {};
+let _f1SelectedProfileKey = '';
+
+function showF1DriverProfile(key) {
+  _f1SelectedProfileKey = key;
+  const panel = document.getElementById('f1-driver-detail');
+  const p = _f1Profiles[key];
+  if (!panel || !p) return;
+
+  const history = (p.points_history || []).map(x => Number(x.points)).filter(v => Number.isFinite(v));
+  panel.innerHTML = `
+    <h2 style="margin:0 0 6px">Driver Focus: ${esc(p.driver || 'Unknown')}</h2>
+    <div class="small-row"><span>Team</span><strong>${esc(p.team || '-')}</strong></div>
+    <div class="small-row"><span>Championship</span><strong>P${esc(p.championship_position || '?')} | ${esc(p.points || '0')} pts</strong></div>
+    <div class="small-row"><span>Wins / Podiums</span><strong>${esc(p.wins || 0)} / ${esc(p.podiums || 0)}</strong></div>
+    <div class="small-row"><span>Finish Rate</span><strong>${p.finish_rate == null ? '-' : esc(p.finish_rate) + '%'}</strong></div>
+    <div class="small-row"><span>Avg Grid / Finish</span><strong>${p.avg_grid == null ? '-' : esc(p.avg_grid)} / ${p.avg_finish == null ? '-' : esc(p.avg_finish)}</strong></div>
+    <div class="small-row"><span>Last Race Behavior</span><strong>${esc(p.latest_result?.status || 'No recent race')}</strong></div>
+    <div class="chart-wrap sparkline-muted">
+      ${buildSparklineSvg(history)}
+      <div class="sparkline-label"><span>Season points progression</span><span>${history.length ? esc(history[history.length-1]) + ' pts' : ''}</span></div>
+    </div>
+  `;
+}
+
 async function loadF1() {
   const seasonInput = document.getElementById('f1-season');
   const metaEl = document.getElementById('f1-meta');
   const nextEl = document.getElementById('f1-next');
   const standingsEl = document.getElementById('f1-standings');
-  if (!seasonInput || !metaEl || !nextEl || !standingsEl) return;
+  const lastRaceEl = document.getElementById('f1-last-race');
+  const tracksEl = document.getElementById('f1-tracks');
+  const profileEl = document.getElementById('f1-driver-detail');
+  if (!seasonInput || !metaEl || !nextEl || !standingsEl || !lastRaceEl || !tracksEl || !profileEl) return;
 
   const season = (seasonInput.value || 'current').trim() || 'current';
   standingsEl.innerHTML = '<div class="empty">Loading...</div>';
   nextEl.innerHTML = '<div class="muted">Loading race calendar...</div>';
+  lastRaceEl.innerHTML = '<div class="muted">Loading latest race...</div>';
+  profileEl.innerHTML = '<div class="muted">Select a driver profile...</div>';
+  tracksEl.innerHTML = '<div class="empty">Loading track guide...</div>';
 
   try {
     const params = new URLSearchParams();
@@ -1079,6 +1219,23 @@ async function loadF1() {
       nextEl.innerHTML = '<div class="muted">No upcoming race found.</div>';
     }
 
+    const latestRace = data.latest_race;
+    if (latestRace && (latestRace.results || []).length) {
+      const rows = (latestRace.results || []).slice(0, 8).map(r => `
+        <div class="small-row">
+          <span>P${esc(r.position || '?')} ${esc(r.driver || 'Driver')}</span>
+          <span class="muted">${esc(r.status || r.time || '')}</span>
+        </div>
+      `).join('');
+      lastRaceEl.innerHTML = `
+        <h2 style="margin:0 0 6px">Last Race Snapshot</h2>
+        <div class="muted">${esc(latestRace.race_name || '')} (${esc(latestRace.circuit || '-')})</div>
+        <div class="small-list">${rows}</div>
+      `;
+    } else {
+      lastRaceEl.innerHTML = '<div class="muted">No completed race data yet.</div>';
+    }
+
     const standings = data.standings || [];
     standingsEl.innerHTML = '';
     if (!standings.length) {
@@ -1086,21 +1243,61 @@ async function loadF1() {
       return;
     }
 
+    _f1Profiles = {};
+    (data.driver_profiles || []).forEach(p => {
+      if (!p || !p.profile_key) return;
+      _f1Profiles[p.profile_key] = p;
+    });
+
     standings.slice(0, 12).forEach(row => {
       const card = document.createElement('div');
-      card.className = 'stat-card';
+      card.className = 'f1-driver-card';
+      const key = row.profile_key || row.driver_id || row.code || '';
       card.innerHTML = `
         <span class="rank-pill">P${esc(row.position || '?')}</span>
         <strong>${esc(row.driver || 'Unknown Driver')}</strong>
         <div class="muted">${esc(row.team || 'Unknown Team')}</div>
         <div class="small-row"><span>Points</span><strong>${esc(row.points || '0')}</strong></div>
         <div class="small-row"><span>Wins</span><strong>${esc(row.wins || '0')}</strong></div>
+        <div class="actions"><button class="sm" onclick="showF1DriverProfile('${esc(key)}')">Open profile</button></div>
       `;
       standingsEl.appendChild(card);
     });
+
+    const guide = (data.upcoming_races && data.upcoming_races.length) ? data.upcoming_races : (data.track_guide || []);
+    tracksEl.innerHTML = '';
+    if (!guide.length) {
+      tracksEl.innerHTML = '<div class="empty">No circuit guide available.</div>';
+    } else {
+      guide.slice(0, 10).forEach(r => {
+        const links = r.links || {};
+        const card = document.createElement('div');
+        card.className = 'stat-card';
+        card.innerHTML = `
+          <span class="rank-pill">R${esc(r.round || '?')}</span>
+          <strong>${esc(r.race_name || 'Race')}</strong>
+          <div class="muted">${esc(r.circuit || '-')}</div>
+          <div class="muted">${esc(r.locality || '')}${r.country ? ', ' + esc(r.country) : ''}</div>
+          <div class="f1-track-links">
+            ${links.map_url ? `<a class="pill" href="${esc(links.map_url)}" target="_blank" rel="noopener">Map</a>` : ''}
+            ${links.layout_url ? `<a class="pill" href="${esc(links.layout_url)}" target="_blank" rel="noopener">Layout</a>` : ''}
+            ${links.wiki_url ? `<a class="pill" href="${esc(links.wiki_url)}" target="_blank" rel="noopener">Wiki</a>` : ''}
+          </div>
+        `;
+        tracksEl.appendChild(card);
+      });
+    }
+
+    const preferred = _f1SelectedProfileKey && _f1Profiles[_f1SelectedProfileKey]
+      ? _f1SelectedProfileKey
+      : (standings.find(x => _f1Profiles[x.profile_key])?.profile_key || Object.keys(_f1Profiles)[0]);
+    if (preferred) showF1DriverProfile(preferred);
   } catch (e) {
     standingsEl.innerHTML = `<div class="empty err-msg">F1 API failed: ${esc(e.message)}</div>`;
     nextEl.innerHTML = '';
+    lastRaceEl.innerHTML = '';
+    profileEl.innerHTML = '';
+    tracksEl.innerHTML = '';
   }
 }
 
@@ -1109,17 +1306,25 @@ async function loadWarframe() {
   const platformSel = document.getElementById('wf-platform');
   const metaEl = document.getElementById('wf-meta');
   const marketEl = document.getElementById('wf-market');
+  const marketChartEl = document.getElementById('wf-market-chart');
   const alertsEl = document.getElementById('wf-alerts');
   const newsEl = document.getElementById('wf-news');
-  if (!itemInput || !platformSel || !metaEl || !marketEl || !alertsEl || !newsEl) return;
+  const fissuresEl = document.getElementById('wf-fissures');
+  const invasionsEl = document.getElementById('wf-invasions');
+  const worldEl = document.getElementById('wf-world');
+  if (!itemInput || !platformSel || !metaEl || !marketEl || !alertsEl || !newsEl || !fissuresEl || !invasionsEl || !worldEl) return;
 
   if (!itemInput.value.trim()) itemInput.value = 'arcane energize';
   const item = itemInput.value.trim();
   const platform = platformSel.value || 'pc';
 
   marketEl.innerHTML = '<div class="muted">Loading market...</div>';
+  if (marketChartEl) marketChartEl.innerHTML = '';
   alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
   newsEl.innerHTML = '<div class="muted">Loading news...</div>';
+  fissuresEl.innerHTML = '<div class="muted">Loading fissures...</div>';
+  invasionsEl.innerHTML = '<div class="muted">Loading invasions...</div>';
+  worldEl.innerHTML = '<div class="muted">Loading world state...</div>';
 
   try {
     const params = new URLSearchParams({ item, platform });
@@ -1132,17 +1337,29 @@ async function loadWarframe() {
       <div class="small-row"><span>Item</span><strong>${esc(m.item || item)}</strong></div>
       <div class="small-row"><span>Best Sell</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
       <div class="small-row"><span>Best Buy</span><strong>${m.best_buy != null ? fmtMarketNum(m.best_buy,0) + 'p' : '-'}</strong></div>
-      <div class="small-row"><span>Live Sell Orders</span><strong>${esc(m.sell_count_live ?? 0)}</strong></div>
-      <div class="small-row"><span>Live Buy Orders</span><strong>${esc(m.buy_count_live ?? 0)}</strong></div>
+      <div class="small-row"><span>Live Orders (S/B)</span><strong>${esc(m.sell_count_live ?? 0)} / ${esc(m.buy_count_live ?? 0)}</strong></div>
+      <div class="small-row"><span>Total Orders (S/B)</span><strong>${esc(m.sell_count_total ?? 0)} / ${esc(m.buy_count_total ?? 0)}</strong></div>
+      <div class="small-row"><span>Scope</span><strong>${esc(m.selected_scope || 'live')}</strong></div>
       <a href="https://warframe.market/items/${esc(m.slug || '')}" target="_blank" rel="noopener">Open on warframe.market</a>
     `;
+
+    if (marketChartEl) {
+      const hist = (m.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
+      marketChartEl.innerHTML = `
+        ${buildSparklineSvg(hist)}
+        <div class="sparkline-label">
+          <span>${esc((m.history_period || 'history').replace('_', ' '))}</span>
+          <span>${hist.length ? `${fmtMarketNum(hist[0],0)}p → ${fmtMarketNum(hist[hist.length-1],0)}p` : 'n/a'}</span>
+        </div>
+      `;
+    }
 
     const alerts = data.worldstate?.alerts || [];
     alertsEl.innerHTML = '';
     if (!alerts.length) {
       alertsEl.innerHTML = '<div class="muted">No active alerts.</div>';
     } else {
-      alerts.slice(0, 6).forEach(a => {
+      alerts.slice(0, 8).forEach(a => {
         const row = document.createElement('div');
         row.className = 'small-row';
         row.innerHTML = `<span>${esc(a.type || a.node || 'Alert')}</span><span class="muted">${esc(a.reward || a.eta || '')}</span>`;
@@ -1150,22 +1367,69 @@ async function loadWarframe() {
       });
     }
 
+    const fissures = data.worldstate?.fissures || [];
+    fissuresEl.innerHTML = '';
+    if (!fissures.length) {
+      fissuresEl.innerHTML = '<div class="muted">No active fissures.</div>';
+    } else {
+      fissures.slice(0, 8).forEach(f => {
+        const row = document.createElement('div');
+        row.className = 'small-row';
+        row.innerHTML = `<span>${esc(f.tier || 'Fissure')} • ${esc(f.mission_type || '-')}</span><span class="muted">${esc(f.eta || '')}</span>`;
+        fissuresEl.appendChild(row);
+      });
+    }
+
+    const invasions = data.worldstate?.invasions || [];
+    const events = data.worldstate?.events || [];
+    invasionsEl.innerHTML = '';
+    if (!invasions.length && !events.length) {
+      invasionsEl.innerHTML = '<div class="muted">No invasions/events right now.</div>';
+    } else {
+      invasions.slice(0, 5).forEach(i => {
+        const row = document.createElement('div');
+        row.className = 'small-row';
+        row.innerHTML = `<span>${esc(i.node || 'Node')} (${esc(i.attacker || '?')} vs ${esc(i.defender || '?')})</span><span class="muted">${esc(i.eta || '')}</span>`;
+        invasionsEl.appendChild(row);
+      });
+      events.slice(0, 3).forEach(ev => {
+        const row = document.createElement('div');
+        row.className = 'small-row';
+        row.innerHTML = `<span>${esc(ev.description || 'Event')}</span><span class="muted">${esc(ev.eta || '')}</span>`;
+        invasionsEl.appendChild(row);
+      });
+    }
+
+    const cycles = data.worldstate?.world_cycles || {};
+    worldEl.innerHTML = `
+      <div class="small-row"><span>Cetus</span><span class="muted">${esc(cycles.cetus?.state || '-')} ${esc(cycles.cetus?.eta || '')}</span></div>
+      <div class="small-row"><span>Vallis</span><span class="muted">${esc(cycles.vallis?.state || '-')} ${esc(cycles.vallis?.eta || '')}</span></div>
+      <div class="small-row"><span>Cambion</span><span class="muted">${esc(cycles.cambion?.state || '-')} ${esc(cycles.cambion?.eta || '')}</span></div>
+      <div class="small-row"><span>Sortie</span><span class="muted">${esc(data.worldstate?.sortie?.eta || '-')}</span></div>
+      <div class="small-row"><span>Nightwave</span><span class="muted">${esc(data.worldstate?.nightwave?.active ? 'Active' : 'Inactive')}</span></div>
+    `;
+
     const news = data.worldstate?.news || [];
     newsEl.innerHTML = '';
     if (!news.length) {
       newsEl.innerHTML = '<div class="muted">No news in worldstate.</div>';
     } else {
-      news.slice(0, 6).forEach(n => {
+      news.slice(0, 8).forEach(n => {
         const row = document.createElement('div');
         row.className = 'small-row';
-        row.innerHTML = `<a href="${esc(n.url || '#')}" target="_blank" rel="noopener">${esc(n.title || 'News')}</a><span class="muted">${relTime(n.published_at)}</span>`;
+        const target = n.url || '#';
+        row.innerHTML = `<a href="${esc(target)}" target="_blank" rel="noopener">${esc(n.title || 'News')}</a><span class="muted">${relTime(n.published_at)}</span>`;
         newsEl.appendChild(row);
       });
     }
   } catch (e) {
     marketEl.innerHTML = `<div class="err-msg">Warframe API failed: ${esc(e.message)}</div>`;
+    if (marketChartEl) marketChartEl.innerHTML = '';
     alertsEl.innerHTML = '';
     newsEl.innerHTML = '';
+    fissuresEl.innerHTML = '';
+    invasionsEl.innerHTML = '';
+    worldEl.innerHTML = '';
   }
 }
 async function saveItem(url, btn, title, summary, category) {

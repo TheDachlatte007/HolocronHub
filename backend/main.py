@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
+import requests
+from statistics import median
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -33,6 +36,7 @@ class Tool(BaseModel):
     category: str
     provider: str
     link: str
+    icon_url: Optional[str] = None
     local_or_cloud: str
     auth_type: str
     cost_hint: str
@@ -176,6 +180,334 @@ _API_KEY_ENV_MAP = {
     "finnhub_api_key": "FINNHUB_API_KEY",
     "alphavantage_api_key": "ALPHAVANTAGE_API_KEY",
 }
+
+_DEFAULT_MARKET_SYMBOLS = [
+    "^GSPC",
+    "^IXIC",
+    "^DJI",
+    "BTC-USD",
+    "ETH-USD",
+    "EURUSD=X",
+    "GC=F",
+    "CL=F",
+]
+
+
+def _http_get_json(
+    url: str,
+    *,
+    params: Optional[dict[str, Any]] = None,
+    headers: Optional[dict[str, str]] = None,
+    timeout: int = 12,
+) -> tuple[Optional[Any], Optional[str]]:
+    try:
+        r = requests.get(url, params=params, headers=headers, timeout=timeout)
+        r.raise_for_status()
+        return r.json(), None
+    except Exception as e:
+        return None, str(e)
+
+
+def _coerce_symbol_list(raw: Optional[str]) -> list[str]:
+    if not raw:
+        return list(_DEFAULT_MARKET_SYMBOLS)
+    items = [s.strip().upper() for s in raw.split(",") if s.strip()]
+    if not items:
+        return list(_DEFAULT_MARKET_SYMBOLS)
+    return items[:30]
+
+
+def _fetch_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
+    errors: list[str] = []
+    try:
+        r = requests.get(
+            "https://query1.finance.yahoo.com/v7/finance/quote",
+            params={"symbols": ",".join(symbols)},
+            timeout=12,
+        )
+        r.raise_for_status()
+        payload = r.json().get("quoteResponse", {}).get("result", [])
+    except Exception as e:
+        return [], [str(e)]
+
+    out: list[dict[str, Any]] = []
+    found = {str(q.get("symbol", "")).upper() for q in payload}
+    for sym in symbols:
+        q = next((x for x in payload if str(x.get("symbol", "")).upper() == sym.upper()), None)
+        if not q:
+            errors.append(f"symbol_not_found:{sym}")
+            continue
+
+        out.append(
+            {
+                "symbol": q.get("symbol", sym),
+                "name": q.get("shortName") or q.get("longName") or q.get("symbol", sym),
+                "price": q.get("regularMarketPrice"),
+                "change": q.get("regularMarketChange"),
+                "change_pct": q.get("regularMarketChangePercent"),
+                "currency": q.get("currency"),
+                "market_state": q.get("marketState"),
+                "updated_at": q.get("regularMarketTime"),
+            }
+        )
+
+    missing = [s for s in symbols if s.upper() not in found]
+    for m in missing:
+        if f"symbol_not_found:{m}" not in errors:
+            errors.append(f"symbol_not_found:{m}")
+
+    return out, errors
+
+
+def _safe_iso_utc(date_raw: Optional[str], time_raw: Optional[str]) -> Optional[str]:
+    if not date_raw:
+        return None
+    t = (time_raw or "00:00:00Z").replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(f"{date_raw}T{t}").astimezone(timezone.utc).isoformat()
+    except Exception:
+        return None
+
+
+def _dig(data: Any, *path: str) -> Any:
+    cur = data
+    for key in path:
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(key)
+    return cur
+
+
+def _fetch_f1_overview(season: str) -> tuple[list[dict[str, Any]], Optional[dict[str, Any]], list[dict[str, Any]], list[str], str]:
+    errors: list[str] = []
+    source = "unknown"
+
+    standings_urls = [
+        ("ergast", f"https://ergast.com/api/f1/{season}/driverStandings.json"),
+        ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/driverStandings.json"),
+        ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/driverStandings/"),
+    ]
+    schedule_urls = [
+        ("ergast", f"https://ergast.com/api/f1/{season}.json"),
+        ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}.json"),
+        ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/races/"),
+    ]
+
+    standings_payload: Optional[dict[str, Any]] = None
+    schedule_payload: Optional[dict[str, Any]] = None
+
+    for src, url in standings_urls:
+        data, err = _http_get_json(url, timeout=15)
+        if err:
+            errors.append(f"standings:{src}:{err}")
+            continue
+        if isinstance(_dig(data, "MRData", "StandingsTable"), dict):
+            standings_payload = data
+            source = src
+            break
+        errors.append(f"standings:{src}:invalid_payload")
+
+    for src, url in schedule_urls:
+        data, err = _http_get_json(url, timeout=15)
+        if err:
+            errors.append(f"schedule:{src}:{err}")
+            continue
+        if isinstance(_dig(data, "MRData", "RaceTable"), dict):
+            schedule_payload = data
+            if source == "unknown":
+                source = src
+            break
+        errors.append(f"schedule:{src}:invalid_payload")
+
+    standings_out: list[dict[str, Any]] = []
+    standings_lists = _dig(standings_payload, "MRData", "StandingsTable", "StandingsLists") or []
+    first_list = standings_lists[0] if isinstance(standings_lists, list) and standings_lists else {}
+    if isinstance(first_list, dict):
+        for row in first_list.get("DriverStandings", [])[:20]:
+            drv = row.get("Driver", {}) if isinstance(row.get("Driver"), dict) else {}
+            constructors = row.get("Constructors", [])
+            team = ""
+            if isinstance(constructors, list) and constructors:
+                c0 = constructors[0] if isinstance(constructors[0], dict) else {}
+                team = str(c0.get("name", ""))
+            standings_out.append(
+                {
+                    "position": row.get("position"),
+                    "driver": f"{drv.get('givenName', '')} {drv.get('familyName', '')}".strip(),
+                    "code": drv.get("code"),
+                    "team": team,
+                    "points": row.get("points"),
+                    "wins": row.get("wins"),
+                }
+            )
+
+    races = _dig(schedule_payload, "MRData", "RaceTable", "Races") or []
+    upcoming: list[dict[str, Any]] = []
+    now_utc = datetime.now(timezone.utc)
+    next_race: Optional[dict[str, Any]] = None
+    for race in races:
+        if not isinstance(race, dict):
+            continue
+        iso = _safe_iso_utc(race.get("date"), race.get("time"))
+        race_item = {
+            "round": race.get("round"),
+            "race_name": race.get("raceName"),
+            "datetime_utc": iso,
+            "circuit": _dig(race, "Circuit", "circuitName"),
+            "locality": _dig(race, "Circuit", "Location", "locality"),
+            "country": _dig(race, "Circuit", "Location", "country"),
+        }
+        if iso:
+            try:
+                dt = datetime.fromisoformat(iso)
+                if dt >= now_utc and next_race is None:
+                    next_race = race_item
+                if dt >= now_utc:
+                    upcoming.append(race_item)
+            except Exception:
+                pass
+    if not next_race and upcoming:
+        next_race = upcoming[0]
+
+    return standings_out, next_race, upcoming[:5], errors[:12], source
+
+
+def _normalize_warframe_item_name(item: str) -> str:
+    s = str(item or "").lower().strip()
+    s = s.replace("&", " and ").replace("'", " ")
+    s = re.sub(r"[^a-z0-9]+", "_", s)
+    return s.strip("_")
+
+
+def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]]:
+    data, err = _http_get_json(f"https://api.warframestat.us/{platform}", timeout=15)
+    if err or not isinstance(data, dict):
+        return {"platform": platform, "news": [], "alerts": [], "fissures": []}, [err or "invalid_worldstate_payload"]
+
+    news_out: list[dict[str, Any]] = []
+    for n in (data.get("news") or [])[:6]:
+        if not isinstance(n, dict):
+            continue
+        news_out.append(
+            {
+                "title": n.get("message") or n.get("title") or "News",
+                "url": n.get("link"),
+                "published_at": n.get("date"),
+            }
+        )
+
+    alerts_out: list[dict[str, Any]] = []
+    for a in (data.get("alerts") or [])[:8]:
+        if not isinstance(a, dict):
+            continue
+        mission = a.get("mission", {}) if isinstance(a.get("mission"), dict) else {}
+        reward = mission.get("reward", {}) if isinstance(mission.get("reward"), dict) else {}
+        reward_name = (
+            reward.get("asString")
+            or reward.get("itemString")
+            or ", ".join(x.get("itemType", "") for x in reward.get("items", []) if isinstance(x, dict))
+            or "Reward"
+        )
+        alerts_out.append(
+            {
+                "node": mission.get("node"),
+                "faction": mission.get("faction"),
+                "type": mission.get("type"),
+                "reward": reward_name,
+                "eta": a.get("eta"),
+            }
+        )
+
+    fissures_out: list[dict[str, Any]] = []
+    for f in (data.get("fissures") or [])[:8]:
+        if not isinstance(f, dict):
+            continue
+        if f.get("expired"):
+            continue
+        fissures_out.append(
+            {
+                "tier": f.get("tier"),
+                "mission_type": f.get("missionType"),
+                "node": f.get("node"),
+                "eta": f.get("eta"),
+            }
+        )
+
+    return {
+        "platform": platform,
+        "timestamp": data.get("timestamp"),
+        "news": news_out,
+        "alerts": alerts_out,
+        "fissures": fissures_out,
+        "sortie": data.get("sortie", {}),
+        "nightwave": data.get("nightwave", {}),
+    }, []
+
+
+def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
+    slug = _normalize_warframe_item_name(item)
+    if not slug:
+        return {"item": item, "slug": "", "best_sell": None, "best_buy": None}, ["invalid_item"]
+
+    data, err = _http_get_json(
+        f"https://api.warframe.market/v1/items/{slug}/orders",
+        headers={"Accept": "application/json", "Language": "en"},
+        timeout=15,
+    )
+    if err or not isinstance(data, dict):
+        return {"item": item, "slug": slug, "best_sell": None, "best_buy": None}, [err or "invalid_market_payload"]
+
+    orders = _dig(data, "payload", "orders") or []
+    sells: list[int] = []
+    buys: list[int] = []
+    live_sell_orders: list[dict[str, Any]] = []
+    live_buy_orders: list[dict[str, Any]] = []
+    for o in orders:
+        if not isinstance(o, dict):
+            continue
+        if not o.get("visible", True):
+            continue
+        user = o.get("user", {}) if isinstance(o.get("user"), dict) else {}
+        status = str(user.get("status", "")).lower()
+        if status not in {"ingame", "online"}:
+            continue
+        plat = o.get("platinum")
+        if plat is None:
+            continue
+        try:
+            plat_int = int(plat)
+        except Exception:
+            continue
+
+        row = {
+            "price": plat_int,
+            "user": user.get("ingame_name"),
+            "status": status,
+            "quantity": o.get("quantity"),
+        }
+        order_type = str(o.get("order_type", "")).lower()
+        if order_type == "sell":
+            sells.append(plat_int)
+            live_sell_orders.append(row)
+        elif order_type == "buy":
+            buys.append(plat_int)
+            live_buy_orders.append(row)
+
+    sells_sorted = sorted(sells)
+    buys_sorted = sorted(buys, reverse=True)
+
+    return {
+        "item": item,
+        "slug": slug,
+        "best_sell": sells_sorted[0] if sells_sorted else None,
+        "best_buy": buys_sorted[0] if buys_sorted else None,
+        "median_sell": float(median(sells_sorted[:20])) if sells_sorted else None,
+        "median_buy": float(median(buys_sorted[:20])) if buys_sorted else None,
+        "sample_sell_orders": sorted(live_sell_orders, key=lambda x: x["price"])[:6],
+        "sample_buy_orders": sorted(live_buy_orders, key=lambda x: x["price"], reverse=True)[:6],
+        "sell_count_live": len(sells_sorted),
+        "buy_count_live": len(buys_sorted),
+    }, []
 
 
 def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
@@ -757,6 +1089,59 @@ async def update_settings(request: Request):
 
     return _settings_response(updated)
 
+
+# ── markets ───────────────────────────────────────────────────────────────────
+
+@app.get("/api/markets/overview")
+def markets_overview(symbols: Optional[str] = None):
+    symbol_list = _coerce_symbol_list(symbols)
+    quotes, errors = _fetch_market_quotes(symbol_list)
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "count": len(quotes),
+        "requested_symbols": symbol_list,
+        "errors": errors,
+        "quotes": quotes,
+    }
+
+
+@app.get("/api/f1/overview")
+def f1_overview(season: Optional[str] = None):
+    season_key = str(season or "current").strip().lower()
+    if season_key != "current" and (not season_key.isdigit() or len(season_key) != 4):
+        raise HTTPException(status_code=422, detail="season must be 'current' or YYYY")
+
+    standings, next_race, upcoming, errors, source = _fetch_f1_overview(season_key)
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "season": season_key,
+        "source": source,
+        "standings_count": len(standings),
+        "standings": standings,
+        "next_race": next_race,
+        "upcoming_races": upcoming,
+        "errors": errors,
+    }
+
+
+@app.get("/api/warframe/overview")
+def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
+    platform_key = str(platform or "pc").strip().lower()
+    if platform_key not in {"pc", "ps4", "xb1", "swi"}:
+        platform_key = "pc"
+
+    worldstate, world_errors = _fetch_warframe_worldstate(platform_key)
+    market, market_errors = _fetch_warframe_market(item)
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "platform": platform_key,
+        "item_query": item,
+        "worldstate": worldstate,
+        "market": market,
+        "errors": world_errors + market_errors,
+    }
+
+
 # ── schedule ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/schedule")
@@ -826,4 +1211,16 @@ def status():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8787, reload=True)
+
+
+
+
+
+
+
+
+
+
+
+
 

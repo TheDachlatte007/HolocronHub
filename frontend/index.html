@@ -31,6 +31,9 @@
     .pill.breaking{background:#7f1d1d;color:#fca5a5}
     .pill.act{background:#14532d;color:#86efac}
     .pill.read{background:#0f172a;color:#475569}
+    .pill.prio-high{background:#7f1d1d;color:#fecaca}
+    .pill.prio-watch{background:#1e3a5f;color:#bfdbfe}
+    .pill.prio-normal{background:#1f2937;color:#9ca3af}
 
     /* nav */
     .nav{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid #334155;padding-bottom:0;flex-wrap:wrap}
@@ -40,6 +43,8 @@
     /* tool cards */
     .tool-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:5px}
     .tool-card .card-actions{display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap}
+    .tool-head{display:flex;align-items:center;gap:8px}
+    .tool-icon{width:20px;height:20px;border-radius:4px;object-fit:cover;background:#0f172a;border:1px solid #334155}
     /* star rating */
     .stars{display:flex;gap:2px;cursor:pointer}
     .star{font-size:16px;color:#374151;line-height:1;transition:color .1s}
@@ -107,6 +112,20 @@
     .saved-item .title{font-size:14px;font-weight:600;line-height:1.4}
     .saved-item .summary{font-size:13px;color:#64748b;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
+    /* markets */
+    .market-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
+    .market-price{font-size:18px;font-weight:700;color:#f1f5f9}
+    .market-change.up{color:#86efac}
+    .market-change.down{color:#fca5a5}
+    .market-change.flat{color:#94a3b8}
+
+    /* f1 + warframe */
+    .overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+    .stat-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
+    .rank-pill{font-size:10px;padding:2px 7px;border-radius:999px;background:#1e3a5f;color:#bfdbfe;width:max-content}
+    .small-list{display:flex;flex-direction:column;gap:8px}
+    .small-row{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px}
+
     /* empty / error */
     .empty{color:#475569;font-size:14px;padding:24px 0;text-align:center}
     .err-msg{color:#f87171}
@@ -132,6 +151,9 @@
     <button class="nav-tab active" onclick="showTab('tools',this)">Tool Hub</button>
     <button class="nav-tab" onclick="showTab('feed',this)">Feed</button>
     <button class="nav-tab" onclick="showTab('digest',this)">Morning Digest</button>
+    <button class="nav-tab" onclick="showTab('markets',this)">Markets</button>
+    <button class="nav-tab" onclick="showTab('f1',this)">F1</button>
+    <button class="nav-tab" onclick="showTab('warframe',this)">Warframe</button>
     <button class="nav-tab" onclick="showTab('saved',this)">Saved</button>
     <button class="nav-tab" onclick="showTab('sources',this)">Sources</button>
     <button class="nav-tab" onclick="showTab('settings',this)">Settings</button>
@@ -173,6 +195,7 @@
         <input id="new_link" placeholder="https://…" style="flex:2;min-width:180px" />
       </div>
       <div class="row">
+        <input id="new_icon" placeholder="icon URL (optional)" style="flex:1" />
         <input id="new_tags" placeholder="tags, comma-separated" style="flex:1" />
         <select id="new_loc"><option value="cloud">cloud</option><option value="local">local</option></select>
         <select id="new_auth"><option value="none">none</option><option value="api-key">api-key</option><option value="oauth">oauth</option><option value="subscription">subscription</option><option value="token">token</option><option value="local">local</option></select>
@@ -204,13 +227,19 @@
           <option value="World">World</option>
           <option value="Politics">Politics</option>
         </select>
+        <select id="feed-focus" onchange="loadFeed()">
+          <option value="all">All items</option>
+          <option value="important">Important first</option>
+          <option value="critical">Only important</option>
+          <option value="breaking">Only breaking</option>
+        </select>
         <button onclick="loadFeed()">Filter</button>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
           <input type="checkbox" id="hide-read" onchange="loadFeed()" /> Hide read
         </label>
       </div>
       <div id="feed-meta" class="muted" style="margin-bottom:8px"></div>
-      <div id="feed-list" class="feed-list"><div class="empty">Loading…</div></div>
+      <div id="feed-list" class="feed-list"><div class="empty">Loading...</div></div>
     </div>
   </div>
 
@@ -223,15 +252,72 @@
         <button class="sm" onclick="markAllRead('digest')">Mark all read</button>
         <span id="digest-meta" class="muted" style="margin-left:8px"></span>
       </div>
-      <div id="digest-content"><div class="empty">Loading…</div></div>
+      <div id="digest-content"><div class="empty">Loading...</div></div>
     </div>
   </div>
 
+  <!-- ═══ MARKETS ═══ -->
+  <div id="tab-markets" style="display:none">
+    <div class="card">
+      <h2>Markets Overview</h2>
+      <div class="row">
+        <input id="market-symbols" placeholder="Symbols (comma-separated), e.g. ^GSPC,BTC-USD,ETH-USD" style="flex:1;min-width:220px" />
+        <button class="primary" onclick="loadMarkets()">Refresh</button>
+      </div>
+      <div id="market-meta" class="muted" style="margin-bottom:8px"></div>
+      <div id="market-grid" class="grid"><div class="empty">Loading...</div></div>
+    </div>
+  </div>
   <!-- ═══ SAVED ═══ -->
+  <!-- F1 -->
+  <div id="tab-f1" style="display:none">
+    <div class="card">
+      <h2>Formula 1 Overview</h2>
+      <div class="row">
+        <input id="f1-season" placeholder="Season (current or 2026)" style="width:220px" />
+        <button class="primary" onclick="loadF1()">Refresh</button>
+      </div>
+      <div id="f1-meta" class="muted" style="margin-bottom:10px"></div>
+      <div id="f1-next" class="card" style="margin-bottom:10px;background:#0b1220"></div>
+      <div id="f1-standings" class="overview-grid"><div class="empty">Loading.</div></div>
+    </div>
+  </div>
+
+  <!-- WARFRAME -->
+  <div id="tab-warframe" style="display:none">
+    <div class="card">
+      <h2>Warframe Hub</h2>
+      <div class="row">
+        <input id="wf-item" placeholder="Item, e.g. arcane energize" style="flex:1;min-width:220px" />
+        <select id="wf-platform">
+          <option value="pc">PC</option>
+          <option value="ps4">PlayStation</option>
+          <option value="xb1">Xbox</option>
+          <option value="swi">Switch</option>
+        </select>
+        <button class="primary" onclick="loadWarframe()">Refresh</button>
+      </div>
+      <div id="wf-meta" class="muted" style="margin-bottom:10px"></div>
+      <div class="overview-grid" style="margin-bottom:10px">
+        <div class="stat-card">
+          <h2 style="margin:0 0 6px">Market Snapshot</h2>
+          <div id="wf-market" class="small-list"></div>
+        </div>
+        <div class="stat-card">
+          <h2 style="margin:0 0 6px">Active Alerts</h2>
+          <div id="wf-alerts" class="small-list"></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <h2 style="margin:0 0 6px">Warframe News</h2>
+        <div id="wf-news" class="small-list"></div>
+      </div>
+    </div>
+  </div>
   <div id="tab-saved" style="display:none">
     <div class="card">
       <h2>Saved Items</h2>
-      <div id="saved-list" class="feed-list"><div class="empty">Loading…</div></div>
+      <div id="saved-list" class="feed-list"><div class="empty">Loading...</div></div>
     </div>
   </div>
 
@@ -264,7 +350,7 @@
         </select>
         <input id="src-q" placeholder="Search sources…" style="flex:1" oninput="renderSourcesFiltered()" />
       </div>
-      <div id="sources-list"><div class="empty">Loading…</div></div>
+      <div id="sources-list"><div class="empty">Loading...</div></div>
     </div>
 
     <div class="card">
@@ -440,6 +526,15 @@ function relTime(iso) {
   return `${Math.floor(h/24)}d ago`;
 }
 
+function deriveToolIcon(link) {
+  try {
+    const host = new URL(link).hostname;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+  } catch {
+    return '';
+  }
+}
+
 // ══ read/unread (LocalStorage) ════════════════════════════════
 
 const READ_KEY = 'hub_read_items';
@@ -475,6 +570,9 @@ function showTab(name, btn) {
         loadDigest();
       }
     }
+    if (name==='markets') loadMarkets();
+    if (name==='f1') loadF1();
+    if (name==='warframe') loadWarframe();
     if (name==='saved') loadSaved();
     if (name==='sources') { loadSources(); loadSchedule(); }
     if (name==='settings') loadSettingsPage();
@@ -527,8 +625,8 @@ async function loadTools() {
   const elOther = document.getElementById('tools-other');
   const secOther = document.getElementById('other-tools-section');
 
-  elAi.innerHTML = '<div class="empty">Loading…</div>';
-  elHome.innerHTML = '<div class="empty">Loading…</div>';
+  elAi.innerHTML = '<div class="empty">Loading...</div>';
+  elHome.innerHTML = '<div class="empty">Loading...</div>';
   elOther.innerHTML = '';
   secOther.style.display = 'none';
 
@@ -571,7 +669,7 @@ function buildStars(toolId, currentRating) {
   for (let i=1; i<=5; i++) {
     const s = document.createElement('span');
     s.className = 'star' + (i <= (currentRating||0) ? ' on' : '');
-    s.textContent = '★';
+    s.textContent = '*';
     s.dataset.val = i;
     s.addEventListener('click', async () => {
       const newRating = parseInt(s.dataset.val);
@@ -590,9 +688,13 @@ function buildToolCard(t) {
   const d = document.createElement('div');
   d.className = 'tool-card';
   d.dataset.id = t.id;
+  const icon = t.icon_url || deriveToolIcon(t.link);
   d.innerHTML = `
-    <strong>${esc(t.name)}</strong>
-    <div class="muted">${esc(t.provider)} · ${esc(t.category)}</div>
+    <div class="tool-head">
+      ${icon ? `<img class="tool-icon" src="${esc(icon)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ''}
+      <strong>${esc(t.name)}</strong>
+    </div>
+    <div class="muted">${esc(t.provider)} | ${esc(t.category)}</div>
     <div class="meta">
       <span class="pill">${esc(t.local_or_cloud)}</span>
       <span class="pill">${esc(t.auth_type)}</span>
@@ -637,6 +739,7 @@ function showEditForm(toolId) {
       </div>
       <div class="row">
         <input id="e_link" value="${esc(t.link)}" placeholder="https://…" style="flex:2;min-width:180px"/>
+        <input id="e_icon" value="${esc(t.icon_url||'')}" placeholder="icon URL" style="flex:1"/>
         <input id="e_tags" value="${esc((t.tags||[]).join(', '))}" placeholder="tags" style="flex:1"/>
         <select id="e_loc">${locOpts}</select>
         <select id="e_auth">${authOpts}</select>
@@ -658,6 +761,7 @@ async function saveEdit(toolId) {
     provider: document.getElementById('e_provider').value.trim(),
     category: document.getElementById('e_cat').value,
     link: document.getElementById('e_link').value.trim(),
+    icon_url: document.getElementById('e_icon').value.trim(),
     tags: document.getElementById('e_tags').value.split(',').map(s=>s.trim()).filter(Boolean),
     local_or_cloud: document.getElementById('e_loc').value,
     auth_type: document.getElementById('e_auth').value,
@@ -691,6 +795,7 @@ async function addTool() {
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   const payload = {
     id, name, provider, link,
+    icon_url: document.getElementById('new_icon').value.trim(),
     category: document.getElementById('new_category').value||'other',
     local_or_cloud: document.getElementById('new_loc').value,
     auth_type: document.getElementById('new_auth').value,
@@ -700,7 +805,7 @@ async function addTool() {
   const res = await fetch(`${API}/tools`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   if (res.ok) {
     resultEl.textContent='Tool added.';
-    ['new_name','new_provider','new_link','new_tags','new_cost'].forEach(id=>document.getElementById(id).value='');
+    ['new_name','new_provider','new_link','new_icon','new_tags','new_cost'].forEach(id=>document.getElementById(id).value='');
     loadTools(); loadCategories();
   } else {
     const err = await res.json().catch(()=>({detail:'Unknown error'}));
@@ -747,6 +852,27 @@ async function pollIngestStatus() {
 
 // ══ feed ════════════════════════════════════════════════════
 
+function feedPriority(item) {
+  if (item?.breaking || item?.actionability === 'act') return 'high';
+  const conf = Number(item?.confidence_score || 0);
+  const rel = Number(item?.daniel_score || 0);
+  if (item?.actionability === 'watch' || conf >= 70 || rel >= 55) return 'watch';
+  return 'normal';
+}
+
+function feedPriorityLabel(prio) {
+  if (prio === 'high') return 'HIGH';
+  if (prio === 'watch') return 'WATCH';
+  return 'NORMAL';
+}
+
+function feedPriorityRank(item) {
+  const prio = feedPriority(item);
+  if (prio === 'high') return 300;
+  if (prio === 'watch') return 200;
+  return 100;
+}
+
 function renderFeedItem(item, opts={}) {
   const id = item.url||item.id;
   const read = isRead(id);
@@ -756,8 +882,12 @@ function renderFeedItem(item, opts={}) {
   el.dataset.id = id;
 
   const badges = [];
+  const prio = feedPriority(item);
+  badges.push(`<span class="pill prio-${prio}">${feedPriorityLabel(prio)}</span>`);
   if (item.breaking) badges.push(`<span class="pill breaking">BREAKING</span>`);
   if (item.actionability==='act') badges.push(`<span class="pill act">ACT</span>`);
+  if (item.confidence) badges.push(`<span class="pill">${esc(item.confidence)}</span>`);
+  if (item.daniel_score!=null) badges.push(`<span class="pill">rel ${Math.round(Number(item.daniel_score)||0)}</span>`);
   badges.push(`<span class="cat-badge ${catClass(item.category)}">${esc(item.category)}</span>`);
   if (item.source_name) badges.push(`<span class="muted">${esc(item.source_name)}</span>`);
   badges.push(`<span class="muted">${relTime(item.published_at)}</span>`);
@@ -781,21 +911,38 @@ function renderFeedItem(item, opts={}) {
 async function loadFeed() {
   const q = document.getElementById('feed-q').value.trim();
   const cat = document.getElementById('feed-cat').value;
+  const focus = document.getElementById('feed-focus')?.value || 'all';
   const hideRead = document.getElementById('hide-read')?.checked;
   const params = new URLSearchParams({limit:'100'});
   if (q) params.set('q',q);
   if (cat) params.set('category',cat);
   const listEl = document.getElementById('feed-list');
-  listEl.innerHTML='<div class="empty">Loading…</div>';
+  listEl.innerHTML='<div class="empty">Loading...</div>';
   try {
     const data = await fetch(`${API}/feed?${params}`).then(r=>r.json());
-    let items = data.items||[];
+    const rawItems = data.items||[];
+    let items = rawItems.slice();
+
     if (hideRead) items = items.filter(i=>!isRead(i.url||i.id));
+
+    if (focus === 'breaking') {
+      items = items.filter(i => !!i.breaking);
+    } else if (focus === 'critical') {
+      items = items.filter(i => feedPriority(i) !== 'normal');
+      items.sort((a,b) => feedPriorityRank(b)-feedPriorityRank(a));
+    } else if (focus === 'important') {
+      items.sort((a,b) => feedPriorityRank(b)-feedPriorityRank(a));
+    }
+
+    const highCount = rawItems.filter(i => feedPriority(i)==='high').length;
+    const watchCount = rawItems.filter(i => feedPriority(i)==='watch').length;
+
     document.getElementById('feed-meta').textContent =
-      `${items.length} items · updated ${relTime(data.generated_at)}`+
-      (data.errors?.length?` · ⚠ ${data.errors.length} source error(s)`:'');
+      `${items.length} shown | high ${highCount} | watch ${watchCount} | updated ${relTime(data.generated_at)}`+
+      (data.errors?.length?` | WARN ${data.errors.length} source error(s)`:'' );
+
     listEl.innerHTML='';
-    if (!items.length) { listEl.innerHTML='<div class="empty">No items.</div>'; return; }
+    if (!items.length) { listEl.innerHTML='<div class="empty">No items for this filter.</div>'; return; }
     items.forEach(item=>listEl.appendChild(renderFeedItem(item)));
   } catch(e) {
     listEl.innerHTML=`<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
@@ -803,14 +950,13 @@ async function loadFeed() {
 }
 
 // ══ digest ═══════════════════════════════════════════════════
-
 async function loadDigest() {
   const contentEl = document.getElementById('digest-content');
-  contentEl.innerHTML='<div class="empty">Loading…</div>';
+  contentEl.innerHTML='<div class="empty">Loading...</div>';
   try {
     const data = await fetch(`${API}/digest/morning?total_limit=15&per_category=4`).then(r=>r.json());
     document.getElementById('digest-meta').textContent=
-      `${data.selected_count} items · ${data.breaking_count} breaking · ${relTime(data.generated_at)}`;
+      `${data.selected_count} items | ${data.breaking_count} breaking | ${relTime(data.generated_at)}`;
 
     const fs = data.finance_summary;
     let html='';
@@ -824,7 +970,7 @@ async function loadDigest() {
       fs.watchlist?.slice(0,5).forEach(w=>{
         html+=`<div class="watchlist-item">
           <a href="${esc(w.url)}" target="_blank" rel="noopener" style="font-size:13px;font-weight:600">${esc(w.title)}</a>
-          <div class="muted">${esc(w.source)} · ${relTime(w.published_at)}</div>
+          <div class="muted">${esc(w.source)} | ${relTime(w.published_at)}</div>
           <div class="driver-pills">
             ${(w.drivers||[]).map(d=>`<span class="driver-pill">${esc(d)}</span>`).join('')}
             ${(w.themes||[]).map(t=>`<span class="driver-pill" style="background:#1e3a5f;color:#93c5fd">${esc(t)}</span>`).join('')}
@@ -849,22 +995,193 @@ async function loadDigest() {
   }
 }
 
+const DEFAULT_MARKET_SYMBOLS = '^GSPC,^IXIC,^DJI,BTC-USD,ETH-USD,EURUSD=X,GC=F,CL=F';
+
+function fmtMarketNum(v, digits=2) {
+  if (v==null || Number.isNaN(Number(v))) return '—';
+  return Number(v).toLocaleString(undefined, {maximumFractionDigits: digits});
+}
+
+async function loadMarkets() {
+  const symbolsInput = document.getElementById('market-symbols');
+  const metaEl = document.getElementById('market-meta');
+  const gridEl = document.getElementById('market-grid');
+  if (!symbolsInput || !metaEl || !gridEl) return;
+
+  if (!symbolsInput.value.trim()) symbolsInput.value = DEFAULT_MARKET_SYMBOLS;
+  const symbols = symbolsInput.value.trim();
+
+  gridEl.innerHTML = '<div class="empty">Loading...</div>';
+  try {
+    const params = new URLSearchParams();
+    if (symbols) params.set('symbols', symbols);
+    const data = await fetch(`${API}/markets/overview?${params}`).then(r=>r.json());
+
+    metaEl.textContent = `${data.count||0} quotes | updated ${relTime(data.generated_at)}` + (data.errors?.length ? ` | WARN ${data.errors.length} warning(s)` : '');
+
+    const quotes = data.quotes || [];
+    gridEl.innerHTML = '';
+    if (!quotes.length) {
+      gridEl.innerHTML = '<div class="empty">No market data.</div>';
+      return;
+    }
+
+    quotes.forEach(q => {
+      const ch = Number(q.change || 0);
+      const pct = Number(q.change_pct || 0);
+      const cls = ch > 0 ? 'up' : (ch < 0 ? 'down' : 'flat');
+      const card = document.createElement('div');
+      card.className = 'market-card';
+      card.innerHTML = `
+        <strong>${esc(q.name || q.symbol)}</strong>
+        <div class="muted">${esc(q.symbol)}${q.currency ? ` | ${esc(q.currency)}` : ''}</div>
+        <div class="market-price">${fmtMarketNum(q.price, 4)}</div>
+        <div class="market-change ${cls}">${ch>=0?'+':''}${fmtMarketNum(ch,4)} (${pct>=0?'+':''}${fmtMarketNum(pct,2)}%)</div>
+      `;
+      gridEl.appendChild(card);
+    });
+  } catch (e) {
+    gridEl.innerHTML = `<div class="empty err-msg">Market API failed: ${esc(e.message)}</div>`;
+  }
+}
+
 // ══ saved items ═══════════════════════════════════════════════
 
+async function loadF1() {
+  const seasonInput = document.getElementById('f1-season');
+  const metaEl = document.getElementById('f1-meta');
+  const nextEl = document.getElementById('f1-next');
+  const standingsEl = document.getElementById('f1-standings');
+  if (!seasonInput || !metaEl || !nextEl || !standingsEl) return;
+
+  const season = (seasonInput.value || 'current').trim() || 'current';
+  standingsEl.innerHTML = '<div class="empty">Loading...</div>';
+  nextEl.innerHTML = '<div class="muted">Loading race calendar...</div>';
+
+  try {
+    const params = new URLSearchParams();
+    if (season) params.set('season', season);
+    const data = await fetch(`${API}/f1/overview?${params}`).then(r=>r.json());
+
+    const errInfo = data.errors?.length ? ` | ${data.errors.length} warning(s)` : '';
+    metaEl.textContent = `${data.standings_count || 0} drivers | source ${data.source || 'unknown'} | updated ${relTime(data.generated_at)}${errInfo}`;
+
+    const nr = data.next_race;
+    if (nr) {
+      nextEl.innerHTML = `
+        <h2 style="margin:0 0 6px">Next Race</h2>
+        <div style="font-size:15px;font-weight:600">${esc(nr.race_name || 'TBA')}</div>
+        <div class="muted">Round ${esc(nr.round || '?')} | ${esc(nr.circuit || 'Unknown circuit')}</div>
+        <div class="muted">${esc(nr.locality || '')}${nr.country ? ', ' + esc(nr.country) : ''}</div>
+        <div class="pill" style="width:max-content">${nr.datetime_utc ? new Date(nr.datetime_utc).toLocaleString() : 'Date TBA'}</div>
+      `;
+    } else {
+      nextEl.innerHTML = '<div class="muted">No upcoming race found.</div>';
+    }
+
+    const standings = data.standings || [];
+    standingsEl.innerHTML = '';
+    if (!standings.length) {
+      standingsEl.innerHTML = '<div class="empty">No standings available.</div>';
+      return;
+    }
+
+    standings.slice(0, 12).forEach(row => {
+      const card = document.createElement('div');
+      card.className = 'stat-card';
+      card.innerHTML = `
+        <span class="rank-pill">P${esc(row.position || '?')}</span>
+        <strong>${esc(row.driver || 'Unknown Driver')}</strong>
+        <div class="muted">${esc(row.team || 'Unknown Team')}</div>
+        <div class="small-row"><span>Points</span><strong>${esc(row.points || '0')}</strong></div>
+        <div class="small-row"><span>Wins</span><strong>${esc(row.wins || '0')}</strong></div>
+      `;
+      standingsEl.appendChild(card);
+    });
+  } catch (e) {
+    standingsEl.innerHTML = `<div class="empty err-msg">F1 API failed: ${esc(e.message)}</div>`;
+    nextEl.innerHTML = '';
+  }
+}
+
+async function loadWarframe() {
+  const itemInput = document.getElementById('wf-item');
+  const platformSel = document.getElementById('wf-platform');
+  const metaEl = document.getElementById('wf-meta');
+  const marketEl = document.getElementById('wf-market');
+  const alertsEl = document.getElementById('wf-alerts');
+  const newsEl = document.getElementById('wf-news');
+  if (!itemInput || !platformSel || !metaEl || !marketEl || !alertsEl || !newsEl) return;
+
+  if (!itemInput.value.trim()) itemInput.value = 'arcane energize';
+  const item = itemInput.value.trim();
+  const platform = platformSel.value || 'pc';
+
+  marketEl.innerHTML = '<div class="muted">Loading market...</div>';
+  alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
+  newsEl.innerHTML = '<div class="muted">Loading news...</div>';
+
+  try {
+    const params = new URLSearchParams({ item, platform });
+    const data = await fetch(`${API}/warframe/overview?${params}`).then(r=>r.json());
+    const errInfo = data.errors?.length ? ` | ${data.errors.length} warning(s)` : '';
+    metaEl.textContent = `${String(data.platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${errInfo}`;
+
+    const m = data.market || {};
+    marketEl.innerHTML = `
+      <div class="small-row"><span>Item</span><strong>${esc(m.item || item)}</strong></div>
+      <div class="small-row"><span>Best Sell</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
+      <div class="small-row"><span>Best Buy</span><strong>${m.best_buy != null ? fmtMarketNum(m.best_buy,0) + 'p' : '-'}</strong></div>
+      <div class="small-row"><span>Live Sell Orders</span><strong>${esc(m.sell_count_live ?? 0)}</strong></div>
+      <div class="small-row"><span>Live Buy Orders</span><strong>${esc(m.buy_count_live ?? 0)}</strong></div>
+      <a href="https://warframe.market/items/${esc(m.slug || '')}" target="_blank" rel="noopener">Open on warframe.market</a>
+    `;
+
+    const alerts = data.worldstate?.alerts || [];
+    alertsEl.innerHTML = '';
+    if (!alerts.length) {
+      alertsEl.innerHTML = '<div class="muted">No active alerts.</div>';
+    } else {
+      alerts.slice(0, 6).forEach(a => {
+        const row = document.createElement('div');
+        row.className = 'small-row';
+        row.innerHTML = `<span>${esc(a.type || a.node || 'Alert')}</span><span class="muted">${esc(a.reward || a.eta || '')}</span>`;
+        alertsEl.appendChild(row);
+      });
+    }
+
+    const news = data.worldstate?.news || [];
+    newsEl.innerHTML = '';
+    if (!news.length) {
+      newsEl.innerHTML = '<div class="muted">No news in worldstate.</div>';
+    } else {
+      news.slice(0, 6).forEach(n => {
+        const row = document.createElement('div');
+        row.className = 'small-row';
+        row.innerHTML = `<a href="${esc(n.url || '#')}" target="_blank" rel="noopener">${esc(n.title || 'News')}</a><span class="muted">${relTime(n.published_at)}</span>`;
+        newsEl.appendChild(row);
+      });
+    }
+  } catch (e) {
+    marketEl.innerHTML = `<div class="err-msg">Warframe API failed: ${esc(e.message)}</div>`;
+    alertsEl.innerHTML = '';
+    newsEl.innerHTML = '';
+  }
+}
 async function saveItem(url, btn, title, summary, category) {
   btn.disabled=true;
   const res = await fetch(`${API}/saved`,{
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({url, title, summary, category}),
   });
-  if (res.ok) { btn.textContent='Saved ✓'; }
+  if (res.ok) { btn.textContent='Saved'; }
   else if (res.status===409) { btn.textContent='Already saved'; }
   else { btn.disabled=false; btn.textContent='Failed'; }
 }
 
 async function loadSaved() {
   const listEl = document.getElementById('saved-list');
-  listEl.innerHTML='<div class="empty">Loading…</div>';
+  listEl.innerHTML='<div class="empty">Loading...</div>';
   try {
     const items = await fetch(`${API}/saved`).then(r=>r.json());
     listEl.innerHTML='';
@@ -946,7 +1263,7 @@ let _allSources = [];
 
 async function loadSources() {
   const listEl = document.getElementById('sources-list');
-  listEl.innerHTML='<div class="empty">Loading…</div>';
+  listEl.innerHTML='<div class="empty">Loading...</div>';
   try {
     _allSources = await fetch(`${API}/sources?enabled_only=false`).then(r=>r.json());
     renderSourcesFiltered();
@@ -1282,4 +1599,37 @@ fetchSettings().catch(()=>{}).finally(() => {
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -10,7 +10,10 @@ from typing import Any
 import feedparser
 import requests
 
-from normalize import normalize_rss_entry, normalize_api_entry
+try:
+    from backend.normalize import normalize_rss_entry, normalize_api_entry
+except ImportError:
+    from normalize import normalize_rss_entry, normalize_api_entry
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 SOURCES_FILE = BASE_DIR / "data" / "sources.json"
@@ -608,3 +611,4 @@ if __name__ == "__main__":
         f"ingested: {result['count']} items, errors: {len(result['errors'])}, "
         f"breaking: {result.get('breaking_count',0)}, dedup_removed: {result.get('dedup_removed',0)}"
     )
+

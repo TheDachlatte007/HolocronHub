@@ -3,13 +3,15 @@ from __future__ import annotations
 import json
 import os
 import shutil
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -19,6 +21,8 @@ SOURCES_FILE = BASE_DIR / "data" / "sources.json"
 FEED_FILE = BASE_DIR / "data" / "feed_items.json"
 SAVED_FILE = BASE_DIR / "data" / "saved_items.json"
 SCHEDULE_FILE = BASE_DIR / "data" / "schedule.json"
+SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
+FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
 
 
 # ── models ────────────────────────────────────────────────────────────────────
@@ -140,6 +144,145 @@ def _save_schedule(cfg: dict) -> None:
     SCHEDULE_FILE.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+_DEFAULT_SETTINGS = {
+    "ux": {
+        "language": "EN",
+        "default_category": "",
+        "show_disabled_sources": False,
+    },
+    "feed": {
+        "refresh_interval_minutes": 15,
+        "digest_mode": "daily",
+    },
+    "models": {
+        "openclaw_model": "unknown",
+    },
+    "api_keys": {
+        "marketaux_api_key": "",
+        "finnhub_api_key": "",
+        "alphavantage_api_key": "",
+    },
+}
+
+_ALLOWED_SETTINGS_PATCH = {
+    "ux": {"language", "default_category", "show_disabled_sources"},
+    "feed": {"refresh_interval_minutes", "digest_mode"},
+    "models": {"openclaw_model"},
+    "api_keys": {"marketaux_api_key", "finnhub_api_key", "alphavantage_api_key"},
+}
+
+_API_KEY_ENV_MAP = {
+    "marketaux_api_key": "MARKETAUX_API_KEY",
+    "finnhub_api_key": "FINNHUB_API_KEY",
+    "alphavantage_api_key": "ALPHAVANTAGE_API_KEY",
+}
+
+
+def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
+    cfg = deepcopy(_DEFAULT_SETTINGS)
+    if not isinstance(raw, dict):
+        return cfg
+
+    for section, keys in _ALLOWED_SETTINGS_PATCH.items():
+        incoming = raw.get(section)
+        if not isinstance(incoming, dict):
+            continue
+        for key in keys:
+            if key in incoming:
+                cfg[section][key] = incoming[key]
+
+    cfg["ux"]["language"] = "DE" if str(cfg["ux"].get("language", "EN")).upper() == "DE" else "EN"
+    cfg["ux"]["default_category"] = str(cfg["ux"].get("default_category", "")).strip()
+    cfg["ux"]["show_disabled_sources"] = bool(cfg["ux"].get("show_disabled_sources", False))
+
+    try:
+        refresh = int(cfg["feed"].get("refresh_interval_minutes", 15))
+    except Exception:
+        refresh = 15
+    cfg["feed"]["refresh_interval_minutes"] = max(1, min(refresh, 240))
+
+    digest_mode = str(cfg["feed"].get("digest_mode", "daily")).lower()
+    if digest_mode not in {"off", "daily", "twice"}:
+        digest_mode = "daily"
+    cfg["feed"]["digest_mode"] = digest_mode
+
+    model_name = str(cfg["models"].get("openclaw_model", "unknown")).strip()
+    cfg["models"]["openclaw_model"] = model_name or "unknown"
+
+    for key in _API_KEY_ENV_MAP:
+        cfg["api_keys"][key] = str(cfg["api_keys"].get(key, "")).strip()
+
+    return cfg
+
+
+def _load_settings() -> dict[str, Any]:
+    if SETTINGS_FILE.exists():
+        try:
+            data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+    else:
+        data = {}
+
+    cfg = _normalize_settings(data)
+
+    env_model = os.getenv("OPENCLAW_MODEL", "").strip()
+    if env_model and cfg["models"].get("openclaw_model") in {"", "unknown"}:
+        cfg["models"]["openclaw_model"] = env_model
+
+    for settings_key, env_name in _API_KEY_ENV_MAP.items():
+        if not cfg["api_keys"].get(settings_key):
+            cfg["api_keys"][settings_key] = os.getenv(env_name, "").strip()
+
+    return cfg
+
+
+def _save_settings(cfg: dict[str, Any]) -> None:
+    SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS_FILE.write_text(
+        json.dumps(_normalize_settings(cfg), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def _patch_settings(current: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
+    merged = deepcopy(current)
+    if not isinstance(patch, dict):
+        return _normalize_settings(merged)
+
+    for section, keys in _ALLOWED_SETTINGS_PATCH.items():
+        incoming = patch.get(section)
+        if not isinstance(incoming, dict):
+            continue
+        for key in keys:
+            if key in incoming:
+                merged.setdefault(section, {})
+                merged[section][key] = incoming[key]
+
+    return _normalize_settings(merged)
+
+
+def _apply_settings_env(cfg: dict[str, Any]) -> None:
+    model_name = str(cfg.get("models", {}).get("openclaw_model", "")).strip()
+    if model_name:
+        os.environ["OPENCLAW_MODEL"] = model_name
+
+    api_cfg = cfg.get("api_keys", {})
+    for settings_key, env_name in _API_KEY_ENV_MAP.items():
+        value = str(api_cfg.get(settings_key, "")).strip()
+        if value:
+            os.environ[env_name] = value
+        else:
+            os.environ.pop(env_name, None)
+
+
+def _settings_response(cfg: dict[str, Any]) -> dict[str, Any]:
+    schedule_cfg = _load_schedule()
+    job = _scheduler.get_job(_schedule_job_id)
+    next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+    return {**cfg, "schedule": {**schedule_cfg, "next_run": next_run}}
+
+
 # ── ingest core ───────────────────────────────────────────────────────────────
 
 def _build_cost_guard(selected_items: list[dict], total_limit: int) -> dict:
@@ -180,7 +323,10 @@ def _run_ingest_bg() -> None:
     _ingest_state["running"] = True
     _ingest_state["last_result"] = None
     try:
-        from ingest import run_ingest
+        try:
+            from backend.ingest import run_ingest
+        except ImportError:
+            from ingest import run_ingest
         result = run_ingest()
         _ingest_state["last_result"] = {
             "ok": True,
@@ -218,6 +364,9 @@ def _apply_schedule(cfg: dict) -> None:
 
 @app.on_event("startup")
 def _startup() -> None:
+    settings_cfg = _load_settings()
+    _apply_settings_env(settings_cfg)
+
     cfg = _load_schedule()
     _apply_schedule(cfg)
     _scheduler.start()
@@ -237,6 +386,13 @@ def _shutdown() -> None:
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/")
+def index():
+    if FRONTEND_INDEX.exists():
+        return FileResponse(FRONTEND_INDEX)
+    raise HTTPException(status_code=404, detail="Frontend index not found")
 
 
 # ── tools ─────────────────────────────────────────────────────────────────────
@@ -563,6 +719,44 @@ def get_morning_digest(
     }
 
 
+# ── settings ──────────────────────────────────────────────────────────────────
+
+@app.get("/api/settings")
+def get_settings():
+    cfg = _load_settings()
+    _apply_settings_env(cfg)
+    return _settings_response(cfg)
+
+
+@app.patch("/api/settings")
+async def update_settings(request: Request):
+    patch = await request.json()
+
+    cfg = _load_settings()
+    updated = _patch_settings(cfg, patch)
+    _save_settings(updated)
+    _apply_settings_env(updated)
+
+    if isinstance(patch, dict):
+        sched_patch = patch.get("schedule")
+    else:
+        sched_patch = None
+
+    if isinstance(sched_patch, dict):
+        sched_cfg = _load_schedule()
+        sched_cfg.update({
+            k: v for k, v in sched_patch.items()
+            if k in {"enabled", "interval_hours", "run_at_startup"}
+        })
+        try:
+            sched_cfg["interval_hours"] = max(1, int(sched_cfg.get("interval_hours", 2)))
+        except Exception:
+            sched_cfg["interval_hours"] = 2
+        _save_schedule(sched_cfg)
+        _apply_schedule(sched_cfg)
+
+    return _settings_response(updated)
+
 # ── schedule ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/schedule")
@@ -578,7 +772,10 @@ async def update_schedule(request: Request):
     patch = await request.json()
     cfg = _load_schedule()
     cfg.update({k: v for k, v in patch.items() if k in {"enabled", "interval_hours", "run_at_startup"}})
-    cfg["interval_hours"] = max(1, int(cfg.get("interval_hours", 2)))
+    try:
+        cfg["interval_hours"] = max(1, int(cfg.get("interval_hours", 2)))
+    except Exception:
+        cfg["interval_hours"] = 2
     _save_schedule(cfg)
     _apply_schedule(cfg)
     job = _scheduler.get_job(_schedule_job_id)
@@ -629,3 +826,4 @@ def status():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8787, reload=True)
+

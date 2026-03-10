@@ -111,12 +111,17 @@
     .empty{color:#475569;font-size:14px;padding:24px 0;text-align:center}
     .err-msg{color:#f87171}
     
-    /* settings modal */
-    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100}
-    .modal{background:#0b1220;border:1px solid #334155;border-radius:12px;width:90%;max-width:400px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,.5)}
-    .modal h2{margin-top:0;color:#f1f5f9;font-size:1.1rem;margin-bottom:15px;text-transform:none;letter-spacing:normal}
-    .modal .form-row{margin-bottom:12px}
-    .modal .form-row label{display:block;margin-bottom:4px;font-size:13px;color:#cbd5e1}
+    /* settings page */
+    .settings-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+    .settings-tab{padding:7px 12px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#94a3b8;cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+    .settings-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
+    .settings-panel{display:none;background:#0b1220;border:1px solid #334155;border-radius:10px;padding:14px}
+    .settings-panel.active{display:block}
+    .settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+    .settings-field label{display:block;font-size:12px;color:#94a3b8;margin-bottom:6px}
+    .settings-field input,.settings-field select{width:100%}
+    .settings-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+    .settings-hint{font-size:12px;color:#64748b;margin-top:8px}
   </style>
 </head>
 <body>
@@ -129,8 +134,7 @@
     <button class="nav-tab" onclick="showTab('digest',this)">Morning Digest</button>
     <button class="nav-tab" onclick="showTab('saved',this)">Saved</button>
     <button class="nav-tab" onclick="showTab('sources',this)">Sources</button>
-    <div style="flex:1"></div>
-    <button class="sm" onclick="openSettings()" title="Settings" style="margin-bottom:8px">⚙️ Setting</button>
+    <button class="nav-tab" onclick="showTab('settings',this)">Settings</button>
   </div>
 
   <!-- ═══ TOOLS ═══ -->
@@ -286,45 +290,135 @@
       <div id="src-add-result" class="muted"></div>
     </div>
   </div>
-</div>
 
-<!-- ═══ SETTINGS MODAL ═══ -->
-<div id="settingsModal" class="modal-overlay" style="display:none">
-  <div class="modal">
-    <h2>Global Settings</h2>
-    <div class="form-row">
-      <label>Language</label>
-      <select id="ux_lang" style="width:100%">
-        <option value="EN">English</option>
-        <option value="DE">Deutsch</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label>Default Feed Category</label>
-      <select id="ux_def_cat" style="width:100%">
-        <option value="">All categories</option>
-        <option value="AI">AI</option>
-        <option value="Finance">Finance</option>
-        <option value="Gaming">Gaming</option>
-        <option value="Warframe">Warframe</option>
-        <option value="World">World</option>
-        <option value="Politics">Politics</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" id="ux_show_disabled" /> Show disabled sources in lists
-      </label>
-    </div>
-    <div class="row" style="margin-top:20px;justify-content:flex-end">
-      <button onclick="closeSettings()" style="margin-right:8px">Cancel</button>
-      <button class="primary" onclick="saveSettings()">Save</button>
+  <!-- ═══ SETTINGS ═══ -->
+  <div id="tab-settings" style="display:none">
+    <div class="card">
+      <h2>Settings</h2>
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-settings-tab="general" onclick="showSettingsPanel('general',this)">General</button>
+        <button class="settings-tab" data-settings-tab="feed" onclick="showSettingsPanel('feed',this)">Feed & Digest</button>
+        <button class="settings-tab" data-settings-tab="ingest" onclick="showSettingsPanel('ingest',this)">Ingest</button>
+        <button class="settings-tab" data-settings-tab="api" onclick="showSettingsPanel('api',this)">API</button>
+      </div>
+
+      <div id="settings-panel-general" class="settings-panel active">
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label>Language</label>
+            <select id="set-ux-lang">
+              <option value="EN">English</option>
+              <option value="DE">Deutsch</option>
+            </select>
+          </div>
+          <div class="settings-field">
+            <label>Default Feed Category</label>
+            <select id="set-ux-default-category">
+              <option value="">All categories</option>
+              <option value="AI">AI</option>
+              <option value="Finance">Finance</option>
+              <option value="Gaming">Gaming</option>
+              <option value="Warframe">Warframe</option>
+              <option value="World">World</option>
+              <option value="Politics">Politics</option>
+            </select>
+          </div>
+          <div class="settings-field">
+            <label>Disabled Sources</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="set-ux-show-disabled" /> Show disabled sources in lists
+            </label>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="primary" onclick="saveSettingsGeneral()">Save General</button>
+          <span id="settings-status-general" class="muted"></span>
+        </div>
+      </div>
+
+      <div id="settings-panel-feed" class="settings-panel">
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label>Feed Refresh Interval (minutes)</label>
+            <input id="set-feed-refresh-minutes" type="number" min="1" max="240" value="15" />
+          </div>
+          <div class="settings-field">
+            <label>Digest Mode</label>
+            <select id="set-feed-digest-mode">
+              <option value="off">Off</option>
+              <option value="daily">Daily</option>
+              <option value="twice">Twice daily</option>
+            </select>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="primary" onclick="saveSettingsFeed()">Save Feed Settings</button>
+          <span id="settings-status-feed" class="muted"></span>
+        </div>
+      </div>
+
+      <div id="settings-panel-ingest" class="settings-panel">
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label>Auto-Ingest Enabled</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="set-schedule-enabled" /> Enable scheduler
+            </label>
+          </div>
+          <div class="settings-field">
+            <label>Interval (hours)</label>
+            <input id="set-schedule-hours" type="number" min="1" max="24" value="2" />
+          </div>
+          <div class="settings-field">
+            <label>Run at Startup</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="set-schedule-startup" /> Run ingest once on app startup
+            </label>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="primary" onclick="saveSettingsIngest()">Save Ingest Settings</button>
+          <button onclick="triggerIngest()">Run Ingest Now</button>
+          <span id="settings-status-ingest" class="muted"></span>
+        </div>
+        <div id="settings-schedule-next" class="settings-hint"></div>
+      </div>
+
+      <div id="settings-panel-api" class="settings-panel">
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label>OpenClaw Model</label>
+            <input id="set-model-openclaw" placeholder="unknown" />
+          </div>
+          <div class="settings-field">
+            <label>Marketaux API Key</label>
+            <input id="set-api-marketaux" type="password" placeholder="..." />
+          </div>
+          <div class="settings-field">
+            <label>Finnhub API Key</label>
+            <input id="set-api-finnhub" type="password" placeholder="..." />
+          </div>
+          <div class="settings-field">
+            <label>Alpha Vantage API Key</label>
+            <input id="set-api-alphavantage" type="password" placeholder="..." />
+          </div>
+        </div>
+        <div class="settings-actions">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="set-api-show" onchange="toggleApiKeyVisibility()" /> Show keys
+          </label>
+          <button class="primary" onclick="saveSettingsApi()">Save API & Model</button>
+          <span id="settings-status-api" class="muted"></span>
+        </div>
+        <div class="settings-hint">Keys are stored in local project settings for this self-hosted instance.</div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-const API = 'http://localhost:8787/api';
+const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8787' : window.location.origin;
+const API = API_BASE + '/api';
 
 // ══ helpers ══════════════════════════════════════════════════
 
@@ -372,9 +466,18 @@ function showTab(name, btn) {
       if(gSet.default_category) document.getElementById('feed-cat').value = gSet.default_category;
       loadFeed();
     }
-    if (name==='digest') loadDigest();
+    if (name==='digest') {
+      const digestMode = _appSettings?.feed?.digest_mode || 'daily';
+      if (digestMode === 'off') {
+        document.getElementById('digest-meta').textContent = 'Digest is disabled in settings.';
+        document.getElementById('digest-content').innerHTML = '<div class="empty">Digest is disabled in Settings.</div>';
+      } else {
+        loadDigest();
+      }
+    }
     if (name==='saved') loadSaved();
     if (name==='sources') { loadSources(); loadSchedule(); }
+    if (name==='settings') loadSettingsPage();
   }
 }
 
@@ -791,15 +894,36 @@ async function deleteSaved(id, btn) {
 
 // ══ schedule ══════════════════════════════════════════════════
 
+function applyScheduleUI(d) {
+  const enabled = !!d?.enabled;
+  const interval = d?.interval_hours || 2;
+  const runAtStartup = !!d?.run_at_startup;
+  const nextText = d?.next_run ? `Next run: ${relTime(d.next_run)}` : (enabled ? 'Scheduled' : 'Disabled');
+
+  const legacyEnabled = document.getElementById('sched-enabled');
+  const legacyHours = document.getElementById('sched-hours');
+  const legacyStartup = document.getElementById('sched-startup');
+  const legacyNext = document.getElementById('sched-next');
+  if (legacyEnabled) legacyEnabled.checked = enabled;
+  if (legacyHours) legacyHours.value = interval;
+  if (legacyStartup) legacyStartup.checked = runAtStartup;
+  if (legacyNext) legacyNext.textContent = nextText;
+
+  const settingsEnabled = document.getElementById('set-schedule-enabled');
+  const settingsHours = document.getElementById('set-schedule-hours');
+  const settingsStartup = document.getElementById('set-schedule-startup');
+  const settingsNext = document.getElementById('settings-schedule-next');
+  if (settingsEnabled) settingsEnabled.checked = enabled;
+  if (settingsHours) settingsHours.value = interval;
+  if (settingsStartup) settingsStartup.checked = runAtStartup;
+  if (settingsNext) settingsNext.textContent = nextText;
+}
+
 async function loadSchedule() {
   try {
     const d = await fetch(`${API}/schedule`).then(r=>r.json());
-    document.getElementById('sched-enabled').checked = !!d.enabled;
-    document.getElementById('sched-hours').value = d.interval_hours||2;
-    document.getElementById('sched-startup').checked = !!d.run_at_startup;
-    document.getElementById('sched-next').textContent = d.next_run
-      ? `Next run: ${relTime(d.next_run)}`
-      : (d.enabled ? 'Scheduled' : 'Disabled');
+    applyScheduleUI(d);
+    if (_appSettings) _appSettings.schedule = { ...(_appSettings.schedule||{}), ...d };
   } catch {}
 }
 
@@ -811,9 +935,8 @@ async function saveSchedule() {
   };
   try {
     const d = await fetch(`${API}/schedule`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)}).then(r=>r.json());
-    document.getElementById('sched-next').textContent = d.next_run
-      ? `Next run: ${relTime(d.next_run)}`
-      : (d.enabled ? 'Scheduled' : 'Disabled');
+    applyScheduleUI(d);
+    if (_appSettings) _appSettings.schedule = { ...(_appSettings.schedule||{}), ...d };
   } catch {}
 }
 
@@ -916,34 +1039,247 @@ async function addSource() {
 document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')loadTools();});
 document.getElementById('feed-q').addEventListener('keydown',e=>{if(e.key==='Enter')loadFeed();});
 
-// ══ Settings (Local Storage v1.1) ═════════════════════════════
+// ══ settings page ═════════════════════════════════════════════
+
 const SETTINGS_KEY = 'hub_global_settings';
+const DEFAULT_SETTINGS = {
+  ux: {
+    language: 'EN',
+    default_category: '',
+    show_disabled_sources: false,
+  },
+  feed: {
+    refresh_interval_minutes: 15,
+    digest_mode: 'daily',
+  },
+  schedule: {
+    enabled: true,
+    interval_hours: 2,
+    run_at_startup: false,
+    next_run: null,
+  },
+  models: {
+    openclaw_model: 'unknown',
+  },
+  api_keys: {
+    marketaux_api_key: '',
+    finnhub_api_key: '',
+    alphavantage_api_key: '',
+  },
+};
+
+let _appSettings = null;
+let _feedAutoRefreshTimer = null;
+
+function applyFeedAutoRefresh() {
+  if (_feedAutoRefreshTimer) {
+    clearInterval(_feedAutoRefreshTimer);
+    _feedAutoRefreshTimer = null;
+  }
+  const minutes = parseInt(_appSettings?.feed?.refresh_interval_minutes || 0) || 0;
+  if (minutes <= 0) return;
+  _feedAutoRefreshTimer = setInterval(() => {
+    const tab = document.getElementById('tab-feed');
+    if (tab && tab.style.display !== 'none') loadFeed();
+  }, minutes * 60 * 1000);
+}
+
+function cloneDefaults() {
+  return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+}
+
+function mergeInto(base, incoming) {
+  if (!incoming || typeof incoming !== 'object') return base;
+  Object.keys(incoming).forEach(key => {
+    const val = incoming[key];
+    if (val && typeof val === 'object' && !Array.isArray(val) && base[key] && typeof base[key] === 'object' && !Array.isArray(base[key])) {
+      mergeInto(base[key], val);
+    } else {
+      base[key] = val;
+    }
+  });
+  return base;
+}
+
+function normalizeSettings(raw) {
+  const cfg = mergeInto(cloneDefaults(), raw || {});
+  cfg.ux.language = String(cfg.ux.language || 'EN').toUpperCase() === 'DE' ? 'DE' : 'EN';
+  cfg.ux.default_category = String(cfg.ux.default_category || '');
+  cfg.ux.show_disabled_sources = !!cfg.ux.show_disabled_sources;
+  cfg.feed.refresh_interval_minutes = Math.max(1, Math.min(240, parseInt(cfg.feed.refresh_interval_minutes || 15) || 15));
+  cfg.feed.digest_mode = ['off','daily','twice'].includes(String(cfg.feed.digest_mode || 'daily')) ? cfg.feed.digest_mode : 'daily';
+  cfg.schedule.interval_hours = Math.max(1, Math.min(24, parseInt(cfg.schedule.interval_hours || 2) || 2));
+  cfg.schedule.enabled = !!cfg.schedule.enabled;
+  cfg.schedule.run_at_startup = !!cfg.schedule.run_at_startup;
+  return cfg;
+}
+
 function loadGlobalSettings() {
-  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); } catch { return {}; }
+  if (_appSettings) return _appSettings.ux;
+  try {
+    return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+  } catch {
+    return {};
+  }
 }
-function openSettings() {
-  const s = loadGlobalSettings();
-  document.getElementById('ux_lang').value = s.language || 'EN';
-  document.getElementById('ux_def_cat').value = s.default_category || '';
-  document.getElementById('ux_show_disabled').checked = s.show_disabled_sources === true;
-  document.getElementById('settingsModal').style.display = 'flex';
+
+function setSettingsStatus(section, text, isError=false) {
+  const el = document.getElementById(`settings-status-${section}`);
+  if (!el) return;
+  el.textContent = text || '';
+  el.className = isError ? 'err-msg' : 'muted';
 }
-function closeSettings() {
-  document.getElementById('settingsModal').style.display = 'none';
+
+function showSettingsPanel(name, btn) {
+  document.querySelectorAll('.settings-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById(`settings-panel-${name}`);
+  if (panel) panel.classList.add('active');
 }
-function saveSettings() {
-  const s = {
-    language: document.getElementById('ux_lang').value,
-    default_category: document.getElementById('ux_def_cat').value,
-    show_disabled_sources: document.getElementById('ux_show_disabled').checked
-  };
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-  closeSettings();
-  if (tabLoaded['sources']) renderSourcesFiltered(); // re-render list with disabled check
+
+function toggleApiKeyVisibility() {
+  const show = document.getElementById('set-api-show')?.checked;
+  ['set-api-marketaux','set-api-finnhub','set-api-alphavantage'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.type = show ? 'text' : 'password';
+  });
+}
+
+function populateSettingsForm(cfg) {
+  document.getElementById('set-ux-lang').value = cfg.ux.language || 'EN';
+  document.getElementById('set-ux-default-category').value = cfg.ux.default_category || '';
+  document.getElementById('set-ux-show-disabled').checked = cfg.ux.show_disabled_sources === true;
+
+  document.getElementById('set-feed-refresh-minutes').value = cfg.feed.refresh_interval_minutes || 15;
+  document.getElementById('set-feed-digest-mode').value = cfg.feed.digest_mode || 'daily';
+
+  document.getElementById('set-model-openclaw').value = cfg.models.openclaw_model || 'unknown';
+  document.getElementById('set-api-marketaux').value = cfg.api_keys.marketaux_api_key || '';
+  document.getElementById('set-api-finnhub').value = cfg.api_keys.finnhub_api_key || '';
+  document.getElementById('set-api-alphavantage').value = cfg.api_keys.alphavantage_api_key || '';
+  const showToggle = document.getElementById('set-api-show');
+  if (showToggle) showToggle.checked = false;
+  toggleApiKeyVisibility();
+
+  applyScheduleUI(cfg.schedule || {});
+}
+
+async function fetchSettings() {
+  const data = await fetch(`${API}/settings`).then(r=>r.json());
+  _appSettings = normalizeSettings(data);
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(_appSettings.ux));
+  applyFeedAutoRefresh();
+  return _appSettings;
+}
+
+async function patchSettings(patch) {
+  const data = await fetch(`${API}/settings`, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(patch),
+  }).then(r=>r.json());
+  _appSettings = normalizeSettings(data);
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(_appSettings.ux));
+  applyFeedAutoRefresh();
+  applyScheduleUI(_appSettings.schedule || {});
+  if (tabLoaded['sources']) renderSourcesFiltered();
+  return _appSettings;
+}
+
+async function loadSettingsPage() {
+  try {
+    const cfg = await fetchSettings();
+    populateSettingsForm(cfg);
+    setSettingsStatus('general', '');
+    setSettingsStatus('feed', '');
+    setSettingsStatus('ingest', '');
+    setSettingsStatus('api', '');
+  } catch (e) {
+    setSettingsStatus('general', `Could not load settings: ${e.message}`, true);
+  }
+}
+
+async function saveSettingsGeneral() {
+  try {
+    await patchSettings({
+      ux: {
+        language: document.getElementById('set-ux-lang').value,
+        default_category: document.getElementById('set-ux-default-category').value,
+        show_disabled_sources: document.getElementById('set-ux-show-disabled').checked,
+      },
+    });
+    setSettingsStatus('general', 'Saved.');
+    if (tabLoaded['feed']) {
+      document.getElementById('feed-cat').value = _appSettings?.ux?.default_category || '';
+      loadFeed();
+    }
+  } catch (e) {
+    setSettingsStatus('general', `Save failed: ${e.message}`, true);
+  }
+}
+
+async function saveSettingsFeed() {
+  try {
+    await patchSettings({
+      feed: {
+        refresh_interval_minutes: parseInt(document.getElementById('set-feed-refresh-minutes').value) || 15,
+        digest_mode: document.getElementById('set-feed-digest-mode').value,
+      },
+    });
+    setSettingsStatus('feed', 'Saved.');
+    if (tabLoaded['digest']) {
+      const digestMode = _appSettings?.feed?.digest_mode || 'daily';
+      if (digestMode === 'off') {
+        document.getElementById('digest-meta').textContent = 'Digest is disabled in settings.';
+        document.getElementById('digest-content').innerHTML = '<div class="empty">Digest is disabled in Settings.</div>';
+      } else {
+        loadDigest();
+      }
+    }
+  } catch (e) {
+    setSettingsStatus('feed', `Save failed: ${e.message}`, true);
+  }
+}
+
+async function saveSettingsIngest() {
+  try {
+    await patchSettings({
+      schedule: {
+        enabled: document.getElementById('set-schedule-enabled').checked,
+        interval_hours: parseInt(document.getElementById('set-schedule-hours').value) || 2,
+        run_at_startup: document.getElementById('set-schedule-startup').checked,
+      },
+    });
+    setSettingsStatus('ingest', 'Saved.');
+  } catch (e) {
+    setSettingsStatus('ingest', `Save failed: ${e.message}`, true);
+  }
+}
+
+async function saveSettingsApi() {
+  try {
+    await patchSettings({
+      models: {
+        openclaw_model: document.getElementById('set-model-openclaw').value.trim() || 'unknown',
+      },
+      api_keys: {
+        marketaux_api_key: document.getElementById('set-api-marketaux').value.trim(),
+        finnhub_api_key: document.getElementById('set-api-finnhub').value.trim(),
+        alphavantage_api_key: document.getElementById('set-api-alphavantage').value.trim(),
+      },
+    });
+    setSettingsStatus('api', 'Saved.');
+  } catch (e) {
+    setSettingsStatus('api', `Save failed: ${e.message}`, true);
+  }
 }
 
 // ══ init ═════════════════════════════════════════════════════
-loadCategories().then(()=>loadTools());
+fetchSettings().catch(()=>{}).finally(() => {
+  loadCategories().then(()=>loadTools());
+});
 </script>
 </body>
 </html>
+

@@ -1154,5 +1154,90 @@
     ],
     "usage_count": 50,
     "rating": 4
+  },
+  {
+    "id": "futurepedia",
+    "name": "Futurepedia",
+    "category": "AI Indexes",
+    "provider": "Futurepedia",
+    "link": "https://www.futurepedia.io",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "free",
+    "notes": "Directory of AI tools",
+    "tags": [
+      "index",
+      "discovery"
+    ],
+    "usage_count": 34,
+    "rating": 4
+  },
+  {
+    "id": "theres-an-ai-for-that",
+    "name": "There's An AI For That",
+    "category": "AI Indexes",
+    "provider": "TAAFT",
+    "link": "https://theresanaiforthat.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "free",
+    "notes": "Large AI tool index",
+    "tags": [
+      "index",
+      "discovery"
+    ],
+    "usage_count": 36,
+    "rating": 4
+  },
+  {
+    "id": "toolify",
+    "name": "Toolify",
+    "category": "AI Indexes",
+    "provider": "Toolify",
+    "link": "https://www.toolify.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "free",
+    "notes": "AI tools and rankings",
+    "tags": [
+      "index",
+      "rankings"
+    ],
+    "usage_count": 28,
+    "rating": 3
+  },
+  {
+    "id": "futuretools",
+    "name": "FutureTools",
+    "category": "AI Indexes",
+    "provider": "FutureTools",
+    "link": "https://www.futuretools.io",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "free",
+    "notes": "Curated AI tool links",
+    "tags": [
+      "index",
+      "curated"
+    ],
+    "usage_count": 25,
+    "rating": 3
+  },
+  {
+    "id": "insidr-ai-tools",
+    "name": "Insidr AI Tools",
+    "category": "AI Indexes",
+    "provider": "Insidr",
+    "link": "https://www.insidr.ai/ai-tools",
+    "local_or_cloud": "cloud",
+    "auth_type": "none",
+    "cost_hint": "free",
+    "notes": "AI tools explorer",
+    "tags": [
+      "index",
+      "tools"
+    ],
+    "usage_count": 22,
+    "rating": 3
   }
 ]

@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import requests
+import time
 from urllib.parse import quote, quote_plus
 from statistics import median
 from copy import deepcopy
@@ -195,6 +196,29 @@ _DEFAULT_MARKET_SYMBOLS = [
 ]
 
 
+_DEFAULT_HTTP_HEADERS = {
+    "User-Agent": "HolocronHub/0.5 (+self-hosted)",
+    "Accept": "application/json, text/plain, */*",
+}
+
+_API_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def _cache_get(key: str, ttl_seconds: int) -> Optional[Any]:
+    ent = _API_CACHE.get(key)
+    if not isinstance(ent, dict):
+        return None
+    ts = float(ent.get("ts") or 0.0)
+    if time.time() - ts > max(1, int(ttl_seconds)):
+        _API_CACHE.pop(key, None)
+        return None
+    return deepcopy(ent.get("value"))
+
+
+def _cache_set(key: str, value: Any) -> None:
+    _API_CACHE[key] = {"ts": time.time(), "value": deepcopy(value)}
+
+
 def _http_get_json(
     url: str,
     *,
@@ -202,8 +226,11 @@ def _http_get_json(
     headers: Optional[dict[str, str]] = None,
     timeout: int = 12,
 ) -> tuple[Optional[Any], Optional[str]]:
+    merged_headers = dict(_DEFAULT_HTTP_HEADERS)
+    if isinstance(headers, dict):
+        merged_headers.update(headers)
     try:
-        r = requests.get(url, params=params, headers=headers, timeout=timeout)
+        r = requests.get(url, params=params, headers=merged_headers, timeout=timeout)
         r.raise_for_status()
         return r.json(), None
     except Exception as e:
@@ -219,23 +246,65 @@ def _coerce_symbol_list(raw: Optional[str]) -> list[str]:
     return items[:30]
 
 
+def _build_market_quote_from_series(symbol: str, series: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    vals = [float(x.get("close")) for x in series if isinstance(x, dict) and x.get("close") is not None]
+    if not vals:
+        return None
+    latest = vals[-1]
+    prev = vals[-2] if len(vals) > 1 else latest
+    ch = latest - prev
+    pct = (ch / prev * 100.0) if prev else 0.0
+    return {
+        "symbol": symbol,
+        "name": symbol,
+        "price": latest,
+        "change": ch,
+        "change_pct": pct,
+        "currency": None,
+        "market_state": "fallback",
+        "updated_at": None,
+    }
+
+
+def _fallback_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
+    out: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for sym in symbols:
+        series, err = _fetch_market_history(sym, range_key="5d", interval="1d")
+        if err:
+            errors.append(f"fallback:{sym}:{err}")
+            continue
+        q = _build_market_quote_from_series(sym, series)
+        if not q:
+            errors.append(f"fallback:{sym}:no_series")
+            continue
+        out.append(q)
+    return out, errors
+
+
 def _fetch_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
     errors: list[str] = []
-    try:
-        r = requests.get(
-            "https://query1.finance.yahoo.com/v7/finance/quote",
-            params={"symbols": ",".join(symbols)},
-            timeout=12,
-        )
-        r.raise_for_status()
-        payload = r.json().get("quoteResponse", {}).get("result", [])
-    except Exception as e:
-        return [], [str(e)]
+
+    payload_data, req_err = _http_get_json(
+        "https://query1.finance.yahoo.com/v7/finance/quote",
+        params={"symbols": ",".join(symbols)},
+        timeout=12,
+    )
+
+    if req_err:
+        fb_quotes, fb_errors = _fallback_market_quotes(symbols)
+        if fb_quotes:
+            return fb_quotes, [f"quote_primary:{req_err}", *fb_errors[:20]]
+        return [], [str(req_err)]
+
+    payload = _dig(payload_data, "quoteResponse", "result") or []
+    if not isinstance(payload, list):
+        payload = []
 
     out: list[dict[str, Any]] = []
-    found = {str(q.get("symbol", "")).upper() for q in payload}
+    found = {str(q.get("symbol", "")).upper() for q in payload if isinstance(q, dict)}
     for sym in symbols:
-        q = next((x for x in payload if str(x.get("symbol", "")).upper() == sym.upper()), None)
+        q = next((x for x in payload if isinstance(x, dict) and str(x.get("symbol", "")).upper() == sym.upper()), None)
         if not q:
             errors.append(f"symbol_not_found:{sym}")
             continue
@@ -254,9 +323,10 @@ def _fetch_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list
         )
 
     missing = [s for s in symbols if s.upper() not in found]
-    for m in missing:
-        if f"symbol_not_found:{m}" not in errors:
-            errors.append(f"symbol_not_found:{m}")
+    if missing:
+        fb_quotes, fb_errors = _fallback_market_quotes(missing)
+        out.extend(fb_quotes)
+        errors.extend(fb_errors)
 
     return out, errors
 
@@ -718,22 +788,7 @@ def _normalize_warframe_item_name(item: str) -> str:
     return s.strip("_")
 
 
-def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]]:
-    data, err = _http_get_json(f"https://api.warframestat.us/{platform}", timeout=15)
-    if err or not isinstance(data, dict):
-        return {
-            "platform": platform,
-            "timestamp": None,
-            "news": [],
-            "alerts": [],
-            "fissures": [],
-            "invasions": [],
-            "events": [],
-            "sortie": {},
-            "nightwave": {},
-            "world_cycles": {},
-        }, [err or "invalid_worldstate_payload"]
-
+def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str, Any]:
     news_out: list[dict[str, Any]] = []
     for n in (data.get("news") or [])[:10]:
         if not isinstance(n, dict):
@@ -840,22 +895,72 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
         "arbitration": data.get("arbitration", {}),
         "steel_path": data.get("steelPath", {}),
         "world_cycles": world_cycles,
-    }, []
+    }
 
 
-def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
+def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]]:
+    errors: list[str] = []
+    headers = {"Accept": "application/json"}
+    candidates = [
+        (f"https://api.warframestat.us/{platform}", None),
+        (f"https://api.warframestat.us/{platform}", {"language": "en"}),
+        (f"https://api.warframestat.us/{platform}/", {"language": "en"}),
+    ]
+
+    data: Optional[dict[str, Any]] = None
+    for url, params in candidates:
+        raw, err = _http_get_json(url, params=params, headers=headers, timeout=15)
+        if err:
+            errors.append(err)
+            continue
+        if isinstance(raw, dict):
+            data = raw
+            break
+        errors.append("invalid_worldstate_payload")
+
+    if isinstance(data, dict):
+        return _parse_warframe_worldstate(data, platform), errors[:12]
+
+    # Fallback: segmented endpoints can still work even when root endpoint fails.
+    segment_payload: dict[str, Any] = {"timestamp": None, "sortie": {}, "nightwave": {}, "arbitration": {}, "steelPath": {}}
+    for seg in ["news", "alerts", "fissures", "invasions", "events"]:
+        raw, err = _http_get_json(f"https://api.warframestat.us/{platform}/{seg}", params={"language": "en"}, headers=headers, timeout=15)
+        if err:
+            errors.append(f"{seg}:{err}")
+            segment_payload[seg] = []
+            continue
+        if isinstance(raw, list):
+            segment_payload[seg] = raw
+        else:
+            segment_payload[seg] = []
+            errors.append(f"{seg}:invalid_payload")
+
+    parsed = _parse_warframe_worldstate(segment_payload, platform)
+    return parsed, errors[:16]
+
+
+def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
     slug = _normalize_warframe_item_name(item)
     if not slug:
         return {"item": item, "slug": "", "best_sell": None, "best_buy": None}, ["invalid_item"]
 
-    req_headers = {"Accept": "application/json", "Language": "en", "User-Agent": "HolocronHub/0.3"}
-    data, err = _http_get_json(
-        f"https://api.warframe.market/v1/items/{slug}/orders",
-        headers=req_headers,
-        timeout=15,
-    )
-    if err or not isinstance(data, dict):
-        return {"item": item, "slug": slug, "best_sell": None, "best_buy": None}, [err or "invalid_market_payload"]
+    req_headers = {"Accept": "application/json", "Language": "en", "User-Agent": "HolocronHub/0.5"}
+    orders_url = f"https://api.warframe.market/v1/items/{slug}/orders"
+
+    errors: list[str] = []
+    data: Optional[dict[str, Any]] = None
+    for params in [{"platform": platform}, {"platform": platform, "include": "item"}, None]:
+        raw, err = _http_get_json(orders_url, params=params, headers=req_headers, timeout=15)
+        if err:
+            errors.append(f"orders:{err}")
+            continue
+        if isinstance(raw, dict):
+            data = raw
+            break
+        errors.append("orders:invalid_payload")
+
+    if not isinstance(data, dict):
+        return {"item": item, "slug": slug, "best_sell": None, "best_buy": None}, errors[:8] or ["invalid_market_payload"]
 
     orders = _dig(data, "payload", "orders") or []
     sells_live: list[int] = []
@@ -864,6 +969,8 @@ def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
     buys_all: list[int] = []
     sell_rows_live: list[dict[str, Any]] = []
     buy_rows_live: list[dict[str, Any]] = []
+    sell_rows_all: list[dict[str, Any]] = []
+    buy_rows_all: list[dict[str, Any]] = []
 
     for o in orders:
         if not isinstance(o, dict):
@@ -879,7 +986,7 @@ def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
         if plat is None:
             continue
         try:
-            plat_int = int(plat)
+            plat_int = int(round(float(plat)))
         except Exception:
             continue
 
@@ -894,11 +1001,13 @@ def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
 
         if order_type == "sell":
             sells_all.append(plat_int)
+            sell_rows_all.append(row)
             if is_live:
                 sells_live.append(plat_int)
                 sell_rows_live.append(row)
         elif order_type == "buy":
             buys_all.append(plat_int)
+            buy_rows_all.append(row)
             if is_live:
                 buys_live.append(plat_int)
                 buy_rows_live.append(row)
@@ -908,6 +1017,7 @@ def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
 
     stats_data, stats_err = _http_get_json(
         f"https://api.warframe.market/v1/items/{slug}/statistics",
+        params={"platform": platform},
         headers=req_headers,
         timeout=15,
     )
@@ -929,7 +1039,6 @@ def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
             }
         )
 
-    errors: list[str] = []
     if stats_err:
         errors.append(f"statistics:{stats_err}")
 
@@ -940,8 +1049,8 @@ def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
         "best_buy": buy_base[0] if buy_base else None,
         "median_sell": float(median(sell_base[:20])) if sell_base else None,
         "median_buy": float(median(buy_base[:20])) if buy_base else None,
-        "sample_sell_orders": sorted(sell_rows_live, key=lambda x: x["price"])[:8],
-        "sample_buy_orders": sorted(buy_rows_live, key=lambda x: x["price"], reverse=True)[:8],
+        "sample_sell_orders": sorted(sell_rows_live, key=lambda x: x["price"])[:8] if sell_rows_live else sorted(sell_rows_all, key=lambda x: x["price"])[:8],
+        "sample_buy_orders": sorted(buy_rows_live, key=lambda x: x["price"], reverse=True)[:8] if buy_rows_live else sorted(buy_rows_all, key=lambda x: x["price"], reverse=True)[:8],
         "sell_count_live": len(sells_live),
         "buy_count_live": len(buys_live),
         "sell_count_total": len(sells_all),
@@ -949,7 +1058,7 @@ def _fetch_warframe_market(item: str) -> tuple[dict[str, Any], list[str]]:
         "history_period": period_key,
         "history": history,
         "selected_scope": "live" if sells_live or buys_live else "all_visible",
-    }, errors
+    }, errors[:12]
 
 
 def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
@@ -1544,7 +1653,6 @@ async def update_settings(request: Request):
 @app.get("/api/markets/overview")
 def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", history_interval: str = "1d"):
     symbol_list = _coerce_symbol_list(symbols)
-    quotes, errors = _fetch_market_quotes(symbol_list)
 
     range_key = str(history_range or "1mo").strip().lower()
     if range_key not in {"5d", "1mo", "3mo", "6mo", "1y"}:
@@ -1554,9 +1662,15 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
     if interval_key not in {"15m", "30m", "1h", "1d", "1wk"}:
         interval_key = "1d"
 
+    cache_key = f"markets:{','.join(symbol_list)}:{range_key}:{interval_key}"
+    cached = _cache_get(cache_key, ttl_seconds=180)
+    if isinstance(cached, dict):
+        return {**cached, "cached": True}
+
+    quotes, errors = _fetch_market_quotes(symbol_list)
     history, history_errors = _fetch_markets_history(symbol_list, range_key=range_key, interval=interval_key)
 
-    return {
+    payload = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "count": len(quotes),
         "requested_symbols": symbol_list,
@@ -1567,6 +1681,8 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
         "history_range": range_key,
         "history_interval": interval_key,
     }
+    _cache_set(cache_key, payload)
+    return {**payload, "cached": False}
 
 
 @app.get("/api/f1/overview")
@@ -1575,9 +1691,14 @@ def f1_overview(season: Optional[str] = None):
     if season_key != "current" and (not season_key.isdigit() or len(season_key) != 4):
         raise HTTPException(status_code=422, detail="season must be 'current' or YYYY")
 
+    cache_key = f"f1:{season_key}"
+    cached = _cache_get(cache_key, ttl_seconds=300)
+    if isinstance(cached, dict):
+        return {**cached, "cached": True}
+
     overview, errors, source = _fetch_f1_overview(season_key)
     standings = overview.get("standings", [])
-    return {
+    payload = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "season": season_key,
         "source": source,
@@ -1585,6 +1706,8 @@ def f1_overview(season: Optional[str] = None):
         **overview,
         "errors": errors,
     }
+    _cache_set(cache_key, payload)
+    return {**payload, "cached": False}
 
 
 @app.get("/api/warframe/overview")
@@ -1593,9 +1716,15 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
     if platform_key not in {"pc", "ps4", "xb1", "swi"}:
         platform_key = "pc"
 
+    item_key = str(item or "arcane energize").strip().lower()
+    cache_key = f"warframe:{platform_key}:{item_key}"
+    cached = _cache_get(cache_key, ttl_seconds=75)
+    if isinstance(cached, dict):
+        return {**cached, "cached": True}
+
     worldstate, world_errors = _fetch_warframe_worldstate(platform_key)
-    market, market_errors = _fetch_warframe_market(item)
-    return {
+    market, market_errors = _fetch_warframe_market(item, platform_key)
+    payload = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "platform": platform_key,
         "item_query": item,
@@ -1603,6 +1732,8 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
         "market": market,
         "errors": world_errors + market_errors,
     }
+    _cache_set(cache_key, payload)
+    return {**payload, "cached": False}
 
 
 # ── schedule ──────────────────────────────────────────────────────────────────

@@ -141,6 +141,10 @@
     .f1-track-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
     .wf-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
 
+    .warn-strip{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
+    .warn-item{font-size:11px;padding:2px 8px;border-radius:999px;background:#3b1f1f;color:#fca5a5;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .track-card{background:linear-gradient(145deg,#0b1220,#101a30);border-color:#334b7a}
+
     /* empty / error */
     .empty{color:#475569;font-size:14px;padding:24px 0;text-align:center}
     .err-msg{color:#f87171}
@@ -300,7 +304,8 @@
         <input id="market-symbols" placeholder="Symbols (comma-separated), e.g. ^GSPC,BTC-USD,ETH-USD" style="flex:1;min-width:220px" />
         <button class="primary" onclick="loadMarkets()">Refresh</button>
       </div>
-      <div id="market-meta" class="muted" style="margin-bottom:8px"></div>
+      <div id="market-meta" class="muted" style="margin-bottom:4px"></div>
+      <div id="market-errors" class="warn-strip"></div>
       <div id="market-grid" class="grid"><div class="empty">Loading...</div></div>
     </div>
   </div>
@@ -313,7 +318,8 @@
         <input id="f1-season" placeholder="Season (current or 2026)" style="width:220px" />
         <button class="primary" onclick="loadF1()">Refresh</button>
       </div>
-      <div id="f1-meta" class="muted" style="margin-bottom:10px"></div>
+      <div id="f1-meta" class="muted" style="margin-bottom:4px"></div>
+      <div id="f1-errors" class="warn-strip"></div>
       <div id="f1-next" class="card" style="margin-bottom:10px;background:#0b1220"></div>
       <div id="f1-last-race" class="stat-card" style="margin-bottom:10px"></div>
       <div id="f1-driver-detail" class="stat-card" style="margin-bottom:10px"></div>
@@ -338,7 +344,8 @@
         </select>
         <button class="primary" onclick="loadWarframe()">Refresh</button>
       </div>
-      <div id="wf-meta" class="muted" style="margin-bottom:10px"></div>
+      <div id="wf-meta" class="muted" style="margin-bottom:4px"></div>
+      <div id="wf-errors" class="warn-strip"></div>
       <div class="wf-grid-3" style="margin-bottom:10px">
         <div class="stat-card">
           <h2 style="margin:0 0 6px">Market Snapshot</h2>
@@ -1118,8 +1125,10 @@ function fmtMarketNum(v, digits=2) {
 async function loadMarkets() {
   const symbolsInput = document.getElementById('market-symbols');
   const metaEl = document.getElementById('market-meta');
+  const errEl = document.getElementById('market-errors');
   const gridEl = document.getElementById('market-grid');
   if (!symbolsInput || !metaEl || !gridEl) return;
+  if (errEl) errEl.innerHTML = '';
 
   if (!symbolsInput.value.trim()) symbolsInput.value = DEFAULT_MARKET_SYMBOLS;
   const symbols = symbolsInput.value.trim();
@@ -1134,7 +1143,12 @@ async function loadMarkets() {
     const data = await fetch(`${API}/markets/overview?${params}`).then(r=>r.json());
 
     const warnings = (data.errors?.length || 0) + (data.history_errors?.length || 0);
-    metaEl.textContent = `${data.count||0} quotes | ${data.history_range || '1mo'} trend | updated ${relTime(data.generated_at)}` + (warnings ? ` | WARN ${warnings}` : '');
+    const cacheTag = data.cached ? ' | cache' : '';
+    metaEl.textContent = `${data.count||0} quotes | ${data.history_range || '1mo'} trend | updated ${relTime(data.generated_at)}` + cacheTag + (warnings ? ` | WARN ${warnings}` : '');
+    if (errEl) {
+      const allErrs = [...(data.errors || []), ...(data.history_errors || [])].slice(0, 6);
+      errEl.innerHTML = allErrs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
+    }
 
     const quotes = data.quotes || [];
     const history = data.history || {};
@@ -1204,12 +1218,14 @@ function showF1DriverProfile(key) {
 async function loadF1() {
   const seasonInput = document.getElementById('f1-season');
   const metaEl = document.getElementById('f1-meta');
+  const errEl = document.getElementById('f1-errors');
   const nextEl = document.getElementById('f1-next');
   const standingsEl = document.getElementById('f1-standings');
   const lastRaceEl = document.getElementById('f1-last-race');
   const tracksEl = document.getElementById('f1-tracks');
   const profileEl = document.getElementById('f1-driver-detail');
   if (!seasonInput || !metaEl || !nextEl || !standingsEl || !lastRaceEl || !tracksEl || !profileEl) return;
+  if (errEl) errEl.innerHTML = '';
 
   const season = (seasonInput.value || 'current').trim() || 'current';
   standingsEl.innerHTML = '<div class="empty">Loading...</div>';
@@ -1224,7 +1240,12 @@ async function loadF1() {
     const data = await fetch(`${API}/f1/overview?${params}`).then(r=>r.json());
 
     const errInfo = data.errors?.length ? ` | ${data.errors.length} warning(s)` : '';
-    metaEl.textContent = `${data.standings_count || 0} drivers | source ${data.source || 'unknown'} | updated ${relTime(data.generated_at)}${errInfo}`;
+    const cacheTag = data.cached ? ' | cache' : '';
+    metaEl.textContent = `${data.standings_count || 0} drivers | source ${data.source || 'unknown'} | updated ${relTime(data.generated_at)}${cacheTag}${errInfo}`;
+    if (errEl) {
+      const errs = (data.errors || []).slice(0, 6);
+      errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
+    }
 
     const nr = data.next_race;
     if (nr) {
@@ -1292,7 +1313,7 @@ async function loadF1() {
       guide.slice(0, 10).forEach(r => {
         const links = r.links || {};
         const card = document.createElement('div');
-        card.className = 'stat-card';
+        card.className = 'stat-card track-card';
         card.innerHTML = `
           <span class="rank-pill">R${esc(r.round || '?')}</span>
           <strong>${esc(r.race_name || 'Race')}</strong>
@@ -1325,6 +1346,7 @@ async function loadWarframe() {
   const itemInput = document.getElementById('wf-item');
   const platformSel = document.getElementById('wf-platform');
   const metaEl = document.getElementById('wf-meta');
+  const errEl = document.getElementById('wf-errors');
   const marketEl = document.getElementById('wf-market');
   const marketChartEl = document.getElementById('wf-market-chart');
   const alertsEl = document.getElementById('wf-alerts');
@@ -1333,6 +1355,7 @@ async function loadWarframe() {
   const invasionsEl = document.getElementById('wf-invasions');
   const worldEl = document.getElementById('wf-world');
   if (!itemInput || !platformSel || !metaEl || !marketEl || !alertsEl || !newsEl || !fissuresEl || !invasionsEl || !worldEl) return;
+  if (errEl) errEl.innerHTML = '';
 
   if (!itemInput.value.trim()) itemInput.value = 'arcane energize';
   const item = itemInput.value.trim();
@@ -1350,7 +1373,12 @@ async function loadWarframe() {
     const params = new URLSearchParams({ item, platform });
     const data = await fetch(`${API}/warframe/overview?${params}`).then(r=>r.json());
     const errInfo = data.errors?.length ? ` | ${data.errors.length} warning(s)` : '';
-    metaEl.textContent = `${String(data.platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${errInfo}`;
+    const cacheTag = data.cached ? ' | cache' : '';
+    metaEl.textContent = `${String(data.platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${cacheTag}${errInfo}`;
+    if (errEl) {
+      const errs = (data.errors || []).slice(0, 6);
+      errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
+    }
 
     const m = data.market || {};
     marketEl.innerHTML = `

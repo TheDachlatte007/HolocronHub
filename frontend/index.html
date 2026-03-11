@@ -145,6 +145,14 @@
     .warn-item{font-size:11px;padding:2px 8px;border-radius:999px;background:#3b1f1f;color:#fca5a5;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .track-card{background:linear-gradient(145deg,#0b1220,#101a30);border-color:#334b7a}
 
+    .diag-row{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+    .diag-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+    .diag-pill{font-size:11px;padding:2px 8px;border-radius:999px}
+    .diag-pill.ok{background:#14532d;color:#86efac}
+    .diag-pill.warn{background:#7f1d1d;color:#fecaca}
+    .diag-pill.unknown{background:#1f2937;color:#cbd5e1}
+    .diag-err{font-size:11px;color:#fca5a5}
+
     /* empty / error */
     .empty{color:#475569;font-size:14px;padding:24px 0;text-align:center}
     .err-msg{color:#f87171}
@@ -561,6 +569,15 @@
         </div>
         <div class="settings-hint">Keys are stored in local project settings for this self-hosted instance.</div>
       </div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155">
+        <h2>Provider Diagnostics</h2>
+        <div class="row">
+          <button onclick="loadProviderDiagnostics()">Refresh Diagnostics</button>
+          <span id="diag-meta" class="muted"></span>
+        </div>
+        <div id="diag-list" class="small-list"><div class="muted">Not loaded yet.</div></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -786,7 +803,7 @@ function buildToolCard(t) {
       ${icon ? `<img class="tool-icon" src="${esc(icon)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ''}
       <strong>${esc(t.name)}</strong>
     </div>
-    <div class="tool-minor">${esc(t.provider)} • ${esc(category)}</div>
+    <div class="tool-minor">${esc(t.provider)} | ${esc(category)}</div>
     <div class="tool-summary">${esc(summary)}</div>
     <div class="meta">
       <span class="pill">${esc(t.local_or_cloud || 'unknown')}</span>
@@ -1397,7 +1414,7 @@ async function loadWarframe() {
         ${buildSparklineSvg(hist)}
         <div class="sparkline-label">
           <span>${esc((m.history_period || 'history').replace('_', ' '))}</span>
-          <span>${hist.length ? `${fmtMarketNum(hist[0],0)}p → ${fmtMarketNum(hist[hist.length-1],0)}p` : 'n/a'}</span>
+          <span>${hist.length ? `${fmtMarketNum(hist[0],0)}p -> ${fmtMarketNum(hist[hist.length-1],0)}p` : 'n/a'}</span>
         </div>
       `;
     }
@@ -1423,7 +1440,7 @@ async function loadWarframe() {
       fissures.slice(0, 8).forEach(f => {
         const row = document.createElement('div');
         row.className = 'small-row';
-        row.innerHTML = `<span>${esc(f.tier || 'Fissure')} • ${esc(f.mission_type || '-')}</span><span class="muted">${esc(f.eta || '')}</span>`;
+        row.innerHTML = `<span>${esc(f.tier || 'Fissure')} | ${esc(f.mission_type || '-')}</span><span class="muted">${esc(f.eta || '')}</span>`;
         fissuresEl.appendChild(row);
       });
     }
@@ -1752,6 +1769,48 @@ function loadGlobalSettings() {
   }
 }
 
+
+
+async function loadProviderDiagnostics() {
+  const listEl = document.getElementById('diag-list');
+  const metaEl = document.getElementById('diag-meta');
+  if (!listEl || !metaEl) return;
+  listEl.innerHTML = '<div class="muted">Loading diagnostics...</div>';
+  try {
+    const data = await fetch(`${API}/debug/providers`).then(r=>r.json());
+    const cache = data.cache || {};
+    metaEl.textContent = `updated ${relTime(data.generated_at)} | cache entries ${cache.entries ?? 0}`;
+    const providers = data.providers || {};
+    const rows = Object.entries(providers);
+    listEl.innerHTML = '';
+    if (!rows.length) {
+      listEl.innerHTML = '<div class="muted">No diagnostics yet.</div>';
+      return;
+    }
+
+    rows.forEach(([name, p]) => {
+      const row = document.createElement('div');
+      row.className = 'diag-row';
+      const status = String(p?.status || 'unknown').toLowerCase();
+      const summary = p?.summary || {};
+      const summaryText = Object.keys(summary).map(k => `${k}: ${summary[k]}`).join(' | ');
+      const errs = (p?.errors || []).slice(0, 3);
+      row.innerHTML = `
+        <div class="diag-head">
+          <strong>${esc(name.toUpperCase())}</strong>
+          <span class="diag-pill ${esc(status)}">${esc(status)}${p?.cached ? ' (cache)' : ''}</span>
+        </div>
+        <div class="muted">last check: ${esc(p?.last_checked || '-')}</div>
+        ${summaryText ? `<div class="muted">${esc(summaryText)}</div>` : ''}
+        ${errs.length ? `<div class="diag-err">${errs.map(e => esc(e)).join(' | ')}</div>` : '<div class="muted">No errors</div>'}
+      `;
+      listEl.appendChild(row);
+    });
+  } catch (e) {
+    listEl.innerHTML = `<div class="err-msg">Diagnostics unavailable: ${esc(e.message)}</div>`;
+  }
+}
+
 function setSettingsStatus(section, text, isError=false) {
   const el = document.getElementById(`settings-status-${section}`);
   if (!el) return;
@@ -1824,6 +1883,7 @@ async function loadSettingsPage() {
     setSettingsStatus('feed', '');
     setSettingsStatus('ingest', '');
     setSettingsStatus('api', '');
+    loadProviderDiagnostics();
   } catch (e) {
     setSettingsStatus('general', `Could not load settings: ${e.message}`, true);
   }
@@ -1911,6 +1971,7 @@ fetchSettings().catch(()=>{}).finally(() => {
 </script>
 </body>
 </html>
+
 
 
 

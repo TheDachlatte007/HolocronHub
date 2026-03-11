@@ -203,6 +203,25 @@ _DEFAULT_HTTP_HEADERS = {
 
 _API_CACHE: dict[str, dict[str, Any]] = {}
 
+_provider_health: dict[str, dict[str, Any]] = {
+    "markets": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}},
+    "f1": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}},
+    "warframe": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}},
+}
+
+
+def _record_provider_health(name: str, *, errors: list[str], cached: bool, summary: Optional[dict[str, Any]] = None) -> None:
+    state = "ok"
+    if errors:
+        state = "warn"
+    _provider_health[name] = {
+        "status": state,
+        "last_checked": datetime.now().isoformat(timespec="seconds"),
+        "cached": bool(cached),
+        "errors": list(errors or [])[:12],
+        "summary": dict(summary or {}),
+    }
+
 
 def _cache_get(key: str, ttl_seconds: int) -> Optional[Any]:
     ent = _API_CACHE.get(key)
@@ -1665,6 +1684,12 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
     cache_key = f"markets:{','.join(symbol_list)}:{range_key}:{interval_key}"
     cached = _cache_get(cache_key, ttl_seconds=180)
     if isinstance(cached, dict):
+        _record_provider_health(
+            "markets",
+            errors=list((cached.get("errors") or [])) + list((cached.get("history_errors") or [])),
+            cached=True,
+            summary={"quotes": int(cached.get("count") or 0)},
+        )
         return {**cached, "cached": True}
 
     quotes, errors = _fetch_market_quotes(symbol_list)
@@ -1682,7 +1707,14 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
         "history_interval": interval_key,
     }
     _cache_set(cache_key, payload)
+    _record_provider_health(
+        "markets",
+        errors=list(errors or []) + list(history_errors or []),
+        cached=False,
+        summary={"quotes": len(quotes)},
+    )
     return {**payload, "cached": False}
+
 
 
 @app.get("/api/f1/overview")
@@ -1694,6 +1726,12 @@ def f1_overview(season: Optional[str] = None):
     cache_key = f"f1:{season_key}"
     cached = _cache_get(cache_key, ttl_seconds=300)
     if isinstance(cached, dict):
+        _record_provider_health(
+            "f1",
+            errors=list(cached.get("errors") or []),
+            cached=True,
+            summary={"standings": int(cached.get("standings_count") or 0)},
+        )
         return {**cached, "cached": True}
 
     overview, errors, source = _fetch_f1_overview(season_key)
@@ -1707,7 +1745,14 @@ def f1_overview(season: Optional[str] = None):
         "errors": errors,
     }
     _cache_set(cache_key, payload)
+    _record_provider_health(
+        "f1",
+        errors=list(errors or []),
+        cached=False,
+        summary={"standings": len(standings)},
+    )
     return {**payload, "cached": False}
+
 
 
 @app.get("/api/warframe/overview")
@@ -1720,6 +1765,18 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
     cache_key = f"warframe:{platform_key}:{item_key}"
     cached = _cache_get(cache_key, ttl_seconds=75)
     if isinstance(cached, dict):
+        ws = cached.get("worldstate") or {}
+        market = cached.get("market") or {}
+        _record_provider_health(
+            "warframe",
+            errors=list(cached.get("errors") or []),
+            cached=True,
+            summary={
+                "alerts": len(ws.get("alerts") or []),
+                "fissures": len(ws.get("fissures") or []),
+                "best_sell": market.get("best_sell"),
+            },
+        )
         return {**cached, "cached": True}
 
     worldstate, world_errors = _fetch_warframe_worldstate(platform_key)
@@ -1733,7 +1790,35 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
         "errors": world_errors + market_errors,
     }
     _cache_set(cache_key, payload)
+    _record_provider_health(
+        "warframe",
+        errors=list(world_errors or []) + list(market_errors or []),
+        cached=False,
+        summary={
+            "alerts": len((worldstate or {}).get("alerts") or []),
+            "fissures": len((worldstate or {}).get("fissures") or []),
+            "best_sell": (market or {}).get("best_sell"),
+        },
+    )
     return {**payload, "cached": False}
+
+
+
+# ── debug ─────────────────────────────────────────────────────────────────────
+
+@app.get("/api/debug/providers")
+def debug_providers():
+    cache_counts = {
+        "entries": len(_API_CACHE),
+        "markets": sum(1 for k in _API_CACHE.keys() if k.startswith("markets:")),
+        "f1": sum(1 for k in _API_CACHE.keys() if k.startswith("f1:")),
+        "warframe": sum(1 for k in _API_CACHE.keys() if k.startswith("warframe:")),
+    }
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "providers": _provider_health,
+        "cache": cache_counts,
+    }
 
 
 # ── schedule ──────────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import quote, quote_plus
 from statistics import median
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -571,6 +571,415 @@ def _f1_status_is_finish(status: str) -> bool:
     if st.startswith("finished"):
         return True
     return "lap" in st and "retired" not in st
+
+
+def _parse_dt(value: Any) -> Optional[datetime]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
+def _fmt_local_offset(dt: Optional[datetime], offset_raw: Any) -> Optional[str]:
+    if dt is None:
+        return None
+    offset = str(offset_raw or "").strip()
+    if not offset:
+        return dt.isoformat()
+    try:
+        sign = 1 if offset[0] != "-" else -1
+        hh, mm, ss = (offset[1:] if offset[0] in "+-" else offset).split(":")
+        delta = timedelta(hours=int(hh), minutes=int(mm), seconds=int(ss or 0))
+        tz = timezone(sign * delta)
+        return dt.astimezone(tz).isoformat()
+    except Exception:
+        return dt.isoformat()
+
+
+def _safe_int(value: Any) -> Optional[int]:
+    try:
+        return int(value)
+    except Exception:
+        return None
+
+
+def _safe_float(value: Any) -> Optional[float]:
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def _f1_norm_text(value: Any) -> str:
+    text = str(value or "").lower().strip()
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _openf1_get(path: str, *, params: Optional[dict[str, Any]] = None, timeout: int = 15) -> tuple[list[dict[str, Any]], Optional[str]]:
+    data, err = _http_get_json(f"https://api.openf1.org/v1/{path}", params=params, timeout=timeout)
+    if err:
+        return [], f"{path}:{err}"
+    if not isinstance(data, list):
+        return [], f"{path}:invalid_payload"
+    return [row for row in data if isinstance(row, dict)], None
+
+
+def _openf1_session_status(session: dict[str, Any], now_utc: Optional[datetime] = None) -> str:
+    now = now_utc or datetime.now(timezone.utc)
+    start_dt = _parse_dt(session.get("date_start"))
+    end_dt = _parse_dt(session.get("date_end"))
+    if start_dt and now < start_dt:
+        return "upcoming"
+    if start_dt and end_dt and start_dt <= now <= end_dt:
+        return "live"
+    if end_dt and end_dt < now <= end_dt + timedelta(minutes=30):
+        return "cooldown"
+    if end_dt and now > end_dt:
+        return "finished"
+    return "scheduled"
+
+
+def _summarize_openf1_session(session: dict[str, Any], now_utc: Optional[datetime] = None) -> dict[str, Any]:
+    start_dt = _parse_dt(session.get("date_start"))
+    end_dt = _parse_dt(session.get("date_end"))
+    local_start = _fmt_local_offset(start_dt, session.get("gmt_offset"))
+    local_end = _fmt_local_offset(end_dt, session.get("gmt_offset"))
+    return {
+        "session_key": session.get("session_key"),
+        "meeting_key": session.get("meeting_key"),
+        "session_name": session.get("session_name"),
+        "session_type": session.get("session_type"),
+        "location": session.get("location"),
+        "country_name": session.get("country_name"),
+        "circuit_short_name": session.get("circuit_short_name"),
+        "date_start": session.get("date_start"),
+        "date_end": session.get("date_end"),
+        "date_start_local": local_start,
+        "date_end_local": local_end,
+        "status": _openf1_session_status(session, now_utc=now_utc),
+    }
+
+
+def _score_openf1_meeting(meeting: dict[str, Any], target: Optional[dict[str, Any]]) -> float:
+    if not isinstance(target, dict):
+        return 0.0
+
+    score = 0.0
+    meeting_name = _f1_norm_text(meeting.get("meeting_name"))
+    official_name = _f1_norm_text(meeting.get("meeting_official_name"))
+    meeting_country = _f1_norm_text(meeting.get("country_name"))
+    meeting_location = _f1_norm_text(meeting.get("location"))
+    meeting_circuit = _f1_norm_text(meeting.get("circuit_short_name"))
+
+    target_name = _f1_norm_text(target.get("race_name"))
+    target_country = _f1_norm_text(target.get("country"))
+    target_location = _f1_norm_text(target.get("locality"))
+    target_circuit = _f1_norm_text(target.get("circuit"))
+    target_dt = _parse_dt(target.get("datetime_utc")) or _parse_dt(_safe_iso_utc(target.get("date"), target.get("time")))
+    meeting_start = _parse_dt(meeting.get("date_start"))
+
+    if target_name and (target_name in meeting_name or target_name in official_name):
+        score += 70.0
+    if target_country and target_country == meeting_country:
+        score += 30.0
+    if target_location and (target_location == meeting_location or target_location in meeting_location or meeting_location in target_location):
+        score += 25.0
+    if target_circuit and (target_circuit == meeting_circuit or target_circuit in meeting_circuit or meeting_circuit in target_circuit):
+        score += 25.0
+    if target_dt and meeting_start:
+        delta_days = abs((meeting_start - target_dt).total_seconds()) / 86400.0
+        score += max(0.0, 20.0 - min(20.0, delta_days * 2.0))
+    return score
+
+
+def _pick_openf1_meeting(meetings: list[dict[str, Any]], next_race: Optional[dict[str, Any]], latest_race: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    if not meetings:
+        return None
+
+    now = datetime.now(timezone.utc)
+    ordered = sorted(meetings, key=lambda m: _parse_dt(m.get("date_start")) or datetime.max.replace(tzinfo=timezone.utc))
+    target = next_race if isinstance(next_race, dict) and next_race else latest_race if isinstance(latest_race, dict) else None
+
+    if target:
+        scored = sorted(
+            ((meeting, _score_openf1_meeting(meeting, target)) for meeting in ordered),
+            key=lambda item: item[1],
+            reverse=True,
+        )
+        if scored and scored[0][1] >= 35.0:
+            return scored[0][0]
+
+    live_meeting = next(
+        (
+            meeting
+            for meeting in ordered
+            if (_parse_dt(meeting.get("date_start")) or now) - timedelta(hours=6) <= now <= (_parse_dt(meeting.get("date_end")) or now) + timedelta(hours=4)
+        ),
+        None,
+    )
+    if live_meeting:
+        return live_meeting
+
+    upcoming = [meeting for meeting in ordered if (_parse_dt(meeting.get("date_start")) or now) >= now - timedelta(hours=12)]
+    if upcoming:
+        return upcoming[0]
+
+    return ordered[-1]
+
+
+def _latest_by_key(rows: list[dict[str, Any]], key_name: str = "driver_number") -> dict[Any, dict[str, Any]]:
+    latest: dict[Any, dict[str, Any]] = {}
+    for row in rows:
+        key = row.get(key_name)
+        if key is None:
+            continue
+        latest[key] = row
+    return latest
+
+
+def _fetch_openf1_weekend_context(
+    season: str,
+    next_race: Optional[dict[str, Any]],
+    latest_race: Optional[dict[str, Any]],
+) -> tuple[dict[str, Any], list[str]]:
+    errors: list[str] = []
+    season_year = _safe_int(season) or datetime.now(timezone.utc).year
+    meetings, err = _openf1_get("meetings", params={"year": season_year}, timeout=20)
+    if err:
+        return {}, [err]
+
+    meeting = _pick_openf1_meeting(meetings, next_race, latest_race)
+    if not isinstance(meeting, dict):
+        return {}, ["meetings:no_match"]
+
+    meeting_key = meeting.get("meeting_key")
+    sessions, err = _openf1_get("sessions", params={"meeting_key": meeting_key}, timeout=20)
+    if err:
+        errors.append(err)
+    now = datetime.now(timezone.utc)
+    sessions_summary = [_summarize_openf1_session(session, now_utc=now) for session in sorted(sessions, key=lambda s: _parse_dt(s.get("date_start")) or now)]
+
+    current_session = next((session for session in sessions_summary if session.get("status") == "live"), None)
+    next_session = next((session for session in sessions_summary if session.get("status") == "upcoming"), None)
+    latest_session = next((session for session in reversed(sessions_summary) if session.get("status") in {"cooldown", "finished"}), None)
+    focus_session = current_session or next_session or latest_session or (sessions_summary[0] if sessions_summary else None)
+
+    weather_rows, err = _openf1_get("weather", params={"meeting_key": meeting_key}, timeout=15)
+    if err:
+        errors.append(err)
+    latest_weather = weather_rows[-1] if weather_rows else {}
+
+    phase = "offseason"
+    if current_session:
+        phase = "live"
+    elif next_session:
+        phase = "upcoming"
+    elif latest_session:
+        phase = "completed"
+
+    track = {
+        "circuit_key": meeting.get("circuit_key"),
+        "name": meeting.get("circuit_short_name"),
+        "type": meeting.get("circuit_type"),
+        "location": meeting.get("location"),
+        "country_name": meeting.get("country_name"),
+        "country_code": meeting.get("country_code"),
+        "country_flag": meeting.get("country_flag"),
+        "image_url": meeting.get("circuit_image"),
+        "info_url": meeting.get("circuit_info_url"),
+        "links": _build_f1_circuit_links(meeting.get("circuit_short_name"), meeting.get("location"), meeting.get("country_name")),
+    }
+
+    headline = meeting.get("meeting_name") or meeting.get("meeting_official_name") or "F1 Weekend"
+    if phase == "live" and current_session:
+        headline = f"{headline} | {current_session.get('session_name')}"
+    elif phase == "upcoming" and next_session:
+        headline = f"{headline} | Next up: {next_session.get('session_name')}"
+    elif phase == "completed" and latest_session:
+        headline = f"{headline} | Last session: {latest_session.get('session_name')}"
+
+    return {
+        "source": "openf1",
+        "meeting": {
+            "meeting_key": meeting.get("meeting_key"),
+            "meeting_name": meeting.get("meeting_name"),
+            "meeting_official_name": meeting.get("meeting_official_name"),
+            "location": meeting.get("location"),
+            "country_name": meeting.get("country_name"),
+            "country_code": meeting.get("country_code"),
+            "date_start": meeting.get("date_start"),
+            "date_end": meeting.get("date_end"),
+            "gmt_offset": meeting.get("gmt_offset"),
+            "date_start_local": _fmt_local_offset(_parse_dt(meeting.get("date_start")), meeting.get("gmt_offset")),
+            "date_end_local": _fmt_local_offset(_parse_dt(meeting.get("date_end")), meeting.get("gmt_offset")),
+        },
+        "phase": phase,
+        "headline": headline,
+        "track": track,
+        "sessions": sessions_summary,
+        "current_session_key": current_session.get("session_key") if isinstance(current_session, dict) else None,
+        "focus_session_key": focus_session.get("session_key") if isinstance(focus_session, dict) else None,
+        "current_session": current_session,
+        "next_session": next_session,
+        "latest_session": latest_session,
+        "weather": {
+            "air_temperature": latest_weather.get("air_temperature"),
+            "track_temperature": latest_weather.get("track_temperature"),
+            "humidity": latest_weather.get("humidity"),
+            "rainfall": latest_weather.get("rainfall"),
+            "wind_direction": latest_weather.get("wind_direction"),
+            "wind_speed": latest_weather.get("wind_speed"),
+            "pressure": latest_weather.get("pressure"),
+            "date": latest_weather.get("date"),
+        },
+    }, errors[:10]
+
+
+def _fetch_openf1_session_detail(session_key: str) -> tuple[dict[str, Any], list[str]]:
+    errors: list[str] = []
+    session_rows, err = _openf1_get("sessions", params={"session_key": session_key}, timeout=15)
+    if err:
+        return {}, [err]
+    session = session_rows[0] if session_rows else {}
+    if not isinstance(session, dict) or not session:
+        return {}, ["sessions:not_found"]
+
+    drivers, err = _openf1_get("drivers", params={"session_key": session_key}, timeout=15)
+    if err:
+        errors.append(err)
+    result_rows, err = _openf1_get("session_result", params={"session_key": session_key}, timeout=15)
+    if err:
+        errors.append(err)
+    position_rows, err = _openf1_get("position", params={"session_key": session_key}, timeout=15)
+    if err:
+        errors.append(err)
+    interval_rows, err = _openf1_get("intervals", params={"session_key": session_key}, timeout=15)
+    if err:
+        errors.append(err)
+    stint_rows, err = _openf1_get("stints", params={"session_key": session_key}, timeout=15)
+    if err:
+        errors.append(err)
+    race_control_rows, err = _openf1_get("race_control", params={"session_key": session_key}, timeout=15)
+    if err:
+        errors.append(err)
+    weather_rows, err = _openf1_get("weather", params={"session_key": session_key}, timeout=15)
+    if err:
+        errors.append(err)
+
+    session_summary = _summarize_openf1_session(session)
+    session_status = session_summary.get("status")
+    driver_map = {
+        driver.get("driver_number"): {
+            "driver_number": driver.get("driver_number"),
+            "driver": driver.get("full_name") or " ".join([str(driver.get("first_name") or "").strip(), str(driver.get("last_name") or "").strip()]).strip(),
+            "code": driver.get("name_acronym"),
+            "team": driver.get("team_name"),
+            "team_color": driver.get("team_colour"),
+            "headshot_url": driver.get("headshot_url"),
+            "country_code": driver.get("country_code"),
+        }
+        for driver in drivers
+        if driver.get("driver_number") is not None
+    }
+
+    latest_positions = _latest_by_key(position_rows)
+    latest_intervals = _latest_by_key(interval_rows)
+    latest_stints = _latest_by_key(stint_rows)
+
+    leaderboard: list[dict[str, Any]] = []
+    result_rows_sorted = sorted(
+        [row for row in result_rows if row.get("driver_number") is not None],
+        key=lambda row: (_safe_int(row.get("position")) or 999, _safe_int(row.get("driver_number")) or 999),
+    )
+
+    if result_rows_sorted:
+        for row in result_rows_sorted:
+            number = row.get("driver_number")
+            driver = driver_map.get(number, {})
+            interval = latest_intervals.get(number, {})
+            stint = latest_stints.get(number, {})
+            leaderboard.append(
+                {
+                    "position": row.get("position"),
+                    "driver_number": number,
+                    "driver": driver.get("driver"),
+                    "code": driver.get("code"),
+                    "team": driver.get("team"),
+                    "team_color": driver.get("team_color"),
+                    "grid_position": row.get("grid_position") or row.get("grid"),
+                    "points": row.get("points"),
+                    "status": "DSQ" if row.get("dsq") else "DNS" if row.get("dns") else "DNF" if row.get("dnf") else None,
+                    "gap_to_leader": interval.get("gap_to_leader"),
+                    "interval": interval.get("interval"),
+                    "best_lap_time": row.get("best_lap_time"),
+                    "time": row.get("time"),
+                    "current_tyre": stint.get("compound"),
+                    "stint": stint.get("stint_number"),
+                }
+            )
+    else:
+        merged_numbers = set(driver_map.keys()) | set(latest_positions.keys())
+        provisional = []
+        for number in merged_numbers:
+            driver = driver_map.get(number, {})
+            pos_row = latest_positions.get(number, {})
+            interval = latest_intervals.get(number, {})
+            stint = latest_stints.get(number, {})
+            provisional.append(
+                {
+                    "position": pos_row.get("position"),
+                    "driver_number": number,
+                    "driver": driver.get("driver"),
+                    "code": driver.get("code"),
+                    "team": driver.get("team"),
+                    "team_color": driver.get("team_color"),
+                    "gap_to_leader": interval.get("gap_to_leader"),
+                    "interval": interval.get("interval"),
+                    "current_tyre": stint.get("compound"),
+                    "stint": stint.get("stint_number"),
+                    "time": pos_row.get("date"),
+                }
+            )
+        leaderboard = sorted(provisional, key=lambda row: (_safe_int(row.get("position")) or 999, _safe_int(row.get("driver_number")) or 999))
+
+    race_control_rows = sorted(race_control_rows, key=lambda row: _parse_dt(row.get("date")) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    race_control = [
+        {
+            "date": row.get("date"),
+            "category": row.get("category"),
+            "flag": row.get("flag"),
+            "message": row.get("message"),
+            "scope": row.get("scope"),
+            "driver_number": row.get("driver_number"),
+            "lap_number": row.get("lap_number"),
+        }
+        for row in race_control_rows[:12]
+    ]
+
+    latest_weather = weather_rows[-1] if weather_rows else {}
+
+    return {
+        "source": "openf1",
+        "session": session_summary,
+        "live": session_status in {"live", "cooldown"},
+        "drivers_count": len(driver_map),
+        "leaderboard": leaderboard[:20],
+        "race_control": race_control,
+        "weather": {
+            "air_temperature": latest_weather.get("air_temperature"),
+            "track_temperature": latest_weather.get("track_temperature"),
+            "humidity": latest_weather.get("humidity"),
+            "rainfall": latest_weather.get("rainfall"),
+            "wind_direction": latest_weather.get("wind_direction"),
+            "wind_speed": latest_weather.get("wind_speed"),
+            "pressure": latest_weather.get("pressure"),
+            "date": latest_weather.get("date"),
+        },
+    }, errors[:12]
 
 
 def _f1_driver_key(driver: dict[str, Any]) -> str:
@@ -1329,11 +1738,177 @@ def _aggregate_relic_states(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out[:10]
 
 
-def _build_warframe_farm_plan(query: str) -> tuple[dict[str, Any], list[str]]:
+def _fetch_warframe_value_snapshot(item: str, platform: str = "pc", *, catalog: Optional[list[dict[str, Any]]] = None) -> tuple[dict[str, Any], list[str]]:
+    item_key = _normalize_warframe_item_name(item)
+    cache_key = f"warframe:value:{platform}:{item_key}"
+    cached = _cache_get(cache_key, ttl_seconds=10 * 60)
+    if isinstance(cached, dict):
+        return cached, []
+
+    catalog_errors: list[str] = []
+    catalog_data = catalog
+    if catalog_data is None:
+        catalog_data, catalog_errors = _fetch_warframe_market_catalog()
+    item_meta = _find_warframe_market_item(catalog_data or [], item)
+    slug = str((item_meta or {}).get("slug") or item_key)
+    canonical_name = str((item_meta or {}).get("name") or item or "Unknown Item")
+    max_rank = (item_meta or {}).get("max_rank")
+    if not slug:
+        return {"item": item, "canonical_name": canonical_name, "slug": "", "last_avg_price": None, "volume_total": 0}, ["invalid_item"]
+
+    req_headers = {"Accept": "application/json", "Language": "en", "User-Agent": "HolocronHub/0.5"}
+    stats_data, stats_err = _http_get_json(
+        f"https://api.warframe.market/v1/items/{slug}/statistics",
+        params={"platform": platform},
+        headers=req_headers,
+        timeout=15,
+    )
+    stats_summary = _summarize_warframe_statistics(stats_data, max_rank=max_rank)
+    price = stats_summary.get("last_avg_price")
+    if price is None:
+        price = stats_summary.get("price_floor_estimate")
+    if price is None:
+        price = stats_summary.get("last_closed_price")
+    payload = {
+        "item": item,
+        "canonical_name": canonical_name,
+        "slug": slug,
+        "selected_rank": stats_summary.get("selected_rank"),
+        "last_avg_price": price,
+        "volume_total": stats_summary.get("volume_total") or 0,
+        "price_change_pct": stats_summary.get("price_change_pct"),
+    }
+    _cache_set(cache_key, payload)
+    errors = list(catalog_errors)
+    if stats_err:
+        errors.append(f"statistics:{stats_err}")
+    return payload, errors[:8]
+
+
+def _compute_relic_value_profiles(relic_names: list[str], *, platform: str = "pc", target_item: str = "") -> tuple[dict[str, dict[str, Any]], list[str]]:
+    target_set = {str(name or "").strip() for name in relic_names if str(name or "").strip()}
+    if not target_set:
+        return {}, []
+
+    relics, relic_errors = _fetch_warframe_drop_dataset("relics")
+    catalog, catalog_errors = _fetch_warframe_market_catalog()
+    order = {"Intact": 0, "Exceptional": 1, "Flawless": 2, "Radiant": 3}
+    target_norm = _normalize_warframe_item_name(target_item)
+
+    relic_state_map: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    reward_names: set[str] = set()
+    for relic in relics:
+        relic_name = f"{relic.get('tier') or ''} {relic.get('relicName') or ''}".strip()
+        if relic_name not in target_set:
+            continue
+        state = str(relic.get("state") or "") or "Intact"
+        rewards_out: list[dict[str, Any]] = []
+        for reward in relic.get("rewards") or []:
+            if not isinstance(reward, dict):
+                continue
+            item_name = str(reward.get("itemName") or "").strip()
+            if not item_name:
+                continue
+            reward_names.add(item_name)
+            rewards_out.append(
+                {
+                    "item_name": item_name,
+                    "rarity": reward.get("rarity"),
+                    "chance": reward.get("chance"),
+                }
+            )
+        relic_state_map.setdefault(relic_name, {})[state] = rewards_out
+
+    reward_values: dict[str, dict[str, Any]] = {}
+    errors: list[str] = list(relic_errors) + list(catalog_errors)
+
+    def load_reward_value(name: str) -> tuple[str, dict[str, Any], list[str]]:
+        payload, reward_errors = _fetch_warframe_value_snapshot(name, platform, catalog=catalog)
+        return name, payload, reward_errors
+
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(reward_names)))) as pool:
+        futures = [pool.submit(load_reward_value, name) for name in sorted(reward_names)]
+        for future in as_completed(futures):
+            try:
+                reward_name, payload, reward_errors = future.result()
+            except Exception as exc:
+                errors.append(f"relic_value:worker:{exc}")
+                continue
+            reward_values[reward_name] = payload
+            errors.extend((reward_errors or [])[:2])
+
+    profiles: dict[str, dict[str, Any]] = {}
+    for relic_name, states in relic_state_map.items():
+        state_values: list[dict[str, Any]] = []
+        jackpot: Optional[dict[str, Any]] = None
+        best_value_state: Optional[dict[str, Any]] = None
+        best_target_state: Optional[dict[str, Any]] = None
+
+        for state_name in sorted(states.keys(), key=lambda key: order.get(key, 99)):
+            rewards = states.get(state_name) or []
+            expected_value = 0.0
+            target_chance = 0.0
+            target_expected_value = 0.0
+            priced_rewards: list[dict[str, Any]] = []
+            for reward in rewards:
+                value = reward_values.get(str(reward.get("item_name") or ""), {})
+                try:
+                    chance = float(reward.get("chance") or 0.0)
+                except Exception:
+                    chance = 0.0
+                try:
+                    price = float(value.get("last_avg_price") or 0.0)
+                except Exception:
+                    price = 0.0
+                expected_value += (chance / 100.0) * price
+                reward_out = {
+                    "item_name": reward.get("item_name"),
+                    "rarity": reward.get("rarity"),
+                    "chance": chance,
+                    "price": round(price, 2),
+                    "slug": value.get("slug"),
+                }
+                priced_rewards.append(reward_out)
+                if (not jackpot) or price > float(jackpot.get("price") or 0.0):
+                    jackpot = reward_out
+                reward_norm = _normalize_warframe_item_name(reward.get("item_name") or "")
+                if target_norm and (target_norm in reward_norm or reward_norm in target_norm):
+                    target_chance = chance
+                    target_expected_value = (chance / 100.0) * price
+
+            priced_rewards.sort(key=lambda reward: (float(reward.get("price") or 0.0), float(reward.get("chance") or 0.0)), reverse=True)
+            summary = {
+                "state": state_name,
+                "expected_value": round(expected_value, 2),
+                "target_chance": round(target_chance, 2),
+                "target_expected_value": round(target_expected_value, 2),
+                "top_rewards": priced_rewards[:3],
+            }
+            state_values.append(summary)
+
+            if (best_value_state is None) or float(summary.get("expected_value") or 0.0) > float(best_value_state.get("expected_value") or 0.0):
+                best_value_state = summary
+            if (best_target_state is None) or float(summary.get("target_expected_value") or 0.0) > float(best_target_state.get("target_expected_value") or 0.0):
+                best_target_state = summary
+
+        profiles[relic_name] = {
+            "states": state_values,
+            "best_value_state": best_value_state,
+            "best_target_state": best_target_state,
+            "jackpot_reward": jackpot,
+        }
+
+    return profiles, errors[:24]
+
+
+def _build_warframe_farm_plan(query: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
     q = str(query or "").strip()
+    platform_key = str(platform or "pc").strip().lower()
+    if platform_key not in {"pc", "ps4", "xb1", "swi"}:
+        platform_key = "pc"
     q_norm = _normalize_warframe_item_name(q)
     if not q_norm:
-        return {"query": q, "relic_targets": [], "blueprints": [], "mods": []}, []
+        return {"query": q, "platform": platform_key, "relic_targets": [], "blueprints": [], "mods": []}, []
 
     relics, relic_errors = _fetch_warframe_drop_dataset("relics")
     blueprints, blueprint_errors = _fetch_warframe_drop_dataset("blueprintLocations")
@@ -1359,6 +1934,12 @@ def _build_warframe_farm_plan(query: str) -> tuple[dict[str, Any], list[str]]:
             )
 
     relic_targets = _aggregate_relic_states(relic_rows)
+    target_market, target_market_errors = _fetch_warframe_value_snapshot(q, platform_key)
+    relic_value_profiles, relic_value_errors = _compute_relic_value_profiles([row.get("relic") for row in relic_targets], platform=platform_key, target_item=q)
+    for row in relic_targets:
+        value_profile = relic_value_profiles.get(str(row.get("relic") or ""))
+        row["value_lab"] = value_profile or {}
+        row["target_market_price"] = target_market.get("last_avg_price")
 
     blueprint_rows: list[dict[str, Any]] = []
     for bp in blueprints:
@@ -1415,12 +1996,14 @@ def _build_warframe_farm_plan(query: str) -> tuple[dict[str, Any], list[str]]:
 
     payload = {
         "query": q,
+        "platform": platform_key,
+        "target_market": target_market,
         "relic_targets": relic_targets[:10],
         "blueprints": blueprint_rows[:8],
         "mods": mod_rows[:8],
     }
-    errors = list(relic_errors) + list(blueprint_errors) + list(mod_errors)
-    return payload, errors[:16]
+    errors = list(relic_errors) + list(blueprint_errors) + list(mod_errors) + list(target_market_errors) + list(relic_value_errors)
+    return payload, errors[:24]
 
 
 def _build_warframe_watchlist_payload(platform: str = "pc") -> tuple[list[dict[str, Any]], list[str]]:
@@ -1432,7 +2015,7 @@ def _build_warframe_watchlist_payload(platform: str = "pc") -> tuple[list[dict[s
         if not name:
             continue
         market, market_errors = _fetch_warframe_market(name, platform)
-        plan, plan_errors = _build_warframe_farm_plan(name)
+        plan, plan_errors = _build_warframe_farm_plan(name, platform=platform)
         errors.extend((market_errors or [])[:2])
         errors.extend((plan_errors or [])[:2])
         out.append(
@@ -2466,7 +3049,13 @@ def f1_overview(season: Optional[str] = None):
         return {**cached, "cached": True}
 
     overview, errors, source = _fetch_f1_overview(season_key)
+    weekend, weekend_errors = _fetch_openf1_weekend_context(
+        season_key,
+        overview.get("next_race"),
+        overview.get("latest_race"),
+    )
     standings = overview.get("standings", [])
+    all_errors = list(errors or []) + list(weekend_errors or [])
 
     generated_at = datetime.now().isoformat(timespec="seconds")
     payload = {
@@ -2476,9 +3065,11 @@ def f1_overview(season: Optional[str] = None):
         "stale_age_seconds": 0,
         "season": season_key,
         "source": source,
+        "weekend_source": weekend.get("source") if isinstance(weekend, dict) else "openf1",
         "standings_count": len(standings),
         **overview,
-        "errors": errors,
+        "weekend": weekend,
+        "errors": all_errors[:24],
     }
 
     if _f1_payload_has_data(payload):
@@ -2486,7 +3077,7 @@ def f1_overview(season: Optional[str] = None):
     else:
         stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
         if isinstance(stale_payload, dict):
-            fallback_errors = list(errors or []) + [f"fallback:last_good:f1:{age}s"]
+            fallback_errors = list(all_errors or []) + [f"fallback:last_good:f1:{age}s"]
             stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
             stale_payload["errors"] = fallback_errors[:24]
             _cache_set(cache_key, stale_payload)
@@ -2504,11 +3095,42 @@ def f1_overview(season: Optional[str] = None):
     duration_ms = int((time.perf_counter() - started) * 1000)
     _record_provider_health(
         "f1",
-        errors=list(errors or []),
+        errors=list(all_errors or []),
         cached=False,
         summary={"standings": len(standings)},
         duration_ms=duration_ms,
     )
+    return {**payload, "cached": False}
+
+
+@app.get("/api/f1/session")
+def f1_session(session_key: str):
+    started = time.perf_counter()
+    session_key = str(session_key or "").strip()
+    if not session_key:
+        raise HTTPException(status_code=422, detail="session_key is required")
+
+    cache_key = f"f1:session:{session_key}"
+    cached = _cache_get(cache_key, ttl_seconds=45)
+    if isinstance(cached, dict):
+        return {**cached, "cached": True}
+
+    detail, errors = _fetch_openf1_session_detail(session_key)
+    if not detail:
+        raise HTTPException(status_code=404, detail="session not found")
+
+    generated_at = datetime.now().isoformat(timespec="seconds")
+    payload = {
+        "generated_at": generated_at,
+        "data_as_of": generated_at,
+        "stale": False,
+        "stale_age_seconds": 0,
+        "session_key": session_key,
+        **detail,
+        "errors": errors[:24],
+        "duration_ms": int((time.perf_counter() - started) * 1000),
+    }
+    _cache_set(cache_key, payload)
     return {**payload, "cached": False}
 
 
@@ -2519,8 +3141,8 @@ def warframe_arsenal(q: str = ""):
 
 
 @app.get("/api/warframe/planner")
-def warframe_planner(q: str = ""):
-    payload, errors = _build_warframe_farm_plan(q)
+def warframe_planner(q: str = "", platform: str = "pc"):
+    payload, errors = _build_warframe_farm_plan(q, platform=platform)
     return {**payload, "errors": errors}
 
 

@@ -139,6 +139,36 @@
     .f1-driver-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:11px;display:flex;flex-direction:column;gap:6px}
     .f1-driver-card .actions{display:flex;gap:6px;flex-wrap:wrap}
     .f1-track-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .f1-hero{background:linear-gradient(135deg,#0f172a 0%,#172554 45%,#0b1220 100%);border:1px solid #334b7a;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+    .f1-hero-title{font-size:26px;font-weight:700;color:#f8fafc;line-height:1.1}
+    .f1-hero-sub{font-size:13px;color:#bfdbfe;display:flex;gap:8px;flex-wrap:wrap}
+    .f1-hero-meta{display:flex;gap:8px;flex-wrap:wrap}
+    .f1-weekend-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:10px}
+    .f1-driver-panels{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:10px;align-items:start}
+    .f1-session-picker{display:flex;flex-wrap:wrap;gap:8px}
+    .f1-session-chip{padding:8px 10px;border-radius:999px;border:1px solid #334155;background:#0f172a;color:#cbd5e1;font-size:12px;cursor:pointer}
+    .f1-session-chip.active{background:#2563eb;border-color:#3b82f6;color:#fff}
+    .f1-session-chip.live{border-color:#16a34a;color:#86efac}
+    .f1-session-chip.cooldown{border-color:#ea580c;color:#fdba74}
+    .f1-session-chip.upcoming{border-color:#2563eb;color:#93c5fd}
+    .f1-session-chip.finished{border-color:#475569;color:#cbd5e1}
+    .f1-track-panel{background:linear-gradient(145deg,#0b1220,#101a30);border-color:#334b7a}
+    .f1-track-visual{width:100%;max-height:210px;object-fit:contain;border-radius:10px;background:radial-gradient(circle at top,#172554 0%,#0b1220 70%);padding:10px}
+    .f1-board-row{display:grid;grid-template-columns:52px minmax(0,1.3fr) minmax(0,.85fr) minmax(0,.85fr);gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #1f2937}
+    .f1-board-row:last-child{border-bottom:none}
+    .f1-pos{font-size:12px;font-weight:700;color:#bfdbfe;background:#1e3a5f;border-radius:999px;padding:4px 8px;width:max-content}
+    .f1-driver-line{display:flex;align-items:center;gap:8px;min-width:0}
+    .f1-team-dot{width:10px;height:10px;border-radius:999px;flex:0 0 auto;background:#64748b}
+    .f1-board-main{min-width:0}
+    .f1-board-main strong,.f1-board-main span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .f1-stat-stack{display:flex;flex-direction:column;gap:2px;font-size:12px}
+    .f1-status-pill{font-size:10px;padding:2px 7px;border-radius:999px;background:#1f2937;color:#cbd5e1;width:max-content}
+    .f1-status-pill.live{background:#14532d;color:#86efac}
+    .f1-status-pill.upcoming{background:#1e3a5f;color:#bfdbfe}
+    .f1-status-pill.cooldown{background:#7c2d12;color:#fdba74}
+    .f1-status-pill.finished{background:#1f2937;color:#cbd5e1}
+    .f1-control-item{padding:8px 0;border-bottom:1px solid #1f2937}
+    .f1-control-item:last-child{border-bottom:none}
     .wf-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
     .wf-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
@@ -183,7 +213,7 @@
       .nav{overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;padding-bottom:6px;gap:6px}
       .nav-tab{flex:0 0 auto;border:1px solid #334155;border-radius:8px;margin-bottom:0}
       .nav-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
-      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid{grid-template-columns:1fr}
+      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels{grid-template-columns:1fr}
       .row>input,.row>select,.row>button{flex:1 1 100%;min-width:0 !important;width:100%}
       input,select,textarea,button{font-size:14px}
     }
@@ -194,6 +224,7 @@
       .pill{font-size:10px}
       .sparkline{height:48px}
       .tool-summary{min-height:0}
+      .f1-board-row{grid-template-columns:1fr}
     }
 
   </style>
@@ -1624,22 +1655,36 @@ async function loadWarframePlanner(seedQuery = '') {
   gridEl.innerHTML = '<div class="muted">Planning farm routes...</div>';
   if (metaEl) metaEl.textContent = `planning ${q}`;
   try {
-    const params = new URLSearchParams({ q });
+    const platformEl = document.getElementById('wf-platform');
+    const params = new URLSearchParams({ q, platform: platformEl?.value || 'pc' });
     const data = await fetch(`${API}/warframe/planner?${params}`).then(r => r.json());
-    if (metaEl) metaEl.textContent = `${(data.relic_targets || []).length} relic routes | ${(data.blueprints || []).length} blueprint routes | ${(data.mods || []).length} mod routes`;
+    const targetPrice = data.target_market?.last_avg_price;
+    if (metaEl) metaEl.textContent = `${(data.relic_targets || []).length} relic routes | ${(data.blueprints || []).length} blueprint routes | ${(data.mods || []).length} mod routes${targetPrice != null ? ` | target ${fmtMarketNum(targetPrice,0)}p` : ''}`;
     const blocks = [];
     const relics = Array.isArray(data.relic_targets) ? data.relic_targets : [];
     const blueprints = Array.isArray(data.blueprints) ? data.blueprints : [];
     const mods = Array.isArray(data.mods) ? data.mods : [];
     if (relics.length) {
-      blocks.push(`
-        <div class="market-card">
-          <strong>Relic Routes</strong>
-          <div class="small-list">
-            ${relics.map(r => `<div class="small-row"><span>${esc(r.relic)} (${esc(r.rarity || '-')})</span><span class="muted">${esc(r.best_state || '-')} ${fmtMarketNum(r.best_chance || 0,2)}%</span></div>`).join('')}
+      relics.forEach(r => {
+        const bestValue = r.value_lab?.best_value_state || {};
+        const bestTarget = r.value_lab?.best_target_state || {};
+        const jackpot = r.value_lab?.jackpot_reward || {};
+        const stateLine = Array.isArray(r.value_lab?.states)
+          ? r.value_lab.states.map(s => `${s.state.slice(0,1)} ${fmtMarketNum(s.expected_value || 0,1)}p`).join(' | ')
+          : '';
+        blocks.push(`
+          <div class="market-card">
+            <div class="diag-head">
+              <strong>${esc(r.relic)} (${esc(r.rarity || '-')})</strong>
+              <span class="rank-pill">target ${esc(r.best_state || '-')} ${fmtMarketNum(r.best_chance || 0,2)}%</span>
+            </div>
+            <div class="small-row"><span>Target EV</span><strong>${bestTarget.target_expected_value != null ? fmtMarketNum(bestTarget.target_expected_value,2) + 'p' : '-'}</strong></div>
+            <div class="small-row"><span>Best Value State</span><span class="muted">${esc(bestValue.state || '-')} ${bestValue.expected_value != null ? fmtMarketNum(bestValue.expected_value,2) + 'p' : '-'}</span></div>
+            <div class="small-row"><span>Jackpot</span><span class="muted">${jackpot.item_name ? `${esc(jackpot.item_name)} ${fmtMarketNum(jackpot.price || 0,0)}p` : 'n/a'}</span></div>
+            <div class="tool-summary">${esc(stateLine || 'No state value data yet.')}</div>
           </div>
-        </div>
-      `);
+        `);
+      });
     }
     if (blueprints.length) {
       blocks.push(`

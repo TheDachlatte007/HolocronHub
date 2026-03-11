@@ -202,6 +202,13 @@ _DEFAULT_HTTP_HEADERS = {
 }
 
 _API_CACHE: dict[str, dict[str, Any]] = {}
+_LAST_GOOD: dict[str, dict[str, Any]] = {}
+_PREWARM_STATE: dict[str, Any] = {
+    "running": False,
+    "started_at": None,
+    "last_run": None,
+    "results": {},
+}
 
 _provider_health: dict[str, dict[str, Any]] = {
     "markets": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}},
@@ -221,6 +228,74 @@ def _record_provider_health(name: str, *, errors: list[str], cached: bool, summa
         "errors": list(errors or [])[:12],
         "summary": dict(summary or {}),
     }
+
+
+def _set_last_good(key: str, payload: dict[str, Any]) -> None:
+    snap = deepcopy(payload)
+    if not isinstance(snap, dict):
+        return
+    snap["data_as_of"] = snap.get("data_as_of") or snap.get("generated_at")
+    snap["stale"] = False
+    snap["stale_age_seconds"] = 0
+    _LAST_GOOD[key] = {"ts": time.time(), "value": snap}
+
+
+def _get_last_good(key: str, *, max_age_seconds: int = 21600) -> tuple[Optional[dict[str, Any]], int]:
+    ent = _LAST_GOOD.get(key)
+    if not isinstance(ent, dict):
+        return None, 0
+
+    ts = float(ent.get("ts") or 0.0)
+    age_seconds = max(0, int(time.time() - ts))
+    if age_seconds > max(1, int(max_age_seconds)):
+        return None, age_seconds
+
+    val = deepcopy(ent.get("value"))
+    if not isinstance(val, dict):
+        return None, age_seconds
+    return val, age_seconds
+
+
+def _mark_payload_stale(payload: dict[str, Any], *, age_seconds: int) -> dict[str, Any]:
+    out = deepcopy(payload)
+    data_as_of = out.get("data_as_of") or out.get("generated_at")
+    out["generated_at"] = datetime.now().isoformat(timespec="seconds")
+    out["data_as_of"] = data_as_of
+    out["stale"] = True
+    out["stale_age_seconds"] = max(0, int(age_seconds))
+    return out
+
+
+def _markets_payload_has_data(payload: dict[str, Any]) -> bool:
+    try:
+        if int(payload.get("count") or 0) > 0:
+            return True
+    except Exception:
+        pass
+    hist = payload.get("history") or {}
+    if not isinstance(hist, dict):
+        return False
+    return any(isinstance(v, list) and len(v) > 0 for v in hist.values())
+
+
+def _f1_payload_has_data(payload: dict[str, Any]) -> bool:
+    try:
+        if int(payload.get("standings_count") or 0) > 0:
+            return True
+    except Exception:
+        pass
+    return any(payload.get(k) for k in ["next_race", "latest_race", "upcoming_races"])
+
+
+def _warframe_payload_has_data(payload: dict[str, Any]) -> bool:
+    worldstate = payload.get("worldstate") or {}
+    market = payload.get("market") or {}
+    if (market.get("best_sell") is not None) or (market.get("best_buy") is not None):
+        return True
+    for key in ["alerts", "fissures", "invasions", "events", "news"]:
+        if len(worldstate.get(key) or []) > 0:
+            return True
+    return False
 
 
 def _cache_get(key: str, ttl_seconds: int) -> Optional[Any]:
@@ -1264,6 +1339,42 @@ def _apply_schedule(cfg: dict) -> None:
         )
 
 
+def _prewarm_provider_caches() -> None:
+    if _PREWARM_STATE.get("running"):
+        return
+
+    _PREWARM_STATE["running"] = True
+    started_at = datetime.now().isoformat(timespec="seconds")
+    _PREWARM_STATE["started_at"] = started_at
+
+    results: dict[str, Any] = {}
+    for name, fn in [
+        ("markets", lambda: markets_overview()),
+        ("f1", lambda: f1_overview("current")),
+        ("warframe", lambda: warframe_overview("arcane energize", "pc")),
+    ]:
+        t0 = time.time()
+        try:
+            payload = fn() or {}
+            results[name] = {
+                "ok": True,
+                "duration_ms": int((time.time() - t0) * 1000),
+                "cached": bool(payload.get("cached")),
+                "stale": bool(payload.get("stale")),
+            }
+        except Exception as e:
+            results[name] = {
+                "ok": False,
+                "duration_ms": int((time.time() - t0) * 1000),
+                "error": str(e),
+            }
+
+    _PREWARM_STATE["running"] = False
+    _PREWARM_STATE["last_run"] = datetime.now().isoformat(timespec="seconds")
+    _PREWARM_STATE["started_at"] = None
+    _PREWARM_STATE["results"] = results
+
+
 @app.on_event("startup")
 def _startup() -> None:
     settings_cfg = _load_settings()
@@ -1272,8 +1383,12 @@ def _startup() -> None:
     cfg = _load_schedule()
     _apply_schedule(cfg)
     _scheduler.start()
+
+    import threading
+
+    threading.Thread(target=_prewarm_provider_caches, daemon=True).start()
+
     if cfg.get("run_at_startup") and cfg.get("enabled"):
-        import threading
         threading.Thread(target=_run_ingest_bg, daemon=True).start()
 
 
@@ -1695,8 +1810,12 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
     quotes, errors = _fetch_market_quotes(symbol_list)
     history, history_errors = _fetch_markets_history(symbol_list, range_key=range_key, interval=interval_key)
 
+    generated_at = datetime.now().isoformat(timespec="seconds")
     payload = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": generated_at,
+        "data_as_of": generated_at,
+        "stale": False,
+        "stale_age_seconds": 0,
         "count": len(quotes),
         "requested_symbols": symbol_list,
         "errors": errors,
@@ -1706,6 +1825,25 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
         "history_range": range_key,
         "history_interval": interval_key,
     }
+
+    if _markets_payload_has_data(payload):
+        _set_last_good(cache_key, payload)
+    else:
+        stale_payload, age = _get_last_good(cache_key, max_age_seconds=6 * 3600)
+        if isinstance(stale_payload, dict):
+            fallback_errors = list(errors or []) + list(history_errors or []) + [f"fallback:last_good:markets:{age}s"]
+            stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+            stale_payload["errors"] = fallback_errors[:24]
+            stale_payload["history_errors"] = list(history_errors or [])[:24]
+            _cache_set(cache_key, stale_payload)
+            _record_provider_health(
+                "markets",
+                errors=fallback_errors,
+                cached=False,
+                summary={"quotes": int(stale_payload.get("count") or 0)},
+            )
+            return {**stale_payload, "cached": False}
+
     _cache_set(cache_key, payload)
     _record_provider_health(
         "markets",
@@ -1714,7 +1852,6 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
         summary={"quotes": len(quotes)},
     )
     return {**payload, "cached": False}
-
 
 
 @app.get("/api/f1/overview")
@@ -1736,14 +1873,37 @@ def f1_overview(season: Optional[str] = None):
 
     overview, errors, source = _fetch_f1_overview(season_key)
     standings = overview.get("standings", [])
+
+    generated_at = datetime.now().isoformat(timespec="seconds")
     payload = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": generated_at,
+        "data_as_of": generated_at,
+        "stale": False,
+        "stale_age_seconds": 0,
         "season": season_key,
         "source": source,
         "standings_count": len(standings),
         **overview,
         "errors": errors,
     }
+
+    if _f1_payload_has_data(payload):
+        _set_last_good(cache_key, payload)
+    else:
+        stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
+        if isinstance(stale_payload, dict):
+            fallback_errors = list(errors or []) + [f"fallback:last_good:f1:{age}s"]
+            stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+            stale_payload["errors"] = fallback_errors[:24]
+            _cache_set(cache_key, stale_payload)
+            _record_provider_health(
+                "f1",
+                errors=fallback_errors,
+                cached=False,
+                summary={"standings": int(stale_payload.get("standings_count") or 0)},
+            )
+            return {**stale_payload, "cached": False}
+
     _cache_set(cache_key, payload)
     _record_provider_health(
         "f1",
@@ -1752,7 +1912,6 @@ def f1_overview(season: Optional[str] = None):
         summary={"standings": len(standings)},
     )
     return {**payload, "cached": False}
-
 
 
 @app.get("/api/warframe/overview")
@@ -1781,14 +1940,43 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
 
     worldstate, world_errors = _fetch_warframe_worldstate(platform_key)
     market, market_errors = _fetch_warframe_market(item, platform_key)
+
+    generated_at = datetime.now().isoformat(timespec="seconds")
     payload = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": generated_at,
+        "data_as_of": generated_at,
+        "stale": False,
+        "stale_age_seconds": 0,
         "platform": platform_key,
         "item_query": item,
         "worldstate": worldstate,
         "market": market,
         "errors": world_errors + market_errors,
     }
+
+    if _warframe_payload_has_data(payload):
+        _set_last_good(cache_key, payload)
+    else:
+        stale_payload, age = _get_last_good(cache_key, max_age_seconds=3 * 3600)
+        if isinstance(stale_payload, dict):
+            fallback_errors = list(world_errors or []) + list(market_errors or []) + [f"fallback:last_good:warframe:{age}s"]
+            stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+            stale_payload["errors"] = fallback_errors[:24]
+            _cache_set(cache_key, stale_payload)
+            ws = stale_payload.get("worldstate") or {}
+            mk = stale_payload.get("market") or {}
+            _record_provider_health(
+                "warframe",
+                errors=fallback_errors,
+                cached=False,
+                summary={
+                    "alerts": len(ws.get("alerts") or []),
+                    "fissures": len(ws.get("fissures") or []),
+                    "best_sell": mk.get("best_sell"),
+                },
+            )
+            return {**stale_payload, "cached": False}
+
     _cache_set(cache_key, payload)
     _record_provider_health(
         "warframe",
@@ -1803,9 +1991,6 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
     return {**payload, "cached": False}
 
 
-
-# ── debug ─────────────────────────────────────────────────────────────────────
-
 @app.get("/api/debug/providers")
 def debug_providers():
     cache_counts = {
@@ -1814,14 +1999,20 @@ def debug_providers():
         "f1": sum(1 for k in _API_CACHE.keys() if k.startswith("f1:")),
         "warframe": sum(1 for k in _API_CACHE.keys() if k.startswith("warframe:")),
     }
+    last_good_counts = {
+        "entries": len(_LAST_GOOD),
+        "markets": sum(1 for k in _LAST_GOOD.keys() if k.startswith("markets:")),
+        "f1": sum(1 for k in _LAST_GOOD.keys() if k.startswith("f1:")),
+        "warframe": sum(1 for k in _LAST_GOOD.keys() if k.startswith("warframe:")),
+    }
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "providers": _provider_health,
         "cache": cache_counts,
+        "last_good": last_good_counts,
+        "prewarm": deepcopy(_PREWARM_STATE),
     }
 
-
-# ── schedule ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/schedule")
 def get_schedule():
@@ -1890,6 +2081,7 @@ def status():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8787, reload=True)
+
 
 
 

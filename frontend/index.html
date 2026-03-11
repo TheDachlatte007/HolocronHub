@@ -1161,7 +1161,9 @@ async function loadMarkets() {
 
     const warnings = (data.errors?.length || 0) + (data.history_errors?.length || 0);
     const cacheTag = data.cached ? ' | cache' : '';
-    metaEl.textContent = `${data.count||0} quotes | ${data.history_range || '1mo'} trend | updated ${relTime(data.generated_at)}` + cacheTag + (warnings ? ` | WARN ${warnings}` : '');
+    const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
+    const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
+    metaEl.textContent = `${data.count||0} quotes | ${data.history_range || '1mo'} trend | updated ${relTime(data.generated_at)}` + cacheTag + staleTag + asOfTag + (warnings ? ` | WARN ${warnings}` : '');
     if (errEl) {
       const allErrs = [...(data.errors || []), ...(data.history_errors || [])].slice(0, 6);
       errEl.innerHTML = allErrs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
@@ -1258,7 +1260,9 @@ async function loadF1() {
 
     const errInfo = data.errors?.length ? ` | ${data.errors.length} warning(s)` : '';
     const cacheTag = data.cached ? ' | cache' : '';
-    metaEl.textContent = `${data.standings_count || 0} drivers | source ${data.source || 'unknown'} | updated ${relTime(data.generated_at)}${cacheTag}${errInfo}`;
+    const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
+    const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
+    metaEl.textContent = `${data.standings_count || 0} drivers | source ${data.source || 'unknown'} | updated ${relTime(data.generated_at)}${cacheTag}${staleTag}${asOfTag}${errInfo}`;
     if (errEl) {
       const errs = (data.errors || []).slice(0, 6);
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
@@ -1391,7 +1395,9 @@ async function loadWarframe() {
     const data = await fetch(`${API}/warframe/overview?${params}`).then(r=>r.json());
     const errInfo = data.errors?.length ? ` | ${data.errors.length} warning(s)` : '';
     const cacheTag = data.cached ? ' | cache' : '';
-    metaEl.textContent = `${String(data.platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${cacheTag}${errInfo}`;
+    const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
+    const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
+    metaEl.textContent = `${String(data.platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${cacheTag}${staleTag}${asOfTag}${errInfo}`;
     if (errEl) {
       const errs = (data.errors || []).slice(0, 6);
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
@@ -1779,7 +1785,10 @@ async function loadProviderDiagnostics() {
   try {
     const data = await fetch(`${API}/debug/providers`).then(r=>r.json());
     const cache = data.cache || {};
-    metaEl.textContent = `updated ${relTime(data.generated_at)} | cache entries ${cache.entries ?? 0}`;
+    const lastGood = data.last_good || {};
+    const prewarm = data.prewarm || {};
+    const prewarmLabel = prewarm.running ? 'running' : (prewarm.last_run ? relTime(prewarm.last_run) : 'n/a');
+    metaEl.textContent = `updated ${relTime(data.generated_at)} | cache ${cache.entries ?? 0} | last-good ${lastGood.entries ?? 0} | prewarm ${prewarmLabel}`;
     const providers = data.providers || {};
     const rows = Object.entries(providers);
     listEl.innerHTML = '';

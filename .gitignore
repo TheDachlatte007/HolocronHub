@@ -3,3 +3,4 @@ backend/.env
 data/settings.json
 data/saved_items.json
 data/schedule.json
+data/warframe_watchlist.json

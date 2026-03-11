@@ -26,6 +26,7 @@ SAMPLE_FILE = BASE_DIR / "data" / "tools.sample.json"
 SOURCES_FILE = BASE_DIR / "data" / "sources.json"
 FEED_FILE = BASE_DIR / "data" / "feed_items.json"
 SAVED_FILE = BASE_DIR / "data" / "saved_items.json"
+WARFRAME_WATCHLIST_FILE = BASE_DIR / "data" / "warframe_watchlist.json"
 SCHEDULE_FILE = BASE_DIR / "data" / "schedule.json"
 SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
@@ -133,6 +134,20 @@ def _load_saved() -> list[dict]:
 
 def _save_saved(items: list[dict]) -> None:
     SAVED_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _load_warframe_watchlist() -> list[dict]:
+    if not WARFRAME_WATCHLIST_FILE.exists():
+        return []
+    try:
+        data = json.loads(WARFRAME_WATCHLIST_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _save_warframe_watchlist(items: list[dict]) -> None:
+    WARFRAME_WATCHLIST_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 _DEFAULT_SCHEDULE = {"enabled": True, "interval_hours": 2, "run_at_startup": False}
@@ -1259,6 +1274,189 @@ def _fetch_warframe_arsenal(query: str = "") -> tuple[dict[str, Any], list[str]]
     }, errors[:8]
 
 
+def _fetch_warframe_drop_dataset(dataset_name: str) -> tuple[list[dict[str, Any]], list[str]]:
+    cache_key = f"warframe:drops:{dataset_name}"
+    cached = _cache_get(cache_key, ttl_seconds=6 * 3600)
+    if isinstance(cached, dict):
+        return list(cached.get("items") or []), list(cached.get("errors") or [])
+
+    raw, err = _http_get_json(f"https://drops.warframestat.us/data/{dataset_name}.json", timeout=20)
+    if err:
+        return [], [f"drops:{dataset_name}:{err}"]
+    payload = raw.get(dataset_name) if isinstance(raw, dict) else None
+    if not isinstance(payload, list):
+        return [], [f"drops:{dataset_name}:invalid_payload"]
+    items = [item for item in payload if isinstance(item, dict)]
+    _cache_set(cache_key, {"items": items, "errors": []})
+    return items, []
+
+
+def _aggregate_relic_states(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str, str], dict[str, Any]] = {}
+    order = {"Intact": 0, "Exceptional": 1, "Flawless": 2, "Radiant": 3}
+    for row in rows:
+        key = (str(row.get("relic") or ""), str(row.get("item_name") or ""), str(row.get("rarity") or ""))
+        ent = grouped.setdefault(key, {
+            "relic": row.get("relic"),
+            "item_name": row.get("item_name"),
+            "rarity": row.get("rarity"),
+            "best_state": row.get("state"),
+            "best_chance": row.get("chance"),
+            "states": [],
+        })
+        ent["states"].append({"state": row.get("state"), "chance": row.get("chance")})
+        cur_order = order.get(str(row.get("state") or ""), -1)
+        best_order = order.get(str(ent.get("best_state") or ""), -1)
+        try:
+            row_chance = float(row.get("chance") or 0)
+            best_chance = float(ent.get("best_chance") or 0)
+        except Exception:
+            row_chance = 0.0
+            best_chance = 0.0
+        if row_chance > best_chance or (row_chance == best_chance and cur_order > best_order):
+            ent["best_state"] = row.get("state")
+            ent["best_chance"] = row.get("chance")
+
+    for ent in grouped.values():
+        ent["states"] = sorted(
+            ent.get("states") or [],
+            key=lambda row: (float(row.get("chance") or 0.0), order.get(str(row.get("state") or ""), -1)),
+            reverse=True,
+        )
+
+    out = list(grouped.values())
+    out.sort(key=lambda row: (float(row.get("best_chance") or 0.0), str(row.get("relic") or "")), reverse=True)
+    return out[:10]
+
+
+def _build_warframe_farm_plan(query: str) -> tuple[dict[str, Any], list[str]]:
+    q = str(query or "").strip()
+    q_norm = _normalize_warframe_item_name(q)
+    if not q_norm:
+        return {"query": q, "relic_targets": [], "blueprints": [], "mods": []}, []
+
+    relics, relic_errors = _fetch_warframe_drop_dataset("relics")
+    blueprints, blueprint_errors = _fetch_warframe_drop_dataset("blueprintLocations")
+    mods, mod_errors = _fetch_warframe_drop_dataset("modLocations")
+
+    relic_rows: list[dict[str, Any]] = []
+    for relic in relics:
+        rewards = relic.get("rewards") or []
+        for reward in rewards:
+            if not isinstance(reward, dict):
+                continue
+            item_name = str(reward.get("itemName") or "")
+            if q_norm not in _normalize_warframe_item_name(item_name):
+                continue
+            relic_rows.append(
+                {
+                    "relic": f"{relic.get('tier') or ''} {relic.get('relicName') or ''}".strip(),
+                    "item_name": item_name,
+                    "rarity": reward.get("rarity"),
+                    "state": relic.get("state"),
+                    "chance": reward.get("chance"),
+                }
+            )
+
+    relic_targets = _aggregate_relic_states(relic_rows)
+
+    blueprint_rows: list[dict[str, Any]] = []
+    for bp in blueprints:
+        item_name = str(bp.get("itemName") or bp.get("blueprintName") or "")
+        if q_norm not in _normalize_warframe_item_name(item_name):
+            continue
+        enemies = []
+        for enemy in (bp.get("enemies") or [])[:8]:
+            if not isinstance(enemy, dict):
+                continue
+            enemies.append(
+                {
+                    "enemy_name": enemy.get("enemyName"),
+                    "rarity": enemy.get("rarity"),
+                    "chance": enemy.get("chance"),
+                }
+            )
+        enemies = sorted(enemies, key=lambda enemy: float(enemy.get("chance") or 0.0), reverse=True)
+        blueprint_rows.append(
+            {
+                "item_name": item_name,
+                "blueprint_name": bp.get("blueprintName"),
+                "enemies": enemies,
+                "best_chance": max([float(e.get("chance") or 0) for e in enemies] or [0.0]),
+            }
+        )
+    blueprint_rows.sort(key=lambda row: (float(row.get("best_chance") or 0.0), str(row.get("item_name") or "")), reverse=True)
+
+    mod_rows: list[dict[str, Any]] = []
+    for mod in mods:
+        mod_name = str(mod.get("modName") or "")
+        if q_norm not in _normalize_warframe_item_name(mod_name):
+            continue
+        enemies = []
+        for enemy in (mod.get("enemies") or [])[:10]:
+            if not isinstance(enemy, dict):
+                continue
+            enemies.append(
+                {
+                    "enemy_name": enemy.get("enemyName"),
+                    "rarity": enemy.get("rarity"),
+                    "chance": enemy.get("chance"),
+                }
+            )
+        enemies = sorted(enemies, key=lambda enemy: float(enemy.get("chance") or 0.0), reverse=True)
+        mod_rows.append(
+            {
+                "mod_name": mod_name,
+                "enemies": enemies,
+                "best_chance": max([float(e.get("chance") or 0) for e in enemies] or [0.0]),
+            }
+        )
+    mod_rows.sort(key=lambda row: (float(row.get("best_chance") or 0.0), str(row.get("mod_name") or "")), reverse=True)
+
+    payload = {
+        "query": q,
+        "relic_targets": relic_targets[:10],
+        "blueprints": blueprint_rows[:8],
+        "mods": mod_rows[:8],
+    }
+    errors = list(relic_errors) + list(blueprint_errors) + list(mod_errors)
+    return payload, errors[:16]
+
+
+def _build_warframe_watchlist_payload(platform: str = "pc") -> tuple[list[dict[str, Any]], list[str]]:
+    items = _load_warframe_watchlist()
+    out: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for item in items[:20]:
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        market, market_errors = _fetch_warframe_market(name, platform)
+        plan, plan_errors = _build_warframe_farm_plan(name)
+        errors.extend((market_errors or [])[:2])
+        errors.extend((plan_errors or [])[:2])
+        out.append(
+            {
+                **item,
+                "market": {
+                    "best_sell": market.get("best_sell"),
+                    "last_avg_price": market.get("last_avg_price"),
+                    "volume_total": market.get("volume_total"),
+                    "price_change_pct": market.get("price_change_pct"),
+                    "slug": market.get("slug"),
+                    "snapshot_source": market.get("snapshot_source"),
+                },
+                "planner": {
+                    "relic_count": len(plan.get("relic_targets") or []),
+                    "best_relic": (plan.get("relic_targets") or [{}])[0],
+                    "blueprint_count": len(plan.get("blueprints") or []),
+                    "mod_count": len(plan.get("mods") or []),
+                },
+            }
+        )
+    return out, errors[:24]
+
+
 def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str, Any]:
     news_out: list[dict[str, Any]] = []
     for n in (data.get("news") or [])[:10]:
@@ -2318,6 +2516,50 @@ def f1_overview(season: Optional[str] = None):
 def warframe_arsenal(q: str = ""):
     payload, errors = _fetch_warframe_arsenal(q)
     return {**payload, "errors": errors}
+
+
+@app.get("/api/warframe/planner")
+def warframe_planner(q: str = ""):
+    payload, errors = _build_warframe_farm_plan(q)
+    return {**payload, "errors": errors}
+
+
+@app.get("/api/warframe/watchlist")
+def get_warframe_watchlist(platform: str = "pc"):
+    items, errors = _build_warframe_watchlist_payload(platform)
+    return {"items": items, "count": len(items), "errors": errors}
+
+
+@app.post("/api/warframe/watchlist")
+async def add_warframe_watchlist_item(request: Request):
+    item = await request.json()
+    name = str(item.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="name required")
+    items = _load_warframe_watchlist()
+    item_id = _normalize_warframe_item_name(name)
+    if any(str(entry.get("id") or "") == item_id for entry in items):
+        raise HTTPException(status_code=409, detail="Already tracked")
+    record = {
+        "id": item_id,
+        "name": name,
+        "kind": str(item.get("kind") or "item").strip() or "item",
+        "note": str(item.get("note") or "").strip(),
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    items.insert(0, record)
+    _save_warframe_watchlist(items)
+    return record
+
+
+@app.delete("/api/warframe/watchlist/{item_id}")
+def delete_warframe_watchlist_item(item_id: str):
+    items = _load_warframe_watchlist()
+    new_items = [entry for entry in items if str(entry.get("id") or "") != item_id]
+    if len(new_items) == len(items):
+        raise HTTPException(status_code=404, detail="Item not found")
+    _save_warframe_watchlist(new_items)
+    return {"ok": True}
 
 
 @app.get("/api/warframe/overview")

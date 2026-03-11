@@ -147,6 +147,7 @@
     .wf-ability-tags{display:flex;flex-wrap:wrap;gap:6px}
     .wf-ability-chip{font-size:11px;padding:4px 8px;border-radius:999px;background:#172554;color:#bfdbfe}
     .wf-tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+    .wf-plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
 
     .warn-strip{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
     .warn-item{font-size:11px;padding:2px 8px;border-radius:999px;background:#3b1f1f;color:#fca5a5;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -358,6 +359,7 @@
           <option value="swi">Switch</option>
         </select>
         <button class="primary" onclick="loadWarframe()">Refresh</button>
+        <button onclick="addCurrentWarframeItem()">Track Item</button>
       </div>
       <div id="wf-meta" class="muted" style="margin-bottom:4px"></div>
       <div id="wf-errors" class="warn-strip"></div>
@@ -396,6 +398,24 @@
           <span class="tool-minor">48h volume across a popular trading watchlist</span>
         </div>
         <div id="wf-hot" class="wf-top-grid"></div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
+          <h2 style="margin:0">Farm Planner</h2>
+          <span id="wf-plan-meta" class="tool-minor"></span>
+        </div>
+        <div class="row">
+          <input id="wf-plan-query" placeholder="Search farm targets, e.g. dante prime systems, target acquired, revenant prime chassis" style="flex:1;min-width:220px" />
+          <button onclick="loadWarframePlanner()">Plan Farm</button>
+        </div>
+        <div id="wf-plan" class="wf-plan-grid"></div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
+          <h2 style="margin:0">Personal Watchlist</h2>
+          <span id="wf-watch-meta" class="tool-minor"></span>
+        </div>
+        <div id="wf-watchlist" class="wf-plan-grid"></div>
       </div>
       <div class="stat-card">
         <div class="diag-head">
@@ -1426,6 +1446,8 @@ async function loadWarframe() {
   marketEl.innerHTML = '<div class="muted">Loading market...</div>';
   renderWarframeTools();
   void loadWarframeArsenal();
+  void loadWarframeWatchlist();
+  void loadWarframePlanner(item);
   hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
   if (marketChartEl) marketChartEl.innerHTML = '';
   alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
@@ -1587,6 +1609,127 @@ async function loadWarframe() {
     worldEl.innerHTML = '';
   }
 }
+async function loadWarframePlanner(seedQuery = '') {
+  const inputEl = document.getElementById('wf-plan-query');
+  const metaEl = document.getElementById('wf-plan-meta');
+  const gridEl = document.getElementById('wf-plan');
+  if (!gridEl) return;
+  if (seedQuery && inputEl && !inputEl.value.trim()) inputEl.value = seedQuery;
+  const q = (inputEl?.value || seedQuery || '').trim();
+  if (!q) {
+    gridEl.innerHTML = '<div class="muted">Search an item, part or mod to see relic and drop paths.</div>';
+    if (metaEl) metaEl.textContent = 'waiting for a target';
+    return;
+  }
+  gridEl.innerHTML = '<div class="muted">Planning farm routes...</div>';
+  if (metaEl) metaEl.textContent = `planning ${q}`;
+  try {
+    const params = new URLSearchParams({ q });
+    const data = await fetch(`${API}/warframe/planner?${params}`).then(r => r.json());
+    if (metaEl) metaEl.textContent = `${(data.relic_targets || []).length} relic routes | ${(data.blueprints || []).length} blueprint routes | ${(data.mods || []).length} mod routes`;
+    const blocks = [];
+    const relics = Array.isArray(data.relic_targets) ? data.relic_targets : [];
+    const blueprints = Array.isArray(data.blueprints) ? data.blueprints : [];
+    const mods = Array.isArray(data.mods) ? data.mods : [];
+    if (relics.length) {
+      blocks.push(`
+        <div class="market-card">
+          <strong>Relic Routes</strong>
+          <div class="small-list">
+            ${relics.map(r => `<div class="small-row"><span>${esc(r.relic)} (${esc(r.rarity || '-')})</span><span class="muted">${esc(r.best_state || '-')} ${fmtMarketNum(r.best_chance || 0,2)}%</span></div>`).join('')}
+          </div>
+        </div>
+      `);
+    }
+    if (blueprints.length) {
+      blocks.push(`
+        <div class="market-card">
+          <strong>Blueprint Drops</strong>
+          <div class="small-list">
+            ${blueprints.map(bp => `<div class="small-row"><span>${esc(bp.item_name || bp.blueprint_name || 'Blueprint')}</span><span class="muted">${esc(bp.enemies?.[0]?.enemy_name || 'source unknown')} ${fmtMarketNum(bp.best_chance || 0,2)}%</span></div>`).join('')}
+          </div>
+        </div>
+      `);
+    }
+    if (mods.length) {
+      blocks.push(`
+        <div class="market-card">
+          <strong>Mod Sources</strong>
+          <div class="small-list">
+            ${mods.map(mod => `<div class="small-row"><span>${esc(mod.mod_name || 'Mod')}</span><span class="muted">${esc(mod.enemies?.[0]?.enemy_name || 'source unknown')} ${fmtMarketNum(mod.best_chance || 0,2)}%</span></div>`).join('')}
+          </div>
+        </div>
+      `);
+    }
+    gridEl.innerHTML = blocks.length ? blocks.join('') : '<div class="muted">No relic or drop routes found for that query.</div>';
+  } catch (e) {
+    gridEl.innerHTML = `<div class="err-msg">Farm planner failed: ${esc(e.message)}</div>`;
+    if (metaEl) metaEl.textContent = 'planner unavailable';
+  }
+}
+
+async function loadWarframeWatchlist() {
+  const platformSel = document.getElementById('wf-platform');
+  const metaEl = document.getElementById('wf-watch-meta');
+  const gridEl = document.getElementById('wf-watchlist');
+  if (!gridEl) return;
+  const platform = platformSel?.value || 'pc';
+  gridEl.innerHTML = '<div class="muted">Loading tracked items...</div>';
+  if (metaEl) metaEl.textContent = `syncing ${String(platform).toUpperCase()} watchlist`;
+  try {
+    const params = new URLSearchParams({ platform });
+    const data = await fetch(`${API}/warframe/watchlist?${params}`).then(r => r.json());
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (metaEl) metaEl.textContent = `${items.length} tracked item(s)`;
+    if (!items.length) {
+      gridEl.innerHTML = '<div class="muted">No tracked Warframe items yet. Use Track Item to start a personal list.</div>';
+      return;
+    }
+    gridEl.innerHTML = '';
+    items.forEach(item => {
+      const move = Number(item.market?.price_change_pct);
+      const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+      const bestRelic = item.planner?.best_relic || {};
+      const card = document.createElement('div');
+      card.className = 'market-card';
+      card.innerHTML = `
+        <div class="diag-head">
+          <strong>${esc(item.name || 'Tracked Item')}</strong>
+          <button class="sm danger" onclick="deleteWarframeWatchItem('${esc(item.id)}', this)">Remove</button>
+        </div>
+        ${item.note ? `<div class="tool-summary">${esc(item.note)}</div>` : ''}
+        <div class="small-row"><span>Price</span><strong>${item.market?.last_avg_price != null ? fmtMarketNum(item.market.last_avg_price,0) + 'p' : '-'}</strong></div>
+        <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
+        <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.market?.volume_total || 0,0)}</span></div>
+        <div class="small-row"><span>Best Relic</span><span class="muted">${bestRelic.relic ? `${esc(bestRelic.relic)} ${esc(bestRelic.best_state || '')}` : 'no relic route'}</span></div>
+        ${item.market?.slug ? `<a href="https://warframe.market/items/${esc(item.market.slug)}" target="_blank" rel="noopener">Open market page</a>` : ''}
+      `;
+      gridEl.appendChild(card);
+    });
+  } catch (e) {
+    gridEl.innerHTML = `<div class="err-msg">Watchlist failed: ${esc(e.message)}</div>`;
+    if (metaEl) metaEl.textContent = 'watchlist unavailable';
+  }
+}
+
+async function addCurrentWarframeItem() {
+  const inputEl = document.getElementById('wf-item');
+  if (!inputEl || !inputEl.value.trim()) return;
+  const name = inputEl.value.trim();
+  const res = await fetch(`${API}/warframe/watchlist`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name, kind:'item' }),
+  });
+  if (res.ok || res.status === 409) loadWarframeWatchlist();
+}
+
+async function deleteWarframeWatchItem(id, btn) {
+  btn.disabled = true;
+  const res = await fetch(`${API}/warframe/watchlist/${encodeURIComponent(id)}`, { method:'DELETE' });
+  if (res.ok) loadWarframeWatchlist(); else btn.disabled = false;
+}
+
 async function loadWarframeArsenal() {
   const inputEl = document.getElementById('wf-frame-search');
   const metaEl = document.getElementById('wf-arsenal-meta');

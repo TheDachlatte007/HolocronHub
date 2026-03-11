@@ -141,6 +141,12 @@
     .f1-track-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
     .wf-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
     .wf-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+    .wf-frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+    .wf-frame-card{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .wf-frame-art{width:100%;aspect-ratio:16/9;object-fit:contain;border-radius:10px;background:radial-gradient(circle at top,#1e3a5f 0%,#0b1220 70%);padding:10px}
+    .wf-ability-tags{display:flex;flex-wrap:wrap;gap:6px}
+    .wf-ability-chip{font-size:11px;padding:4px 8px;border-radius:999px;background:#172554;color:#bfdbfe}
+    .wf-tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 
     .warn-strip{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
     .warn-item{font-size:11px;padding:2px 8px;border-radius:999px;background:#3b1f1f;color:#fca5a5;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -390,6 +396,24 @@
           <span class="tool-minor">48h volume across a popular trading watchlist</span>
         </div>
         <div id="wf-hot" class="wf-top-grid"></div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
+          <h2 style="margin:0">Arsenal Explorer</h2>
+          <span id="wf-arsenal-meta" class="tool-minor"></span>
+        </div>
+        <div class="row">
+          <input id="wf-frame-search" placeholder="Search frames, e.g. dante, revenant, saryn prime" style="flex:1;min-width:220px" />
+          <button onclick="loadWarframeArsenal()">Search Frames</button>
+        </div>
+        <div id="wf-arsenal" class="wf-frame-grid"></div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
+          <h2 style="margin:0">Warframe Tools & Research</h2>
+          <span class="tool-minor">Quick access for planning, farming and price checks</span>
+        </div>
+        <div id="wf-tools" class="wf-tool-grid"></div>
       </div>
     </div>
   </div>
@@ -1112,6 +1136,14 @@ async function loadDigest() {
 }
 
 const DEFAULT_MARKET_SYMBOLS = '^GSPC,^IXIC,^DJI,BTC-USD,ETH-USD,EURUSD=X,GC=F,CL=F';
+const WARFRAME_TOOL_LINKS = [
+  { name:'Warframe Wiki', url:'https://wiki.warframe.com/w/Main_Page', summary:'Frame abilities, farm paths, drop tables and patch context.' },
+  { name:'Warframe Market', url:'https://warframe.market/', summary:'Trading, price discovery and item drill-down.' },
+  { name:'Warframe Drops', url:'https://drops.warframestat.us/', summary:'Drop table explorer powered by WarframeStat.' },
+  { name:'WFInfo', url:'https://wfinfo.warframestat.us/', summary:'Overlay-style fissure helper for plat and ducat value checks.' },
+  { name:'WFCD Items', url:'https://github.com/WFCD/warframe-items', summary:'Community dataset for frames, items and artwork.' },
+  { name:'Deal Finder', url:'https://github.com/Luis-Munu/Warframe-Market-deal-finder', summary:'Community market-analysis project for inspiration and scanning ideas.' },
+];
 
 
 function buildSparklineSvg(points, cls = '') {
@@ -1392,6 +1424,8 @@ async function loadWarframe() {
   const platform = platformSel.value || 'pc';
 
   marketEl.innerHTML = '<div class="muted">Loading market...</div>';
+  renderWarframeTools();
+  void loadWarframeArsenal();
   hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
   if (marketChartEl) marketChartEl.innerHTML = '';
   alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
@@ -1553,6 +1587,73 @@ async function loadWarframe() {
     worldEl.innerHTML = '';
   }
 }
+async function loadWarframeArsenal() {
+  const inputEl = document.getElementById('wf-frame-search');
+  const metaEl = document.getElementById('wf-arsenal-meta');
+  const gridEl = document.getElementById('wf-arsenal');
+  if (!gridEl) return;
+  const q = (inputEl?.value || '').trim();
+  gridEl.innerHTML = '<div class="muted">Loading frames...</div>';
+  if (metaEl) metaEl.textContent = q ? `searching for "${q}"` : 'loading frame catalog';
+
+  try {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    const data = await fetch(`${API}/warframe/arsenal?${params}`).then(r => r.json());
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (metaEl) metaEl.textContent = q
+      ? `${data.total ?? items.length} match(es) for "${q}"`
+      : `showing ${data.count ?? items.length} of ${data.total ?? items.length} frames`;
+
+    if (!items.length) {
+      gridEl.innerHTML = '<div class="muted">No frames found for that search.</div>';
+      return;
+    }
+
+    gridEl.innerHTML = '';
+    items.forEach(frame => {
+      const card = document.createElement('div');
+      card.className = 'wf-frame-card';
+      const abilityNames = Array.isArray(frame.abilities) ? frame.abilities.map(a => a?.name).filter(Boolean) : [];
+      const intro = frame.introduced ? `Introduced ${esc(frame.introduced)}` : '';
+      card.innerHTML = `
+        ${frame.image_url ? `<img class="wf-frame-art" src="${esc(frame.image_url)}" alt="${esc(frame.name || 'Warframe')}" loading="lazy" />` : ''}
+        <div class="diag-head">
+          <strong>${esc(frame.name || 'Warframe')}</strong>
+          <span class="rank-pill">${frame.is_prime ? 'Prime' : 'Frame'}</span>
+        </div>
+        <div class="tool-summary">${esc(frame.passive || frame.description || 'No summary available.')}</div>
+        <div class="small-row"><span>Stats</span><span class="muted">HP ${fmtMarketNum(frame.health || 0,0)} | SH ${fmtMarketNum(frame.shield || 0,0)} | AR ${fmtMarketNum(frame.armor || 0,0)}</span></div>
+        <div class="small-row"><span>Mobility</span><span class="muted">EN ${fmtMarketNum(frame.energy || 0,0)} | Sprint ${fmtMarketNum(frame.sprint || 0,2)}</span></div>
+        <div class="small-row"><span>Aura / MR</span><span class="muted">${esc(frame.aura || '-')} / ${esc(frame.mastery_req ?? '-')}</span></div>
+        ${intro ? `<div class="small-row"><span>Release</span><span class="muted">${intro}</span></div>` : ''}
+        <div class="wf-ability-tags">${abilityNames.map(name => `<span class="wf-ability-chip">${esc(name)}</span>`).join('')}</div>
+        ${frame.wiki_url ? `<a href="${esc(frame.wiki_url)}" target="_blank" rel="noopener">Open wiki page</a>` : ''}
+      `;
+      gridEl.appendChild(card);
+    });
+  } catch (e) {
+    gridEl.innerHTML = `<div class="err-msg">Arsenal loading failed: ${esc(e.message)}</div>`;
+    if (metaEl) metaEl.textContent = 'arsenal unavailable';
+  }
+}
+
+function renderWarframeTools() {
+  const gridEl = document.getElementById('wf-tools');
+  if (!gridEl) return;
+  gridEl.innerHTML = '';
+  WARFRAME_TOOL_LINKS.forEach(tool => {
+    const card = document.createElement('div');
+    card.className = 'market-card';
+    card.innerHTML = `
+      <strong>${esc(tool.name)}</strong>
+      <div class="tool-summary">${esc(tool.summary)}</div>
+      <a href="${esc(tool.url)}" target="_blank" rel="noopener">Open</a>
+    `;
+    gridEl.appendChild(card);
+  });
+}
+
 async function saveItem(url, btn, title, summary, category) {
   btn.disabled=true;
   const res = await fetch(`${API}/saved`,{

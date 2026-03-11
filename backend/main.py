@@ -1170,6 +1170,95 @@ def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]
     return hot_items, errors[:16]
 
 
+def _clean_warframe_text(value: Any) -> str:
+    text = str(value or "")
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\|[A-Z0-9_]+\|", "", text)
+    text = text.replace("\n", " ").replace("\r", " ")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _warframe_image_url(image_name: Any) -> Optional[str]:
+    image = str(image_name or "").strip()
+    if not image:
+        return None
+    return f"https://cdn.warframestat.us/img/{quote(image)}"
+
+
+def _fetch_warframe_arsenal(query: str = "") -> tuple[dict[str, Any], list[str]]:
+    cache_key = "warframe:arsenal:catalog"
+    cached = _cache_get(cache_key, ttl_seconds=12 * 3600)
+    errors: list[str] = []
+    frames_raw: list[dict[str, Any]] = []
+
+    if isinstance(cached, dict):
+        frames_raw = list(cached.get("frames") or [])
+        errors = list(cached.get("errors") or [])
+    else:
+        raw, err = _http_get_json(
+            "https://raw.githubusercontent.com/WFCD/warframe-items/master/data/json/Warframes.json",
+            timeout=20,
+        )
+        if err:
+            return {"query": query, "count": 0, "total": 0, "items": []}, [f"arsenal:{err}"]
+        if not isinstance(raw, list):
+            return {"query": query, "count": 0, "total": 0, "items": []}, ["arsenal:invalid_payload"]
+        frames_raw = [item for item in raw if isinstance(item, dict)]
+        _cache_set(cache_key, {"frames": frames_raw, "errors": []})
+
+    frames: list[dict[str, Any]] = []
+    q_norm = _normalize_warframe_item_name(query)
+    for item in frames_raw:
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        name_norm = _normalize_warframe_item_name(name)
+        if q_norm and q_norm not in name_norm:
+            continue
+
+        abilities = []
+        for ability in item.get("abilities") or []:
+            if not isinstance(ability, dict):
+                continue
+            abilities.append(
+                {
+                    "name": ability.get("name"),
+                    "description": _clean_warframe_text(ability.get("description")),
+                    "image_url": _warframe_image_url(ability.get("imageName")),
+                }
+            )
+
+        frames.append(
+            {
+                "name": name,
+                "is_prime": bool(item.get("isPrime")),
+                "description": _clean_warframe_text(item.get("description")),
+                "passive": _clean_warframe_text(item.get("passiveDescription")),
+                "image_url": _warframe_image_url(item.get("imageName")),
+                "wiki_url": item.get("wikiaUrl"),
+                "health": item.get("health"),
+                "shield": item.get("shield"),
+                "armor": item.get("armor"),
+                "energy": item.get("power"),
+                "sprint": item.get("sprintSpeed") or item.get("sprint"),
+                "aura": item.get("aura"),
+                "mastery_req": item.get("masteryReq"),
+                "introduced": item.get("introduced") or item.get("releaseDate"),
+                "abilities": abilities[:4],
+            }
+        )
+
+    frames.sort(key=lambda frame: (0 if q_norm and _normalize_warframe_item_name(frame.get("name") or "") == q_norm else 1, str(frame.get("name") or "")))
+    total = len(frames)
+    limit = 18 if not q_norm else 24
+    return {
+        "query": query,
+        "count": min(total, limit),
+        "total": total,
+        "items": frames[:limit],
+    }, errors[:8]
+
+
 def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str, Any]:
     news_out: list[dict[str, Any]] = []
     for n in (data.get("news") or [])[:10]:
@@ -2223,6 +2312,12 @@ def f1_overview(season: Optional[str] = None):
         duration_ms=duration_ms,
     )
     return {**payload, "cached": False}
+
+
+@app.get("/api/warframe/arsenal")
+def warframe_arsenal(q: str = ""):
+    payload, errors = _fetch_warframe_arsenal(q)
+    return {**payload, "errors": errors}
 
 
 @app.get("/api/warframe/overview")

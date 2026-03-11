@@ -2141,6 +2141,7 @@ def _build_warframe_watchlist_payload(platform: str = "pc", sort_by: str = "prio
         price_value = float(market.get("last_avg_price") or 0.0)
         volume_value = float(market.get("volume_total") or 0.0)
         best_relic = (plan.get("relic_targets") or [{}])[0]
+        market_signal = _build_warframe_market_signal(market, tracked=True)
         out.append(
             {
                 **item,
@@ -2148,11 +2149,14 @@ def _build_warframe_watchlist_payload(platform: str = "pc", sort_by: str = "prio
                 "tags": _normalize_tag_list(item.get("tags") or []),
                 "market": {
                     "best_sell": market.get("best_sell"),
+                    "best_buy": market.get("best_buy"),
                     "last_avg_price": market.get("last_avg_price"),
                     "volume_total": market.get("volume_total"),
                     "price_change_pct": market.get("price_change_pct"),
                     "slug": market.get("slug"),
                     "snapshot_source": market.get("snapshot_source"),
+                    "buy_count_live": market.get("buy_count_live"),
+                    "sell_count_live": market.get("sell_count_live"),
                 },
                 "planner": {
                     "relic_count": len(plan.get("relic_targets") or []),
@@ -2160,6 +2164,7 @@ def _build_warframe_watchlist_payload(platform: str = "pc", sort_by: str = "prio
                     "blueprint_count": len(plan.get("blueprints") or []),
                     "mod_count": len(plan.get("mods") or []),
                 },
+                "signal": market_signal,
                 "score": round(priority * 1000 + price_value * 10 + min(volume_value, 1000), 2),
             }
         )
@@ -2327,6 +2332,12 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
 
 
 def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
+    item_key = _normalize_warframe_item_name(item)
+    cache_key = f"warframe:market_snapshot:{platform}:{item_key}"
+    cached = _cache_get(cache_key, ttl_seconds=10 * 60)
+    if isinstance(cached, dict):
+        return dict(cached.get("payload") or {}), list(cached.get("errors") or [])
+
     catalog, catalog_errors = _fetch_warframe_market_catalog()
     item_meta = _find_warframe_market_item(catalog, item)
     slug = str((item_meta or {}).get("slug") or _normalize_warframe_item_name(item))
@@ -2454,7 +2465,192 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
         "price_floor_estimate": price_floor,
         "price_ceiling_estimate": price_ceiling,
         "price_change_pct": stats_summary.get("price_change_pct"),
-    }, errors[:16]
+    }
+    trimmed_errors = errors[:16]
+    _cache_set(cache_key, {"payload": payload, "errors": trimmed_errors})
+    return payload, trimmed_errors
+
+
+def _build_warframe_market_signal(market: dict[str, Any], *, tracked: bool = False) -> dict[str, Any]:
+    try:
+        best_sell = float(market.get("best_sell")) if market.get("best_sell") is not None else None
+    except Exception:
+        best_sell = None
+    try:
+        best_buy = float(market.get("best_buy")) if market.get("best_buy") is not None else None
+    except Exception:
+        best_buy = None
+    try:
+        trend = float(market.get("price_change_pct") or 0.0)
+    except Exception:
+        trend = 0.0
+    try:
+        volume = float(market.get("volume_total") or 0.0)
+    except Exception:
+        volume = 0.0
+
+    buy_live = int(market.get("buy_count_live") or 0)
+    sell_live = int(market.get("sell_count_live") or 0)
+    buy_total = int(market.get("buy_count_total") or 0)
+    sell_total = int(market.get("sell_count_total") or 0)
+
+    spread = None
+    spread_pct = None
+    if best_sell is not None and best_buy is not None:
+        spread = round(max(best_sell - best_buy, 0.0), 2)
+        if best_sell > 0:
+            spread_pct = round((spread / best_sell) * 100.0, 1)
+
+    demand_score = (
+        min(48.0, math.log10(volume + 1.0) * 18.0)
+        + min(20.0, buy_live * 3.5)
+        + min(12.0, max(trend, 0.0) * 1.4)
+        + (8.0 if best_buy and best_sell and best_buy >= best_sell * 0.9 else 0.0)
+        - min(14.0, max(sell_live - buy_live, 0) * 1.6)
+    )
+    liquidity_score = (
+        min(42.0, math.log10(volume + 1.0) * 16.0)
+        + min(18.0, (buy_live + sell_live) * 2.4)
+        + max(0.0, 22.0 - min(spread_pct if spread_pct is not None else 18.0, 18.0))
+        + (8.0 if str(market.get("snapshot_source") or "") == "orders_live" else 0.0)
+    )
+    demand_score = round(max(0.0, min(100.0, demand_score)), 1)
+    liquidity_score = round(max(0.0, min(100.0, liquidity_score)), 1)
+
+    pressure_ratio = None
+    if sell_live > 0:
+        pressure_ratio = round(buy_live / max(sell_live, 1), 2)
+    elif buy_live > 0:
+        pressure_ratio = 9.99
+
+    if tracked and trend <= -10.0 and volume < 120:
+        signal = "dump"
+    elif tracked and demand_score >= 68.0 and liquidity_score >= 55.0:
+        signal = "sell"
+    elif tracked and (demand_score >= 52.0 or liquidity_score >= 52.0):
+        signal = "hold"
+    else:
+        signal = "watch"
+
+    if demand_score >= 75.0:
+        momentum = "surging"
+    elif demand_score >= 55.0:
+        momentum = "active"
+    else:
+        momentum = "quiet"
+
+    return {
+        "spread": spread,
+        "spread_pct": spread_pct,
+        "demand_score": demand_score,
+        "liquidity_score": liquidity_score,
+        "pressure_ratio": pressure_ratio,
+        "momentum": momentum,
+        "signal": signal,
+        "tracked": tracked,
+        "live_buyers": buy_live,
+        "live_sellers": sell_live,
+        "total_buyers": buy_total,
+        "total_sellers": sell_total,
+    }
+
+
+def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
+    platform_key = str(platform or "pc").strip().lower()
+    if platform_key not in {"pc", "ps4", "xb1", "swi"}:
+        platform_key = "pc"
+
+    cache_key = f"warframe:market_pulse:{platform_key}"
+    cached = _cache_get(cache_key, ttl_seconds=15 * 60)
+    if isinstance(cached, dict):
+        return cached, list(cached.get("errors") or [])
+
+    tracked_names = [
+        str(item.get("name") or "").strip()
+        for item in _load_warframe_watchlist()
+        if str(item.get("name") or "").strip()
+    ]
+    tracked_set = {name.casefold() for name in tracked_names}
+    seed_names = list(dict.fromkeys([*tracked_names[:16], *_WARFRAME_MARKET_WATCHLIST]))
+
+    errors: list[str] = []
+    cards: list[dict[str, Any]] = []
+
+    def load_item(name: str) -> tuple[Optional[dict[str, Any]], list[str]]:
+        market, market_errors = _fetch_warframe_market(name, platform_key)
+        if not isinstance(market, dict):
+            return None, market_errors
+        if market.get("best_sell") is None and not market.get("volume_total"):
+            return None, market_errors
+        metrics = _build_warframe_market_signal(market, tracked=name.casefold() in tracked_set)
+        return {
+            "name": market.get("canonical_name") or name,
+            "slug": market.get("slug"),
+            "thumb": market.get("thumb"),
+            "icon": market.get("icon"),
+            "price": market.get("last_avg_price") if market.get("last_avg_price") is not None else market.get("best_sell"),
+            "best_sell": market.get("best_sell"),
+            "best_buy": market.get("best_buy"),
+            "volume_total": market.get("volume_total") or 0,
+            "price_change_pct": market.get("price_change_pct"),
+            "snapshot_source": market.get("snapshot_source"),
+            "history": market.get("history") or [],
+            **metrics,
+        }, market_errors
+
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(seed_names)))) as pool:
+        futures = [pool.submit(load_item, name) for name in seed_names]
+        for future in as_completed(futures):
+            try:
+                item_payload, item_errors = future.result()
+            except Exception as exc:
+                errors.append(f"market_pulse:worker:{exc}")
+                continue
+            errors.extend((item_errors or [])[:2])
+            if item_payload:
+                cards.append(item_payload)
+
+    demand_board = sorted(
+        cards,
+        key=lambda item: (
+            float(item.get("demand_score") or 0.0),
+            float(item.get("volume_total") or 0.0),
+            float(item.get("price_change_pct") or 0.0),
+        ),
+        reverse=True,
+    )[:8]
+    liquidity_board = sorted(
+        cards,
+        key=lambda item: (
+            float(item.get("liquidity_score") or 0.0),
+            float(item.get("volume_total") or 0.0),
+            -float(item.get("spread_pct") or 999.0),
+        ),
+        reverse=True,
+    )[:8]
+
+    signal_rank = {"sell": 0, "hold": 1, "watch": 2, "dump": 3}
+    tracked_signals = sorted(
+        [item for item in cards if item.get("tracked")],
+        key=lambda item: (
+            signal_rank.get(str(item.get("signal") or "watch"), 9),
+            -float(item.get("demand_score") or 0.0),
+            -float(item.get("liquidity_score") or 0.0),
+        ),
+    )[:12]
+
+    payload = {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "platform": platform_key,
+        "demand_leaders": demand_board,
+        "liquidity_leaders": liquidity_board,
+        "watch_signals": tracked_signals,
+        "coverage_count": len(cards),
+        "tracked_count": len(tracked_signals),
+        "errors": errors[:24],
+    }
+    _cache_set(cache_key, payload)
+    return payload, list(payload.get("errors") or [])
 
 
 def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
@@ -3284,6 +3480,12 @@ def warframe_planner(q: str = "", platform: str = "pc"):
 @app.get("/api/warframe/relics/profit")
 def warframe_relic_profit(platform: str = "pc"):
     payload, errors = _build_warframe_relic_profit_radar(platform)
+    return {**payload, "errors": errors}
+
+
+@app.get("/api/warframe/marketpulse")
+def warframe_market_pulse(platform: str = "pc"):
+    payload, errors = _build_warframe_market_pulse(platform)
     return {**payload, "errors": errors}
 
 

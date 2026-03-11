@@ -195,6 +195,12 @@
     .wf-ability-icon{width:42px;height:42px;object-fit:contain;border-radius:8px;background:#0f172a;padding:6px}
     .wf-pill-row{display:flex;flex-wrap:wrap;gap:6px}
     .wf-meta-chip{font-size:11px;padding:3px 8px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid #1f2937}
+    .wf-signal-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:999px;border:1px solid transparent;text-transform:uppercase;letter-spacing:.04em}
+    .wf-signal-chip.sell{background:#16351f;color:#86efac;border-color:#16a34a}
+    .wf-signal-chip.hold{background:#172554;color:#bfdbfe;border-color:#2563eb}
+    .wf-signal-chip.watch{background:#3f3f46;color:#d4d4d8;border-color:#52525b}
+    .wf-signal-chip.dump{background:#3b1f1f;color:#fca5a5;border-color:#ef4444}
+    .wf-section-title{margin:0 0 8px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8}
     .wf-tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
 
@@ -501,6 +507,26 @@
           <span class="tool-minor">48h volume across a popular trading watchlist</span>
         </div>
         <div id="wf-hot" class="wf-top-grid"></div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
+          <h2 style="margin:0">Market Pulse</h2>
+          <span id="wf-pulse-meta" class="tool-minor"></span>
+        </div>
+        <div class="wf-grid-3">
+          <div>
+            <h3 class="wf-section-title">Demand Leaders</h3>
+            <div id="wf-demand" class="wf-plan-grid"></div>
+          </div>
+          <div>
+            <h3 class="wf-section-title">Liquidity Leaders</h3>
+            <div id="wf-liquidity" class="wf-plan-grid"></div>
+          </div>
+          <div>
+            <h3 class="wf-section-title">Trader Signals</h3>
+            <div id="wf-signals" class="wf-plan-grid"></div>
+          </div>
+        </div>
       </div>
       <div class="stat-card">
         <div class="diag-head">
@@ -2126,6 +2152,7 @@ async function loadWarframe() {
   void loadWarframeArsenal();
   void loadWarframeWatchlist();
   void loadWarframePlanner(item);
+  void loadWarframePulse();
   void loadWarframeRadar();
   hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
   if (marketChartEl) marketChartEl.innerHTML = '';
@@ -2288,6 +2315,99 @@ async function loadWarframe() {
     worldEl.innerHTML = '';
   }
 }
+
+function warframeSignalClass(signal) {
+  const val = String(signal || 'watch').toLowerCase();
+  return ['sell','hold','watch','dump'].includes(val) ? val : 'watch';
+}
+
+function warframeSignalChip(signal) {
+  const cls = warframeSignalClass(signal);
+  return `<span class="wf-signal-chip ${cls}">${esc(cls)}</span>`;
+}
+
+async function loadWarframePulse() {
+  const platformEl = document.getElementById('wf-platform');
+  const metaEl = document.getElementById('wf-pulse-meta');
+  const demandEl = document.getElementById('wf-demand');
+  const liquidityEl = document.getElementById('wf-liquidity');
+  const signalsEl = document.getElementById('wf-signals');
+  if (!demandEl || !liquidityEl || !signalsEl) return;
+  demandEl.innerHTML = '<div class="muted">Scanning demand leaders...</div>';
+  liquidityEl.innerHTML = '<div class="muted">Scanning liquid markets...</div>';
+  signalsEl.innerHTML = '<div class="muted">Building trader signals...</div>';
+  if (metaEl) metaEl.textContent = `scanning ${String(platformEl?.value || 'pc').toUpperCase()} market pulse`;
+
+  const renderCard = (item, mode = 'demand') => {
+    const move = Number(item.price_change_pct);
+    const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+    const score = mode === 'liquidity' ? item.liquidity_score : item.demand_score;
+    const scoreLabel = mode === 'liquidity' ? 'Liq' : 'Demand';
+    const hist = Array.isArray(item.history) ? item.history.map(x => Number(x.avg_price)).filter(v => Number.isFinite(v)) : [];
+    return `
+      <div class="market-card">
+        <div class="diag-head">
+          <strong>${esc(item.name || 'Unknown Item')}</strong>
+          <span class="rank-pill">${scoreLabel} ${fmtMarketNum(score || 0,0)}</span>
+        </div>
+        <div class="row" style="margin:0;justify-content:space-between">
+          ${warframeSignalChip(item.signal)}
+          <span class="muted">${esc(item.momentum || 'quiet')}</span>
+        </div>
+        <div class="small-row"><span>Price</span><strong>${item.price != null ? fmtMarketNum(item.price,0) + 'p' : '-'}</strong></div>
+        <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
+        <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.volume_total || 0,0)}</span></div>
+        <div class="small-row"><span>Spread</span><span class="muted">${item.spread != null ? `${fmtMarketNum(item.spread,0)}p (${fmtMarketNum(item.spread_pct || 0,1)}%)` : 'n/a'}</span></div>
+        <div class="small-row"><span>Live B/S</span><span class="muted">${fmtMarketNum(item.live_buyers || 0,0)} / ${fmtMarketNum(item.live_sellers || 0,0)}</span></div>
+        ${buildSparklineSvg(hist, 'sparkline-muted')}
+        <div class="sparkline-label">
+          <button class="sm" onclick='trackWarframeNamedItem(${JSON.stringify(item.name || '')}, "item")'>Track</button>
+          ${item.slug ? `<a href="https://warframe.market/items/${esc(item.slug)}" target="_blank" rel="noopener">Open</a>` : ''}
+        </div>
+      </div>
+    `;
+  };
+
+  const renderSignalCard = (item) => {
+    const move = Number(item.price_change_pct);
+    const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+    return `
+      <div class="market-card">
+        <div class="diag-head">
+          <strong>${esc(item.name || 'Tracked Item')}</strong>
+          ${warframeSignalChip(item.signal)}
+        </div>
+        <div class="small-row"><span>Demand / Liq</span><span class="muted">${fmtMarketNum(item.demand_score || 0,0)} / ${fmtMarketNum(item.liquidity_score || 0,0)}</span></div>
+        <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
+        <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.volume_total || 0,0)}</span></div>
+        <div class="small-row"><span>Pressure</span><span class="muted">${item.pressure_ratio != null ? fmtMarketNum(item.pressure_ratio,2) + 'x' : 'n/a'}</span></div>
+        <div class="small-row"><span>Best Sell / Buy</span><span class="muted">${item.best_sell != null ? fmtMarketNum(item.best_sell,0) : '-'} / ${item.best_buy != null ? fmtMarketNum(item.best_buy,0) : '-'}</span></div>
+        <div class="sparkline-label">
+          ${item.slug ? `<a href="https://warframe.market/items/${esc(item.slug)}" target="_blank" rel="noopener">Open</a>` : ''}
+          <button class="sm" onclick='loadWarframePlanner(${JSON.stringify(item.name || '')})'>Plan</button>
+        </div>
+      </div>
+    `;
+  };
+
+  try {
+    const params = new URLSearchParams({ platform: platformEl?.value || 'pc' });
+    const data = await fetch(`${API}/warframe/marketpulse?${params}`).then(r => r.json());
+    const demand = Array.isArray(data.demand_leaders) ? data.demand_leaders : [];
+    const liquidity = Array.isArray(data.liquidity_leaders) ? data.liquidity_leaders : [];
+    const signals = Array.isArray(data.watch_signals) ? data.watch_signals : [];
+    if (metaEl) metaEl.textContent = `${data.coverage_count || 0} items scanned | ${data.tracked_count || 0} tracked signals`;
+    demandEl.innerHTML = demand.length ? demand.map(item => renderCard(item, 'demand')).join('') : '<div class="muted">No demand leaders available right now.</div>';
+    liquidityEl.innerHTML = liquidity.length ? liquidity.map(item => renderCard(item, 'liquidity')).join('') : '<div class="muted">No liquid markets available right now.</div>';
+    signalsEl.innerHTML = signals.length ? signals.map(renderSignalCard).join('') : '<div class="muted">Track items to see personalized trader signals.</div>';
+  } catch (e) {
+    demandEl.innerHTML = `<div class="err-msg">Market pulse failed: ${esc(e.message)}</div>`;
+    liquidityEl.innerHTML = '';
+    signalsEl.innerHTML = '';
+    if (metaEl) metaEl.textContent = 'market pulse unavailable';
+  }
+}
+
 async function loadWarframeRadar() {
   const platformEl = document.getElementById('wf-platform');
   const metaEl = document.getElementById('wf-profit-meta');
@@ -2431,12 +2551,14 @@ async function loadWarframeWatchlist() {
       const bestRelic = item.planner?.best_relic || {};
       const bestValue = bestRelic.value_lab?.best_value_state || {};
       const tags = Array.isArray(item.tags) ? item.tags : [];
+      const signal = item.signal || {};
       const card = document.createElement('div');
       card.className = 'market-card';
       card.innerHTML = `
         <div class="diag-head">
           <strong>${esc(item.name || 'Tracked Item')}</strong>
           <div class="row" style="margin:0">
+            ${warframeSignalChip(signal.signal)}
             <span class="rank-pill">P${esc(item.priority ?? 3)}</span>
             <button class="sm danger" onclick="deleteWarframeWatchItem('${esc(item.id)}', this)">Remove</button>
           </div>
@@ -2446,6 +2568,8 @@ async function loadWarframeWatchlist() {
         <div class="small-row"><span>Price</span><strong>${item.market?.last_avg_price != null ? fmtMarketNum(item.market.last_avg_price,0) + 'p' : '-'}</strong></div>
         <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
         <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.market?.volume_total || 0,0)}</span></div>
+        <div class="small-row"><span>Live B/S</span><span class="muted">${fmtMarketNum(item.market?.buy_count_live || 0,0)} / ${fmtMarketNum(item.market?.sell_count_live || 0,0)}</span></div>
+        <div class="small-row"><span>Demand / Liq</span><span class="muted">${fmtMarketNum(signal.demand_score || 0,0)} / ${fmtMarketNum(signal.liquidity_score || 0,0)}</span></div>
         <div class="small-row"><span>Best Relic</span><span class="muted">${bestRelic.relic ? `${esc(bestRelic.relic)} ${esc(bestRelic.best_state || '')}` : 'no relic route'}</span></div>
         <div class="small-row"><span>Best EV</span><span class="muted">${bestValue.expected_value != null ? `${esc(bestValue.state || '-')} ${fmtMarketNum(bestValue.expected_value,2)}p` : 'n/a'}</span></div>
         ${item.market?.slug ? `<a href="https://warframe.market/items/${esc(item.market.slug)}" target="_blank" rel="noopener">Open market page</a>` : ''}

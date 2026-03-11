@@ -169,6 +169,20 @@
     .f1-status-pill.finished{background:#1f2937;color:#cbd5e1}
     .f1-control-item{padding:8px 0;border-bottom:1px solid #1f2937}
     .f1-control-item:last-child{border-bottom:none}
+    .f1-time-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+    .f1-time-box{background:rgba(15,23,42,.7);border:1px solid #1f2937;border-radius:10px;padding:8px 10px}
+    .f1-time-box strong{display:block;font-size:13px;color:#f8fafc}
+    .f1-nowbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+    .f1-nowcard{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+    .f1-nowcard strong{font-size:15px;color:#f8fafc}
+    .f1-countdown-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:999px;border:1px solid transparent}
+    .f1-countdown-pill.live{background:#14532d;color:#86efac;border-color:#16a34a}
+    .f1-countdown-pill.soon{background:#1e3a5f;color:#bfdbfe;border-color:#2563eb}
+    .f1-countdown-pill.later{background:#1f2937;color:#cbd5e1;border-color:#475569}
+    .f1-countdown-pill.past{background:#3f3f46;color:#d4d4d8;border-color:#52525b}
+    .f1-day-card{background:#101827;border:1px solid #1f2937;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+    .f1-day-list{display:flex;flex-direction:column;gap:6px}
+    .f1-day-row{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px}
     .wf-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
     .wf-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
@@ -365,19 +379,61 @@
   <!-- F1 -->
   <div id="tab-f1" style="display:none">
     <div class="card">
-      <h2>Formula 1 Overview</h2>
-      <div class="row">
-        <input id="f1-season" placeholder="Season (current or 2026)" style="width:220px" />
-        <button class="primary" onclick="loadF1()">Refresh</button>
+      <div class="diag-head" style="margin-bottom:10px">
+        <div>
+          <h2 style="margin:0 0 6px">Formula 1 Weekend Hub</h2>
+          <div id="f1-meta" class="muted"></div>
+        </div>
+        <div class="row" style="margin:0">
+          <input id="f1-season" placeholder="Season (current or 2026)" style="width:220px" />
+          <button class="primary" onclick="loadF1()">Refresh</button>
+        </div>
       </div>
-      <div id="f1-meta" class="muted" style="margin-bottom:4px"></div>
       <div id="f1-errors" class="warn-strip"></div>
-      <div id="f1-next" class="card" style="margin-bottom:10px;background:#0b1220"></div>
-      <div id="f1-last-race" class="stat-card" style="margin-bottom:10px"></div>
-      <div id="f1-driver-detail" class="stat-card" style="margin-bottom:10px"></div>
-      <div id="f1-standings" class="f1-driver-cards"><div class="empty">Loading.</div></div>
-      <div style="height:10px"></div>
-      <h2 style="margin:0 0 8px">Tracks & Layout Quick Access</h2>
+      <div id="f1-hero" class="f1-hero" style="margin-bottom:10px"></div>
+      <div id="f1-nowbar" class="f1-nowbar" style="margin-bottom:10px"></div>
+      <div class="overview-grid" style="margin-bottom:10px">
+        <div id="f1-next" class="stat-card"></div>
+        <div id="f1-weekend-phase" class="stat-card"></div>
+        <div id="f1-weather" class="stat-card"></div>
+        <div id="f1-last-race" class="stat-card"></div>
+      </div>
+      <div class="f1-weekend-grid" style="margin-bottom:10px">
+        <div class="stat-card">
+          <div class="diag-head">
+            <h2 style="margin:0">Weekend Sessions</h2>
+            <span id="f1-session-meta" class="tool-minor"></span>
+          </div>
+          <div id="f1-session-picker" class="f1-session-picker"></div>
+          <div id="f1-session-detail" class="small-list" style="margin-top:10px"></div>
+          <div id="f1-day-plan" class="small-list" style="margin-top:10px"></div>
+        </div>
+        <div id="f1-track-panel" class="stat-card f1-track-panel"></div>
+      </div>
+      <div class="f1-weekend-grid" style="margin-bottom:10px">
+        <div class="stat-card">
+          <div class="diag-head">
+            <h2 style="margin:0">Session Board</h2>
+            <span id="f1-live-meta" class="tool-minor"></span>
+          </div>
+          <div id="f1-live-board" class="small-list"></div>
+        </div>
+        <div class="stat-card">
+          <div class="diag-head">
+            <h2 style="margin:0">Race Control</h2>
+            <span class="tool-minor">Flags, notes, incidents</span>
+          </div>
+          <div id="f1-race-control" class="small-list"></div>
+        </div>
+      </div>
+      <div class="f1-driver-panels" style="margin-bottom:10px">
+        <div id="f1-driver-detail" class="stat-card"></div>
+        <div>
+          <h2 style="margin:0 0 8px">Driver Radar</h2>
+          <div id="f1-standings" class="f1-driver-cards"><div class="empty">Loading.</div></div>
+        </div>
+      </div>
+      <h2 style="margin:0 0 8px">Circuits On Deck</h2>
       <div id="f1-tracks" class="overview-grid"><div class="empty">Loading track guide...</div></div>
     </div>
   </div>
@@ -771,8 +827,10 @@ const tabLoaded = {};
 function showTab(name, btn) {
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  if (name !== 'f1') { clearF1SessionPolling(); clearF1ClockTicker(); }
   document.getElementById(`tab-${name}`).style.display='';
   if (btn) btn.classList.add('active');
+  if (name==='f1' && tabLoaded[name]) { loadF1(); return; }
   if (!tabLoaded[name]) {
     tabLoaded[name] = true;
     if (name==='feed') {
@@ -1337,6 +1395,491 @@ async function loadMarkets() {
 
 let _f1Profiles = {};
 let _f1SelectedProfileKey = '';
+let _f1Sessions = {};
+let _f1SelectedSessionKey = '';
+let _f1Weekend = null;
+let _f1SessionTimer = null;
+let _f1ClockTicker = null;
+
+function clearF1SessionPolling() {
+  if (_f1SessionTimer) {
+    clearTimeout(_f1SessionTimer);
+    _f1SessionTimer = null;
+  }
+}
+
+function clearF1ClockTicker() {
+  if (_f1ClockTicker) {
+    clearInterval(_f1ClockTicker);
+    _f1ClockTicker = null;
+  }
+}
+
+function startF1ClockTicker() {
+  clearF1ClockTicker();
+  _f1ClockTicker = setInterval(() => {
+    const tab = document.getElementById('tab-f1');
+    if (!tab || tab.style.display === 'none') return;
+    renderF1NowBar(_f1Weekend);
+  }, 1000);
+}
+
+function scheduleF1SessionRefresh(delay = 15000) {
+  clearF1SessionPolling();
+  _f1SessionTimer = setTimeout(() => {
+    const tab = document.getElementById('tab-f1');
+    if (!tab || tab.style.display === 'none' || !_f1SelectedSessionKey) return;
+    loadF1Session(_f1SelectedSessionKey, { silent: true });
+  }, delay);
+}
+
+function f1FormatDateTime(iso) {
+  if (!iso) return 'TBA';
+  const dt = new Date(iso);
+  return Number.isNaN(dt.getTime()) ? 'TBA' : dt.toLocaleString();
+}
+
+function f1FormatRange(startIso, endIso) {
+  const start = startIso ? new Date(startIso) : null;
+  const end = endIso ? new Date(endIso) : null;
+  if (!start || Number.isNaN(start.getTime())) return 'TBA';
+  if (!end || Number.isNaN(end.getTime())) return start.toLocaleString();
+  const sameDay = start.toDateString() === end.toDateString();
+  return sameDay
+    ? `${start.toLocaleDateString()} | ${start.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`
+    : `${start.toLocaleString()} -> ${end.toLocaleString()}`;
+}
+
+function f1LocalZoneLabel() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local time';
+  } catch {
+    return 'Local time';
+  }
+}
+
+function f1FormatTrackClock(iso) {
+  const raw = String(iso || '').trim();
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2})?(?:([+-]\d{2}:\d{2}|Z))?/);
+  if (!m) return 'TBA';
+  const [, year, month, day, hour, minute, offset] = m;
+  const base = new Date(`${year}-${month}-${day}T00:00:00Z`);
+  if (Number.isNaN(base.getTime())) return `${day}.${month}.${year} | ${hour}:${minute}`;
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday:'short', timeZone:'UTC' }).format(base);
+  const monthLabel = new Intl.DateTimeFormat(undefined, { month:'short', timeZone:'UTC' }).format(base);
+  const zone = !offset || offset === 'Z' ? 'UTC' : `GMT${offset}`;
+  return `${weekday}, ${day} ${monthLabel} ${year} | ${hour}:${minute} ${zone}`;
+}
+
+function f1FormatLocalClock(iso) {
+  if (!iso) return 'TBA';
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return 'TBA';
+  return dt.toLocaleString(undefined, {
+    weekday:'short',
+    year:'numeric',
+    month:'short',
+    day:'2-digit',
+    hour:'2-digit',
+    minute:'2-digit',
+    timeZoneName:'short'
+  });
+}
+
+function f1CountdownTo(iso) {
+  if (!iso) return '';
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return '';
+  const diff = dt.getTime() - Date.now();
+  const absMs = Math.abs(diff);
+  const totalMinutes = Math.round(absMs / 60000);
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+  const compact = [days ? `${days}d` : '', hours ? `${hours}h` : '', (!days && minutes) ? `${minutes}m` : ''].filter(Boolean).join(' ');
+  if (!compact) return diff >= 0 ? 'soon' : 'just now';
+  return diff >= 0 ? `in ${compact}` : `${compact} ago`;
+}
+
+function f1CountdownMeta(iso) {
+  if (!iso) return { label:'TBA', cls:'later' };
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return { label:'TBA', cls:'later' };
+  const diff = dt.getTime() - Date.now();
+  if (Math.abs(diff) <= 15 * 60000) return { label:'Now', cls:'live' };
+  if (diff > 0 && diff <= 6 * 3600000) return { label:f1CountdownTo(iso), cls:'soon' };
+  if (diff > 0) return { label:f1CountdownTo(iso), cls:'later' };
+  return { label:f1CountdownTo(iso), cls:'past' };
+}
+
+function f1ExtractOffsetMinutes(iso) {
+  const raw = String(iso || '').trim();
+  const m = raw.match(/([+-])(\d{2}):(\d{2})$/);
+  if (!m) return raw.endsWith('Z') ? 0 : 0;
+  const sign = m[1] === '-' ? -1 : 1;
+  return sign * ((Number(m[2]) * 60) + Number(m[3]));
+}
+
+function f1FormatTrackNow(referenceIso) {
+  const offsetMinutes = f1ExtractOffsetMinutes(referenceIso);
+  const shifted = new Date(Date.now() + offsetMinutes * 60000);
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday:'short', timeZone:'UTC' }).format(shifted);
+  const dateLabel = new Intl.DateTimeFormat(undefined, { day:'2-digit', month:'short', timeZone:'UTC' }).format(shifted);
+  const timeLabel = shifted.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit', timeZone:'UTC' });
+  const sign = offsetMinutes < 0 ? '-' : '+';
+  const abs = Math.abs(offsetMinutes);
+  const hh = String(Math.floor(abs / 60)).padStart(2, '0');
+  const mm = String(abs % 60).padStart(2, '0');
+  return `${weekday}, ${dateLabel} | ${timeLabel} GMT${sign}${hh}:${mm}`;
+}
+
+function f1FormatTrackDayLabel(iso) {
+  const raw = String(iso || '').trim();
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return 'Unknown day';
+  const [, year, month, day] = m;
+  const base = new Date(`${year}-${month}-${day}T00:00:00Z`);
+  if (Number.isNaN(base.getTime())) return `${day}.${month}.${year}`;
+  return new Intl.DateTimeFormat(undefined, { weekday:'long', day:'2-digit', month:'short', timeZone:'UTC' }).format(base);
+}
+
+function f1BuildTimeComparison(trackIso, fallbackIso, trackLabel='Track time') {
+  const basis = trackIso || fallbackIso || '';
+  return `
+    <div class="f1-time-grid">
+      <div class="f1-time-box">
+        <span class="muted">${esc(trackLabel)}</span>
+        <strong>${esc(f1FormatTrackClock(basis))}</strong>
+      </div>
+      <div class="f1-time-box">
+        <span class="muted">Your time (${esc(f1LocalZoneLabel())})</span>
+        <strong>${esc(f1FormatLocalClock(fallbackIso || basis))}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function renderF1NowBar(weekend) {
+  const bar = document.getElementById('f1-nowbar');
+  if (!bar) return;
+  const meeting = weekend?.meeting || {};
+  const focus = weekend?.current_session || weekend?.next_session || weekend?.latest_session || {};
+  const referenceIso = focus.date_start_local || meeting.date_start_local || focus.date_start || meeting.date_start;
+  const countdown = f1CountdownMeta(focus.date_start || weekend?.next_session?.date_start || '');
+  bar.innerHTML = `
+    <div class="f1-nowcard">
+      <span class="muted">Now at track</span>
+      <strong>${esc(f1FormatTrackNow(referenceIso || meeting.date_start || ''))}</strong>
+      <span class="muted">Reference offset from current weekend</span>
+    </div>
+    <div class="f1-nowcard">
+      <span class="muted">Now for you (${esc(f1LocalZoneLabel())})</span>
+      <strong>${esc(f1FormatLocalClock(new Date().toISOString()))}</strong>
+      <span class="muted">Local desktop time</span>
+    </div>
+    <div class="f1-nowcard">
+      <span class="muted">Focus countdown</span>
+      <strong>${esc(countdown.label)}</strong>
+      <span class="f1-countdown-pill ${countdown.cls}">${esc(focus.session_name || 'Next session')}</span>
+    </div>
+  `;
+}
+
+function renderF1DayPlanner(weekend) {
+  const plan = document.getElementById('f1-day-plan');
+  if (!plan) return;
+  const sessions = weekend?.sessions || [];
+  if (!sessions.length) {
+    plan.innerHTML = '<div class="muted">No day planner available.</div>';
+    return;
+  }
+  const grouped = new Map();
+  sessions.forEach(session => {
+    const key = String(session.date_start_local || session.date_start || '').slice(0, 10) || 'unknown';
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(session);
+  });
+  const cards = [...grouped.entries()].map(([dayKey, daySessions]) => {
+    const first = daySessions[0] || {};
+    const rows = daySessions.map(session => {
+      const badge = f1CountdownMeta(session.date_start || '');
+      return `
+        <div class="f1-day-row">
+          <span>${esc(session.session_name || 'Session')}</span>
+          <span class="muted">${esc(f1FormatRange(session.date_start_local || session.date_start, session.date_end_local || session.date_end))}</span>
+          <span class="f1-countdown-pill ${badge.cls}">${esc(badge.label)}</span>
+        </div>
+      `;
+    }).join('');
+    return `
+      <div class="f1-day-card">
+        <div class="diag-head">
+          <strong>${esc(f1FormatTrackDayLabel(first.date_start_local || first.date_start || dayKey))}</strong>
+          <span class="tool-minor">${esc(first.location || weekend?.meeting?.location || '')}</span>
+        </div>
+        <div class="f1-day-list">${rows}</div>
+      </div>
+    `;
+  }).join('');
+  plan.innerHTML = `
+    <div class="diag-head">
+      <h2 style="margin:0">Trackday Planner</h2>
+      <span class="tool-minor">Grouped by track-local day</span>
+    </div>
+    ${cards}
+  `;
+}
+
+function f1StatusClass(status) {
+  const val = String(status || 'scheduled').toLowerCase();
+  if (val === 'live') return 'live';
+  if (val === 'cooldown') return 'cooldown';
+  if (val === 'upcoming') return 'upcoming';
+  if (val === 'finished') return 'finished';
+  return 'finished';
+}
+
+function f1StatusLabel(status) {
+  const val = String(status || 'scheduled').toLowerCase();
+  if (val === 'live') return 'Live now';
+  if (val === 'cooldown') return 'Just ended';
+  if (val === 'upcoming') return 'Upcoming';
+  if (val === 'finished') return 'Finished';
+  return 'Scheduled';
+}
+
+function renderF1Hero(weekend) {
+  const heroEl = document.getElementById('f1-hero');
+  if (!heroEl) return;
+  if (!weekend || !weekend.meeting) {
+    heroEl.innerHTML = '<div class="muted">No active weekend context found for this season.</div>';
+    return;
+  }
+
+  const meeting = weekend.meeting || {};
+  const phaseClass = f1StatusClass(weekend.phase);
+  heroEl.innerHTML = `
+    <div class="f1-hero-sub">
+      <span class="f1-status-pill ${phaseClass}">${esc(f1StatusLabel(weekend.phase))}</span>
+      <span class="pill">${esc(meeting.country_name || '')}</span>
+      <span class="pill">${esc(meeting.location || '')}</span>
+      ${weekend.next_session?.date_start ? (() => { const badge = f1CountdownMeta(weekend.next_session.date_start); return `<span class="f1-countdown-pill ${badge.cls}">${esc(badge.label)}</span>`; })() : ''}
+    </div>
+    <div class="f1-hero-title">${esc(weekend.headline || meeting.meeting_name || 'F1 Weekend Hub')}</div>
+    <div class="f1-hero-sub">${esc(meeting.meeting_official_name || meeting.meeting_name || '')}</div>
+    ${f1BuildTimeComparison(meeting.date_start_local || meeting.date_start, meeting.date_start, 'Weekend start at track')}
+    <div class="f1-hero-meta">
+      <span class="pill">Window ${esc(f1FormatRange(meeting.date_start_local || meeting.date_start, meeting.date_end_local || meeting.date_end))}</span>
+      ${weekend.current_session ? `<span class="pill">Current: ${esc(weekend.current_session.session_name || '')}</span>` : ''}
+      ${weekend.next_session ? `<span class="pill">Next: ${esc(weekend.next_session.session_name || '')}</span>` : ''}
+    </div>
+  `;
+}
+
+function renderF1WeekendPhase(weekend, nextRace) {
+  const panel = document.getElementById('f1-weekend-phase');
+  if (!panel) return;
+  if (!weekend) {
+    panel.innerHTML = '<div class="muted">Weekend phase unavailable.</div>';
+    return;
+  }
+  const phaseClass = f1StatusClass(weekend.phase);
+  const focus = weekend.current_session || weekend.next_session || weekend.latest_session || {};
+  panel.innerHTML = `
+    <h2 style="margin:0 0 6px">Weekend State</h2>
+    <span class="f1-status-pill ${phaseClass}">${esc(f1StatusLabel(weekend.phase))}</span>
+    <div class="small-row"><span>Focus session</span><strong>${esc(focus.session_name || 'None')}</strong></div>
+    <div class="small-row"><span>Session slot</span><strong>${esc(f1FormatRange(focus.date_start_local || focus.date_start, focus.date_end_local || focus.date_end))}</strong></div>
+    <div class="small-row"><span>Race round</span><strong>${esc(nextRace?.round || '-')}</strong></div>
+    <div class="small-row"><span>Delta</span><strong>${esc(f1CountdownTo(focus.date_start || nextRace?.datetime_utc || '')) || '-'}</strong></div>
+    ${focus.date_start ? f1BuildTimeComparison(focus.date_start_local || focus.date_start, focus.date_start, 'Focus session at track') : ''}
+  `;
+}
+
+function renderF1WeatherCard(weather) {
+  const panel = document.getElementById('f1-weather');
+  if (!panel) return;
+  if (!weather || Object.values(weather).every(v => v == null || v === '')) {
+    panel.innerHTML = '<div class="muted">Trackside weather unavailable.</div>';
+    return;
+  }
+  const rain = weather.rainfall ? 'Yes' : 'No';
+  panel.innerHTML = `
+    <h2 style="margin:0 0 6px">Trackside Weather</h2>
+    <div class="small-row"><span>Air / Track</span><strong>${esc(weather.air_temperature ?? '-')}C / ${esc(weather.track_temperature ?? '-')}C</strong></div>
+    <div class="small-row"><span>Humidity</span><strong>${esc(weather.humidity ?? '-')}%</strong></div>
+    <div class="small-row"><span>Wind</span><strong>${esc(weather.wind_speed ?? '-')} km/h</strong></div>
+    <div class="small-row"><span>Rain</span><strong>${esc(rain)}</strong></div>
+    <div class="muted">${weather.date ? `Updated ${relTime(weather.date)}` : 'Latest meeting snapshot'}</div>
+  `;
+}
+
+function renderF1TrackPanel(weekend) {
+  const panel = document.getElementById('f1-track-panel');
+  if (!panel) return;
+  const track = weekend?.track || {};
+  const meeting = weekend?.meeting || {};
+  const links = track.links || {};
+  panel.innerHTML = `
+    <div class="diag-head">
+      <h2 style="margin:0">Track Panel</h2>
+      <span class="tool-minor">Circuit, visuals, quick links</span>
+    </div>
+    ${track.image_url ? `<img class="f1-track-visual" src="${esc(track.image_url)}" alt="${esc(track.name || 'Circuit')}" loading="lazy" />` : '<div class="muted">No track image available.</div>'}
+    <strong>${esc(track.name || meeting.meeting_name || 'Unknown circuit')}</strong>
+    <div class="muted">${esc(track.location || meeting.location || '')}${track.country_name ? ', ' + esc(track.country_name) : ''}</div>
+    <div class="small-row"><span>Type</span><strong>${esc(track.type || '-')}</strong></div>
+    <div class="f1-track-links">
+      ${links.map_url ? `<a class="pill" href="${esc(links.map_url)}" target="_blank" rel="noopener">Map</a>` : ''}
+      ${links.layout_url ? `<a class="pill" href="${esc(links.layout_url)}" target="_blank" rel="noopener">Layout</a>` : ''}
+      ${track.info_url ? `<a class="pill" href="${esc(track.info_url)}" target="_blank" rel="noopener">Circuit Data</a>` : ''}
+      ${links.wiki_url ? `<a class="pill" href="${esc(links.wiki_url)}" target="_blank" rel="noopener">Wiki</a>` : ''}
+    </div>
+  `;
+}
+
+function renderF1SessionPicker() {
+  const picker = document.getElementById('f1-session-picker');
+  if (!picker) return;
+  const sessions = _f1Weekend?.sessions || [];
+  picker.innerHTML = '';
+  if (!sessions.length) {
+    picker.innerHTML = '<div class="muted">No session schedule available.</div>';
+    return;
+  }
+  sessions.forEach(session => {
+    const btn = document.createElement('button');
+    const isActive = String(session.session_key || '') === String(_f1SelectedSessionKey || '');
+    const badge = f1CountdownMeta(session.date_start || '');
+    btn.className = `f1-session-chip ${f1StatusClass(session.status)}${isActive ? ' active' : ''}`;
+    btn.innerHTML = `${esc(session.session_name || 'Session')} <span class="f1-countdown-pill ${badge.cls}">${esc(badge.label)}</span>`;
+    btn.title = `${session.session_name || 'Session'} | ${f1FormatRange(session.date_start_local || session.date_start, session.date_end_local || session.date_end)}`;
+    btn.onclick = () => { void selectF1Session(session.session_key); };
+    picker.appendChild(btn);
+  });
+}
+
+function renderF1SessionSummary(key) {
+  const panel = document.getElementById('f1-session-detail');
+  const metaEl = document.getElementById('f1-session-meta');
+  if (!panel) return;
+  const session = _f1Sessions[String(key || '')];
+  if (!session) {
+    if (metaEl) metaEl.textContent = '';
+    panel.innerHTML = '<div class="muted">Select a session to load details.</div>';
+    return;
+  }
+  if (metaEl) metaEl.textContent = `${session.session_name || 'Session'} | ${f1StatusLabel(session.status)}`;
+  panel.innerHTML = `
+    <div class="small-row"><span>Window</span><strong>${esc(f1FormatRange(session.date_start_local || session.date_start, session.date_end_local || session.date_end))}</strong></div>
+    <div class="small-row"><span>Status</span><strong>${esc(f1StatusLabel(session.status))}</strong></div>
+    <div class="small-row"><span>Track</span><strong>${esc(session.circuit_short_name || _f1Weekend?.track?.name || '-')}</strong></div>
+    <div class="small-row"><span>Location</span><strong>${esc(session.location || '')}${session.country_name ? ', ' + esc(session.country_name) : ''}</strong></div>
+    <div class="small-row"><span>Countdown</span><strong>${esc(f1CountdownTo(session.date_start || '')) || '-'}</strong></div>
+    ${f1BuildTimeComparison(session.date_start_local || session.date_start, session.date_start, 'Session start at track')}
+  `;
+}
+
+function renderF1SessionBoard(detail) {
+  const boardEl = document.getElementById('f1-live-board');
+  if (!boardEl) return;
+  const rows = detail?.leaderboard || [];
+  if (!rows.length) {
+    boardEl.innerHTML = '<div class="muted">No board data for this session yet.</div>';
+    return;
+  }
+  boardEl.innerHTML = rows.slice(0, 12).map(row => {
+    const teamColor = row.team_color ? `#${String(row.team_color).replace('#','')}` : '#64748b';
+    const statA = row.gap_to_leader || row.interval || row.time || '-';
+    const statB = row.current_tyre ? `${row.current_tyre}${row.stint ? ` | stint ${row.stint}` : ''}` : (row.status || row.points != null ? `${row.status || `${row.points} pts`}` : '-');
+    return `
+      <div class="f1-board-row">
+        <div class="f1-pos">P${esc(row.position || '?')}</div>
+        <div class="f1-driver-line">
+          <span class="f1-team-dot" style="background:${esc(teamColor)}"></span>
+          <div class="f1-board-main">
+            <strong>${esc(row.driver || row.code || 'Driver')}</strong>
+            <span class="muted">${esc(row.team || 'Unknown team')}</span>
+          </div>
+        </div>
+        <div class="f1-stat-stack">
+          <span>${esc(row.code || `#${row.driver_number || '?'}`)}</span>
+          <span class="muted">${esc(statA)}</span>
+        </div>
+        <div class="f1-stat-stack">
+          <span>${esc(statB)}</span>
+          <span class="muted">${row.grid_position ? `Grid P${esc(row.grid_position)}` : ''}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderF1RaceControl(detail) {
+  const feedEl = document.getElementById('f1-race-control');
+  if (!feedEl) return;
+  const items = detail?.race_control || [];
+  if (!items.length) {
+    feedEl.innerHTML = '<div class="muted">No race control messages for this session.</div>';
+    return;
+  }
+  feedEl.innerHTML = items.map(item => `
+    <div class="f1-control-item">
+      <div class="diag-head" style="margin-bottom:4px">
+        <strong>${esc(item.flag || item.category || 'Update')}</strong>
+        <span class="muted">${item.date ? relTime(item.date) : ''}</span>
+      </div>
+      <div style="font-size:13px;line-height:1.45">${esc(item.message || 'No message text')}</div>
+      <div class="muted">${item.driver_number ? `Car #${esc(item.driver_number)} | ` : ''}${item.lap_number ? `Lap ${esc(item.lap_number)} | ` : ''}${esc(item.scope || '')}</div>
+    </div>
+  `).join('');
+}
+
+async function loadF1Session(sessionKey, options={}) {
+  const liveMetaEl = document.getElementById('f1-live-meta');
+  const key = String(sessionKey || '').trim();
+  if (!key) return;
+
+  if (!options.silent) {
+    const boardEl = document.getElementById('f1-live-board');
+    const controlEl = document.getElementById('f1-race-control');
+    if (boardEl) boardEl.innerHTML = '<div class="muted">Loading session board...</div>';
+    if (controlEl) controlEl.innerHTML = '<div class="muted">Loading race control...</div>';
+  }
+
+  try {
+    const params = new URLSearchParams({ session_key: key });
+    const detail = await fetch(`${API}/f1/session?${params}`).then(r => r.json());
+    const session = detail.session || _f1Sessions[key] || {};
+    if (liveMetaEl) {
+      const cacheTag = detail.cached ? ' | cache' : '';
+      const staleTag = detail.stale ? ` | stale (${Math.max(0, Math.round((detail.stale_age_seconds || 0) / 60))}m)` : '';
+      liveMetaEl.textContent = `${session.session_name || 'Session'} | ${detail.drivers_count || 0} drivers | updated ${relTime(detail.generated_at)}${cacheTag}${staleTag}`;
+    }
+    renderF1SessionBoard(detail);
+    renderF1RaceControl(detail);
+    if (detail.live || ['live','cooldown'].includes(String(session.status || '').toLowerCase())) {
+      scheduleF1SessionRefresh(detail.live ? 15000 : 30000);
+    } else {
+      clearF1SessionPolling();
+    clearF1ClockTicker();
+    }
+  } catch (e) {
+    clearF1SessionPolling();
+    const boardEl = document.getElementById('f1-live-board');
+    const controlEl = document.getElementById('f1-race-control');
+    if (boardEl) boardEl.innerHTML = `<div class="err-msg">Session board failed: ${esc(e.message)}</div>`;
+    if (controlEl) controlEl.innerHTML = `<div class="err-msg">Race control failed: ${esc(e.message)}</div>`;
+    if (liveMetaEl) liveMetaEl.textContent = 'session detail unavailable';
+  }
+}
+
+async function selectF1Session(key) {
+  _f1SelectedSessionKey = String(key || '');
+  renderF1SessionPicker();
+  renderF1SessionSummary(_f1SelectedSessionKey);
+  if (_f1SelectedSessionKey) await loadF1Session(_f1SelectedSessionKey);
+}
 
 function showF1DriverProfile(key) {
   _f1SelectedProfileKey = key;
@@ -1345,6 +1888,9 @@ function showF1DriverProfile(key) {
   if (!panel || !p) return;
 
   const history = (p.points_history || []).map(x => Number(x.points)).filter(v => Number.isFinite(v));
+  const recent = (p.recent_results || []).map(r => `
+    <div class="small-row"><span>${esc(r.race_name || `Round ${r.round || '?'}`)}</span><span class="muted">P${esc(r.position || '?')} | ${esc(r.status || '')}</span></div>
+  `).join('');
   panel.innerHTML = `
     <h2 style="margin:0 0 6px">Driver Focus: ${esc(p.driver || 'Unknown')}</h2>
     <div class="small-row"><span>Team</span><strong>${esc(p.team || '-')}</strong></div>
@@ -1352,10 +1898,14 @@ function showF1DriverProfile(key) {
     <div class="small-row"><span>Wins / Podiums</span><strong>${esc(p.wins || 0)} / ${esc(p.podiums || 0)}</strong></div>
     <div class="small-row"><span>Finish Rate</span><strong>${p.finish_rate == null ? '-' : esc(p.finish_rate) + '%'}</strong></div>
     <div class="small-row"><span>Avg Grid / Finish</span><strong>${p.avg_grid == null ? '-' : esc(p.avg_grid)} / ${p.avg_finish == null ? '-' : esc(p.avg_finish)}</strong></div>
-    <div class="small-row"><span>Last Race Behavior</span><strong>${esc(p.latest_result?.status || 'No recent race')}</strong></div>
+    <div class="small-row"><span>Last race note</span><strong>${esc(p.latest_result?.status || 'No recent race')}</strong></div>
     <div class="chart-wrap sparkline-muted">
       ${buildSparklineSvg(history)}
       <div class="sparkline-label"><span>Season points progression</span><span>${history.length ? esc(history[history.length-1]) + ' pts' : ''}</span></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="tool-minor" style="margin-bottom:6px">Recent finishes</div>
+      <div class="small-list">${recent || '<div class="muted">No recent results.</div>'}</div>
     </div>
   `;
 }
@@ -1365,19 +1915,38 @@ async function loadF1() {
   const metaEl = document.getElementById('f1-meta');
   const errEl = document.getElementById('f1-errors');
   const nextEl = document.getElementById('f1-next');
+  const phaseEl = document.getElementById('f1-weekend-phase');
+  const weatherEl = document.getElementById('f1-weather');
   const standingsEl = document.getElementById('f1-standings');
   const lastRaceEl = document.getElementById('f1-last-race');
   const tracksEl = document.getElementById('f1-tracks');
   const profileEl = document.getElementById('f1-driver-detail');
-  if (!seasonInput || !metaEl || !nextEl || !standingsEl || !lastRaceEl || !tracksEl || !profileEl) return;
+  const trackPanelEl = document.getElementById('f1-track-panel');
+  if (!seasonInput || !metaEl || !nextEl || !phaseEl || !weatherEl || !standingsEl || !lastRaceEl || !tracksEl || !profileEl || !trackPanelEl) return;
   if (errEl) errEl.innerHTML = '';
+  clearF1SessionPolling();
 
   const season = (seasonInput.value || 'current').trim() || 'current';
+  _f1Weekend = null;
+  _f1Sessions = {};
+  clearF1ClockTicker();
   standingsEl.innerHTML = '<div class="empty">Loading...</div>';
-  nextEl.innerHTML = '<div class="muted">Loading race calendar...</div>';
+  nextEl.innerHTML = '<div class="muted">Loading race weekend...</div>';
+  phaseEl.innerHTML = '<div class="muted">Loading weekend phase...</div>';
+  weatherEl.innerHTML = '<div class="muted">Loading weather...</div>';
   lastRaceEl.innerHTML = '<div class="muted">Loading latest race...</div>';
   profileEl.innerHTML = '<div class="muted">Select a driver profile...</div>';
+  trackPanelEl.innerHTML = '<div class="muted">Loading track panel...</div>';
   tracksEl.innerHTML = '<div class="empty">Loading track guide...</div>';
+  document.getElementById('f1-hero').innerHTML = '<div class="muted">Loading weekend hub...</div>';
+  document.getElementById('f1-nowbar').innerHTML = '<div class="muted">Syncing clocks...</div>';
+  document.getElementById('f1-session-picker').innerHTML = '<div class="muted">Loading sessions...</div>';
+  document.getElementById('f1-session-detail').innerHTML = '<div class="muted">Waiting for session data...</div>';
+  document.getElementById('f1-day-plan').innerHTML = '<div class="muted">Building trackday planner...</div>';
+  document.getElementById('f1-live-board').innerHTML = '<div class="muted">Select a session to load timing.</div>';
+  document.getElementById('f1-race-control').innerHTML = '<div class="muted">Session race control will appear here.</div>';
+  document.getElementById('f1-live-meta').textContent = '';
+  document.getElementById('f1-session-meta').textContent = '';
 
   try {
     const params = new URLSearchParams();
@@ -1388,11 +1957,20 @@ async function loadF1() {
     const cacheTag = data.cached ? ' | cache' : '';
     const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
     const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
-    metaEl.textContent = `${data.standings_count || 0} drivers | source ${data.source || 'unknown'} | updated ${relTime(data.generated_at)}${cacheTag}${staleTag}${asOfTag}${errInfo}`;
+    metaEl.textContent = `${data.standings_count || 0} drivers | overview ${data.source || 'unknown'} | weekend ${data.weekend_source || 'unknown'} | updated ${relTime(data.generated_at)}${cacheTag}${staleTag}${asOfTag}${errInfo}`;
     if (errEl) {
       const errs = (data.errors || []).slice(0, 6);
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
     }
+
+    _f1Weekend = data.weekend || null;
+    renderF1Hero(_f1Weekend);
+    renderF1NowBar(_f1Weekend);
+    renderF1WeekendPhase(_f1Weekend, data.next_race);
+    renderF1WeatherCard(_f1Weekend?.weather || null);
+    renderF1TrackPanel(_f1Weekend || null);
+    renderF1DayPlanner(_f1Weekend);
+    if (_f1Weekend) startF1ClockTicker();
 
     const nr = data.next_race;
     if (nr) {
@@ -1401,7 +1979,9 @@ async function loadF1() {
         <div style="font-size:15px;font-weight:600">${esc(nr.race_name || 'TBA')}</div>
         <div class="muted">Round ${esc(nr.round || '?')} | ${esc(nr.circuit || 'Unknown circuit')}</div>
         <div class="muted">${esc(nr.locality || '')}${nr.country ? ', ' + esc(nr.country) : ''}</div>
-        <div class="pill" style="width:max-content">${nr.datetime_utc ? new Date(nr.datetime_utc).toLocaleString() : 'Date TBA'}</div>
+        <div class="pill" style="width:max-content">${nr.datetime_utc ? f1FormatDateTime(nr.datetime_utc) : 'Date TBA'}</div>
+        <div class="small-row"><span>Countdown</span><strong>${esc(f1CountdownTo(nr.datetime_utc || '')) || '-'}</strong></div>
+        ${f1BuildTimeComparison(_f1Weekend?.next_session?.date_start_local || nr.datetime_utc, nr.datetime_utc, 'Approx. track time')}
       `;
     } else {
       nextEl.innerHTML = '<div class="muted">No upcoming race found.</div>';
@@ -1409,7 +1989,7 @@ async function loadF1() {
 
     const latestRace = data.latest_race;
     if (latestRace && (latestRace.results || []).length) {
-      const rows = (latestRace.results || []).slice(0, 8).map(r => `
+      const rows = (latestRace.results || []).slice(0, 6).map(r => `
         <div class="small-row">
           <span>P${esc(r.position || '?')} ${esc(r.driver || 'Driver')}</span>
           <span class="muted">${esc(r.status || r.time || '')}</span>
@@ -1424,33 +2004,39 @@ async function loadF1() {
       lastRaceEl.innerHTML = '<div class="muted">No completed race data yet.</div>';
     }
 
-    const standings = data.standings || [];
-    standingsEl.innerHTML = '';
-    if (!standings.length) {
-      standingsEl.innerHTML = '<div class="empty">No standings available.</div>';
-      return;
-    }
-
     _f1Profiles = {};
     (data.driver_profiles || []).forEach(p => {
       if (!p || !p.profile_key) return;
       _f1Profiles[p.profile_key] = p;
     });
 
-    standings.slice(0, 12).forEach(row => {
-      const card = document.createElement('div');
-      card.className = 'f1-driver-card';
-      const key = row.profile_key || row.driver_id || row.code || '';
-      card.innerHTML = `
-        <span class="rank-pill">P${esc(row.position || '?')}</span>
-        <strong>${esc(row.driver || 'Unknown Driver')}</strong>
-        <div class="muted">${esc(row.team || 'Unknown Team')}</div>
-        <div class="small-row"><span>Points</span><strong>${esc(row.points || '0')}</strong></div>
-        <div class="small-row"><span>Wins</span><strong>${esc(row.wins || '0')}</strong></div>
-        <div class="actions"><button class="sm" onclick="showF1DriverProfile('${esc(key)}')">Open profile</button></div>
-      `;
-      standingsEl.appendChild(card);
-    });
+    const standings = data.standings || [];
+    standingsEl.innerHTML = '';
+    if (!standings.length) {
+      standingsEl.innerHTML = '<div class="empty">No standings available.</div>';
+    } else {
+      standings.slice(0, 12).forEach(row => {
+        const card = document.createElement('div');
+        card.className = 'f1-driver-card';
+        const key = row.profile_key || row.driver_id || row.code || '';
+        card.innerHTML = `
+          <span class="rank-pill">P${esc(row.position || '?')}</span>
+          <strong>${esc(row.driver || 'Unknown Driver')}</strong>
+          <div class="muted">${esc(row.team || 'Unknown Team')}</div>
+          <div class="small-row"><span>Points</span><strong>${esc(row.points || '0')}</strong></div>
+          <div class="small-row"><span>Wins</span><strong>${esc(row.wins || '0')}</strong></div>
+        `;
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const btn = document.createElement('button');
+        btn.className = 'sm';
+        btn.textContent = 'Open profile';
+        btn.onclick = () => showF1DriverProfile(key);
+        actions.appendChild(btn);
+        card.appendChild(actions);
+        standingsEl.appendChild(card);
+      });
+    }
 
     const guide = (data.upcoming_races && data.upcoming_races.length) ? data.upcoming_races : (data.track_guide || []);
     tracksEl.innerHTML = '';
@@ -1476,16 +2062,42 @@ async function loadF1() {
       });
     }
 
-    const preferred = _f1SelectedProfileKey && _f1Profiles[_f1SelectedProfileKey]
+    _f1Sessions = {};
+    (_f1Weekend?.sessions || []).forEach(session => {
+      if (!session || !session.session_key) return;
+      _f1Sessions[String(session.session_key)] = session;
+    });
+    renderF1SessionPicker();
+
+    const preferredSession = _f1SelectedSessionKey && _f1Sessions[_f1SelectedSessionKey]
+      ? _f1SelectedSessionKey
+      : String(_f1Weekend?.focus_session_key || _f1Weekend?.current_session_key || Object.keys(_f1Sessions)[0] || '');
+    if (preferredSession) {
+      await selectF1Session(preferredSession);
+    }
+
+    const preferredProfile = _f1SelectedProfileKey && _f1Profiles[_f1SelectedProfileKey]
       ? _f1SelectedProfileKey
       : (standings.find(x => _f1Profiles[x.profile_key])?.profile_key || Object.keys(_f1Profiles)[0]);
-    if (preferred) showF1DriverProfile(preferred);
+    if (preferredProfile) showF1DriverProfile(preferredProfile);
   } catch (e) {
+    clearF1SessionPolling();
+    clearF1ClockTicker();
     standingsEl.innerHTML = `<div class="empty err-msg">F1 API failed: ${esc(e.message)}</div>`;
     nextEl.innerHTML = '';
+    phaseEl.innerHTML = '';
+    weatherEl.innerHTML = '';
     lastRaceEl.innerHTML = '';
     profileEl.innerHTML = '';
+    trackPanelEl.innerHTML = '';
     tracksEl.innerHTML = '';
+    document.getElementById('f1-hero').innerHTML = '';
+    document.getElementById('f1-nowbar').innerHTML = '';
+    document.getElementById('f1-session-picker').innerHTML = '';
+    document.getElementById('f1-session-detail').innerHTML = '';
+    document.getElementById('f1-day-plan').innerHTML = '';
+    document.getElementById('f1-live-board').innerHTML = '';
+    document.getElementById('f1-race-control').innerHTML = '';
   }
 }
 

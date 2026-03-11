@@ -176,6 +176,11 @@
     .wf-frame-art{width:100%;aspect-ratio:16/9;object-fit:contain;border-radius:10px;background:radial-gradient(circle at top,#1e3a5f 0%,#0b1220 70%);padding:10px}
     .wf-ability-tags{display:flex;flex-wrap:wrap;gap:6px}
     .wf-ability-chip{font-size:11px;padding:4px 8px;border-radius:999px;background:#172554;color:#bfdbfe}
+    .wf-ability-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+    .wf-ability-card{background:#101827;border:1px solid #1f2937;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}
+    .wf-ability-icon{width:42px;height:42px;object-fit:contain;border-radius:8px;background:#0f172a;padding:6px}
+    .wf-pill-row{display:flex;flex-wrap:wrap;gap:6px}
+    .wf-meta-chip{font-size:11px;padding:3px 8px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid #1f2937}
     .wf-tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
 
@@ -392,6 +397,17 @@
         <button class="primary" onclick="loadWarframe()">Refresh</button>
         <button onclick="addCurrentWarframeItem()">Track Item</button>
       </div>
+      <div class="row" style="margin-bottom:8px">
+        <select id="wf-track-priority">
+          <option value="5">P5 urgent</option>
+          <option value="4">P4 high</option>
+          <option value="3" selected>P3 normal</option>
+          <option value="2">P2 later</option>
+          <option value="1">P1 parking lot</option>
+        </select>
+        <input id="wf-track-tags" placeholder="Tags, e.g. sell, craft, hold" style="flex:1;min-width:180px" />
+        <input id="wf-track-note" placeholder="Short note for this item" style="flex:1.4;min-width:220px" />
+      </div>
       <div id="wf-meta" class="muted" style="margin-bottom:4px"></div>
       <div id="wf-errors" class="warn-strip"></div>
       <div class="wf-grid-3" style="margin-bottom:10px">
@@ -432,6 +448,13 @@
       </div>
       <div class="stat-card">
         <div class="diag-head">
+          <h2 style="margin:0">Relic Profit Radar</h2>
+          <span id="wf-profit-meta" class="tool-minor"></span>
+        </div>
+        <div id="wf-profit" class="wf-plan-grid"></div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
           <h2 style="margin:0">Farm Planner</h2>
           <span id="wf-plan-meta" class="tool-minor"></span>
         </div>
@@ -445,6 +468,15 @@
         <div class="diag-head">
           <h2 style="margin:0">Personal Watchlist</h2>
           <span id="wf-watch-meta" class="tool-minor"></span>
+        </div>
+        <div class="row">
+          <select id="wf-watch-sort" onchange="loadWarframeWatchlist()">
+            <option value="priority">Sort: Priority</option>
+            <option value="value">Sort: Market Value</option>
+            <option value="volume">Sort: Volume</option>
+            <option value="recent">Sort: Recently Added</option>
+          </select>
+          <button onclick="loadWarframeWatchlist()">Refresh Watchlist</button>
         </div>
         <div id="wf-watchlist" class="wf-plan-grid"></div>
       </div>
@@ -1191,6 +1223,9 @@ const WARFRAME_TOOL_LINKS = [
   { name:'Warframe Wiki', url:'https://wiki.warframe.com/w/Main_Page', summary:'Frame abilities, farm paths, drop tables and patch context.' },
   { name:'Warframe Market', url:'https://warframe.market/', summary:'Trading, price discovery and item drill-down.' },
   { name:'Warframe Drops', url:'https://drops.warframestat.us/', summary:'Drop table explorer powered by WarframeStat.' },
+  { name:'Overframe', url:'https://overframe.gg/', summary:'Community builds, tier lists and loadout inspiration for frames and weapons.' },
+  { name:'WF Tools', url:'https://wftools.eu/', summary:'Wishlist, relic finder, relic profiteer and fissure tracking in one place.' },
+  { name:'Warframe Tools', url:'https://warframetools.com/', summary:'Daily checklist hub with extra planning utilities and quick shortcuts.' },
   { name:'WFInfo', url:'https://wfinfo.warframestat.us/', summary:'Overlay-style fissure helper for plat and ducat value checks.' },
   { name:'WFCD Items', url:'https://github.com/WFCD/warframe-items', summary:'Community dataset for frames, items and artwork.' },
   { name:'Deal Finder', url:'https://github.com/Luis-Munu/Warframe-Market-deal-finder', summary:'Community market-analysis project for inspiration and scanning ideas.' },
@@ -1479,6 +1514,7 @@ async function loadWarframe() {
   void loadWarframeArsenal();
   void loadWarframeWatchlist();
   void loadWarframePlanner(item);
+  void loadWarframeRadar();
   hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
   if (marketChartEl) marketChartEl.innerHTML = '';
   alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
@@ -1640,12 +1676,56 @@ async function loadWarframe() {
     worldEl.innerHTML = '';
   }
 }
+async function loadWarframeRadar() {
+  const platformEl = document.getElementById('wf-platform');
+  const metaEl = document.getElementById('wf-profit-meta');
+  const gridEl = document.getElementById('wf-profit');
+  if (!gridEl) return;
+  gridEl.innerHTML = '<div class="muted">Loading relic value radar...</div>';
+  if (metaEl) metaEl.textContent = `scanning ${String(platformEl?.value || 'pc').toUpperCase()} relics from your watchlist and hot items`;
+  try {
+    const params = new URLSearchParams({ platform: platformEl?.value || 'pc' });
+    const data = await fetch(`${API}/warframe/relics/profit?${params}`).then(r => r.json());
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (metaEl) metaEl.textContent = `${items.length} profitable relic candidates`;
+    if (!items.length) {
+      gridEl.innerHTML = '<div class="muted">No relic profit data available right now.</div>';
+      return;
+    }
+    gridEl.innerHTML = '';
+    items.forEach(item => {
+      const states = Array.isArray(item.state_values) ? item.state_values : [];
+      const stateLine = states.map(s => `${s.state.slice(0,1)} ${fmtMarketNum(s.expected_value || 0,1)}p`).join(' | ');
+      const card = document.createElement('div');
+      card.className = 'market-card';
+      card.innerHTML = `
+        <div class="diag-head">
+          <strong>${esc(item.relic || 'Relic')}</strong>
+          <span class="rank-pill">${esc(item.best_state || '-')} ${fmtMarketNum(item.best_ev || 0,2)}p</span>
+        </div>
+        <div class="small-row"><span>Tracked Hits</span><span class="muted">${fmtMarketNum(item.tracked_hit_count || 0,0)}</span></div>
+        <div class="small-row"><span>Jackpot</span><span class="muted">${item.jackpot_reward?.item_name ? `${esc(item.jackpot_reward.item_name)} ${fmtMarketNum(item.jackpot_reward.price || 0,0)}p` : 'n/a'}</span></div>
+        <div class="tool-summary">${esc(stateLine || 'No EV breakdown.')}</div>
+        <div class="wf-pill-row">${(item.tracked_hits || []).map(hit => `<span class="wf-meta-chip">${esc(hit)}</span>`).join('')}</div>
+        <div class="row" style="margin:0">
+          ${item.jackpot_reward?.item_name ? `<button class="sm" onclick='loadWarframePlanner(${JSON.stringify(item.jackpot_reward.item_name)})'>Plan jackpot</button>` : ''}
+          ${item.jackpot_reward?.item_name ? `<button class="sm" onclick='trackWarframeNamedItem(${JSON.stringify(item.jackpot_reward.item_name)}, "item")'>Track jackpot</button>` : ''}
+        </div>
+      `;
+      gridEl.appendChild(card);
+    });
+  } catch (e) {
+    gridEl.innerHTML = `<div class="err-msg">Relic radar failed: ${esc(e.message)}</div>`;
+    if (metaEl) metaEl.textContent = 'profit radar unavailable';
+  }
+}
+
 async function loadWarframePlanner(seedQuery = '') {
   const inputEl = document.getElementById('wf-plan-query');
   const metaEl = document.getElementById('wf-plan-meta');
   const gridEl = document.getElementById('wf-plan');
   if (!gridEl) return;
-  if (seedQuery && inputEl && !inputEl.value.trim()) inputEl.value = seedQuery;
+  if (seedQuery && inputEl) inputEl.value = seedQuery;
   const q = (inputEl?.value || seedQuery || '').trim();
   if (!q) {
     gridEl.innerHTML = '<div class="muted">Search an item, part or mod to see relic and drop paths.</div>';
@@ -1715,17 +1795,19 @@ async function loadWarframePlanner(seedQuery = '') {
 
 async function loadWarframeWatchlist() {
   const platformSel = document.getElementById('wf-platform');
+  const sortEl = document.getElementById('wf-watch-sort');
   const metaEl = document.getElementById('wf-watch-meta');
   const gridEl = document.getElementById('wf-watchlist');
   if (!gridEl) return;
   const platform = platformSel?.value || 'pc';
+  const sortBy = sortEl?.value || 'priority';
   gridEl.innerHTML = '<div class="muted">Loading tracked items...</div>';
   if (metaEl) metaEl.textContent = `syncing ${String(platform).toUpperCase()} watchlist`;
   try {
-    const params = new URLSearchParams({ platform });
+    const params = new URLSearchParams({ platform, sort_by: sortBy });
     const data = await fetch(`${API}/warframe/watchlist?${params}`).then(r => r.json());
     const items = Array.isArray(data.items) ? data.items : [];
-    if (metaEl) metaEl.textContent = `${items.length} tracked item(s)`;
+    if (metaEl) metaEl.textContent = `${items.length} tracked item(s) | sorted by ${sortBy}`;
     if (!items.length) {
       gridEl.innerHTML = '<div class="muted">No tracked Warframe items yet. Use Track Item to start a personal list.</div>';
       return;
@@ -1735,18 +1817,25 @@ async function loadWarframeWatchlist() {
       const move = Number(item.market?.price_change_pct);
       const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
       const bestRelic = item.planner?.best_relic || {};
+      const bestValue = bestRelic.value_lab?.best_value_state || {};
+      const tags = Array.isArray(item.tags) ? item.tags : [];
       const card = document.createElement('div');
       card.className = 'market-card';
       card.innerHTML = `
         <div class="diag-head">
           <strong>${esc(item.name || 'Tracked Item')}</strong>
-          <button class="sm danger" onclick="deleteWarframeWatchItem('${esc(item.id)}', this)">Remove</button>
+          <div class="row" style="margin:0">
+            <span class="rank-pill">P${esc(item.priority ?? 3)}</span>
+            <button class="sm danger" onclick="deleteWarframeWatchItem('${esc(item.id)}', this)">Remove</button>
+          </div>
         </div>
         ${item.note ? `<div class="tool-summary">${esc(item.note)}</div>` : ''}
+        ${tags.length ? `<div class="wf-pill-row">${tags.map(tag => `<span class="wf-meta-chip">${esc(tag)}</span>`).join('')}</div>` : ''}
         <div class="small-row"><span>Price</span><strong>${item.market?.last_avg_price != null ? fmtMarketNum(item.market.last_avg_price,0) + 'p' : '-'}</strong></div>
         <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
         <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.market?.volume_total || 0,0)}</span></div>
         <div class="small-row"><span>Best Relic</span><span class="muted">${bestRelic.relic ? `${esc(bestRelic.relic)} ${esc(bestRelic.best_state || '')}` : 'no relic route'}</span></div>
+        <div class="small-row"><span>Best EV</span><span class="muted">${bestValue.expected_value != null ? `${esc(bestValue.state || '-')} ${fmtMarketNum(bestValue.expected_value,2)}p` : 'n/a'}</span></div>
         ${item.market?.slug ? `<a href="https://warframe.market/items/${esc(item.market.slug)}" target="_blank" rel="noopener">Open market page</a>` : ''}
       `;
       gridEl.appendChild(card);
@@ -1757,16 +1846,28 @@ async function loadWarframeWatchlist() {
   }
 }
 
-async function addCurrentWarframeItem() {
-  const inputEl = document.getElementById('wf-item');
-  if (!inputEl || !inputEl.value.trim()) return;
-  const name = inputEl.value.trim();
+async function trackWarframeNamedItem(name, kind = 'item') {
+  const priorityEl = document.getElementById('wf-track-priority');
+  const tagsEl = document.getElementById('wf-track-tags');
+  const noteEl = document.getElementById('wf-track-note');
   const res = await fetch(`${API}/warframe/watchlist`, {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ name, kind:'item' }),
+    body: JSON.stringify({
+      name,
+      kind,
+      priority: priorityEl?.value || 3,
+      tags: tagsEl?.value || '',
+      note: noteEl?.value || '',
+    }),
   });
   if (res.ok || res.status === 409) loadWarframeWatchlist();
+}
+
+async function addCurrentWarframeItem() {
+  const inputEl = document.getElementById('wf-item');
+  if (!inputEl || !inputEl.value.trim()) return;
+  await trackWarframeNamedItem(inputEl.value.trim(), 'item');
 }
 
 async function deleteWarframeWatchItem(id, btn) {
@@ -1802,8 +1903,10 @@ async function loadWarframeArsenal() {
     items.forEach(frame => {
       const card = document.createElement('div');
       card.className = 'wf-frame-card';
-      const abilityNames = Array.isArray(frame.abilities) ? frame.abilities.map(a => a?.name).filter(Boolean) : [];
       const intro = frame.introduced ? `Introduced ${esc(frame.introduced)}` : '';
+      const abilities = Array.isArray(frame.abilities) ? frame.abilities : [];
+      const components = Array.isArray(frame.components) ? frame.components : [];
+      const polarities = Array.isArray(frame.polarities) ? frame.polarities : [];
       card.innerHTML = `
         ${frame.image_url ? `<img class="wf-frame-art" src="${esc(frame.image_url)}" alt="${esc(frame.name || 'Warframe')}" loading="lazy" />` : ''}
         <div class="diag-head">
@@ -1815,8 +1918,26 @@ async function loadWarframeArsenal() {
         <div class="small-row"><span>Mobility</span><span class="muted">EN ${fmtMarketNum(frame.energy || 0,0)} | Sprint ${fmtMarketNum(frame.sprint || 0,2)}</span></div>
         <div class="small-row"><span>Aura / MR</span><span class="muted">${esc(frame.aura || '-')} / ${esc(frame.mastery_req ?? '-')}</span></div>
         ${intro ? `<div class="small-row"><span>Release</span><span class="muted">${intro}</span></div>` : ''}
-        <div class="wf-ability-tags">${abilityNames.map(name => `<span class="wf-ability-chip">${esc(name)}</span>`).join('')}</div>
-        ${frame.wiki_url ? `<a href="${esc(frame.wiki_url)}" target="_blank" rel="noopener">Open wiki page</a>` : ''}
+        ${components.length ? `<div class="small-row"><span>Components</span><span class="muted">${esc(components.join(', '))}</span></div>` : ''}
+        ${polarities.length ? `<div class="small-row"><span>Polarities</span><span class="muted">${esc(polarities.join(', '))}</span></div>` : ''}
+        ${frame.market_cost ? `<div class="small-row"><span>Market Cost</span><span class="muted">${fmtMarketNum(frame.market_cost,0)} plat</span></div>` : ''}
+        <div class="wf-ability-grid">
+          ${abilities.map(ability => `
+            <div class="wf-ability-card">
+              <div class="diag-head">
+                ${ability.image_url ? `<img class="wf-ability-icon" src="${esc(ability.image_url)}" alt="${esc(ability.name || 'Ability')}" loading="lazy" />` : ''}
+                <strong>${esc(ability.name || 'Ability')}</strong>
+              </div>
+              <div class="tool-summary">${esc(ability.description || 'No ability description available.')}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="row" style="margin:0">
+          <button class="sm" onclick='loadWarframePlanner(${JSON.stringify(frame.name || '')})'>Plan Farm</button>
+          <button class="sm" onclick='trackWarframeNamedItem(${JSON.stringify(frame.name || '')}, "frame")'>Track</button>
+          ${frame.market_set_slug ? `<a class="sm" href="https://warframe.market/items/${esc(frame.market_set_slug)}" target="_blank" rel="noopener">Open set</a>` : ''}
+          ${frame.wiki_url ? `<a class="sm" href="${esc(frame.wiki_url)}" target="_blank" rel="noopener">Wiki</a>` : ''}
+        </div>
       `;
       gridEl.appendChild(card);
     });

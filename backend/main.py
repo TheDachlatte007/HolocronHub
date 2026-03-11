@@ -150,6 +150,31 @@ def _save_warframe_watchlist(items: list[dict]) -> None:
     WARFRAME_WATCHLIST_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def _coerce_watch_priority(raw: Any) -> int:
+    try:
+        value = int(raw)
+    except Exception:
+        value = 3
+    return max(1, min(5, value))
+
+
+def _normalize_tag_list(raw: Any) -> list[str]:
+    values: list[str] = []
+    if isinstance(raw, str):
+        values = [part.strip() for part in raw.split(",") if part.strip()]
+    elif isinstance(raw, list):
+        values = [str(part).strip() for part in raw if str(part).strip()]
+    seen: set[str] = set()
+    out: list[str] = []
+    for tag in values:
+        norm = _normalize_warframe_item_name(tag)
+        if not norm or norm in seen:
+            continue
+        seen.add(norm)
+        out.append(tag[:24])
+    return out[:8]
+
+
 _DEFAULT_SCHEDULE = {"enabled": True, "interval_hours": 2, "run_at_startup": False}
 
 
@@ -1630,6 +1655,8 @@ def _fetch_warframe_arsenal(query: str = "") -> tuple[dict[str, Any], list[str]]
         frames_raw = [item for item in raw if isinstance(item, dict)]
         _cache_set(cache_key, {"frames": frames_raw, "errors": []})
 
+    market_catalog, market_errors = _fetch_warframe_market_catalog()
+    errors.extend(market_errors[:4])
     frames: list[dict[str, Any]] = []
     q_norm = _normalize_warframe_item_name(query)
     for item in frames_raw:
@@ -1652,6 +1679,23 @@ def _fetch_warframe_arsenal(query: str = "") -> tuple[dict[str, Any], list[str]]
                 }
             )
 
+        components = []
+        for component in item.get("components") or []:
+            if not isinstance(component, dict):
+                continue
+            comp_name = str(component.get("name") or component.get("itemCount") or "").strip()
+            if comp_name:
+                components.append(comp_name)
+
+        market_set = None
+        market_candidates = [f"{name} Set"]
+        if not bool(item.get("isPrime")) and "prime" not in name.casefold():
+            market_candidates.insert(0, f"{name} Prime Set")
+        for candidate in market_candidates:
+            market_set = _find_warframe_market_item(market_catalog, candidate)
+            if market_set:
+                break
+
         frames.append(
             {
                 "name": name,
@@ -1668,6 +1712,11 @@ def _fetch_warframe_arsenal(query: str = "") -> tuple[dict[str, Any], list[str]]
                 "aura": item.get("aura"),
                 "mastery_req": item.get("masteryReq"),
                 "introduced": item.get("introduced") or item.get("releaseDate"),
+                "polarities": item.get("polarities") if isinstance(item.get("polarities"), list) else [],
+                "market_cost": item.get("marketCost"),
+                "build_time": item.get("buildTime"),
+                "components": components[:8],
+                "market_set_slug": (market_set or {}).get("slug"),
                 "abilities": abilities[:4],
             }
         )
@@ -1901,6 +1950,76 @@ def _compute_relic_value_profiles(relic_names: list[str], *, platform: str = "pc
     return profiles, errors[:24]
 
 
+def _build_warframe_relic_profit_radar(platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
+    platform_key = str(platform or "pc").strip().lower()
+    if platform_key not in {"pc", "ps4", "xb1", "swi"}:
+        platform_key = "pc"
+
+    cache_key = f"warframe:relic_profit:{platform_key}"
+    cached = _cache_get(cache_key, ttl_seconds=15 * 60)
+    if isinstance(cached, dict):
+        return cached, list(cached.get("errors") or [])
+
+    tracked_names = [str(item.get("name") or "").strip() for item in _load_warframe_watchlist() if str(item.get("name") or "").strip()]
+    target_names = list(dict.fromkeys([*tracked_names, *_WARFRAME_MARKET_WATCHLIST]))
+    target_norms = [_normalize_warframe_item_name(name) for name in target_names if _normalize_warframe_item_name(name)]
+
+    relics, relic_errors = _fetch_warframe_drop_dataset("relics")
+    candidate_relics: set[str] = set()
+    relic_hits: dict[str, set[str]] = {}
+    for relic in relics:
+        relic_name = f"{relic.get('tier') or ''} {relic.get('relicName') or ''}".strip()
+        hits = relic_hits.setdefault(relic_name, set())
+        for reward in relic.get("rewards") or []:
+            if not isinstance(reward, dict):
+                continue
+            reward_norm = _normalize_warframe_item_name(reward.get("itemName") or "")
+            if any(target in reward_norm or reward_norm in target for target in target_norms):
+                candidate_relics.add(relic_name)
+                hits.add(str(reward.get("itemName") or ""))
+
+    candidate_list = sorted(candidate_relics)[:60]
+    profiles, profile_errors = _compute_relic_value_profiles(candidate_list, platform=platform_key, target_item="")
+
+    cards: list[dict[str, Any]] = []
+    for relic_name in candidate_list:
+        profile = profiles.get(relic_name) or {}
+        best_value = profile.get("best_value_state") or {}
+        jackpot = profile.get("jackpot_reward") or {}
+        hits = sorted(relic_hits.get(relic_name) or [])[:4]
+        if not best_value:
+            continue
+        cards.append(
+            {
+                "relic": relic_name,
+                "best_state": best_value.get("state"),
+                "best_ev": best_value.get("expected_value"),
+                "state_values": profile.get("states") or [],
+                "jackpot_reward": jackpot,
+                "tracked_hits": hits,
+                "tracked_hit_count": len(relic_hits.get(relic_name) or []),
+            }
+        )
+
+    cards.sort(
+        key=lambda item: (
+            float(item.get("best_ev") or 0.0),
+            int(item.get("tracked_hit_count") or 0),
+            float((item.get("jackpot_reward") or {}).get("price") or 0.0),
+            str(item.get("relic") or ""),
+        ),
+        reverse=True,
+    )
+    payload = {
+        "platform": platform_key,
+        "count": min(len(cards), 12),
+        "items": cards[:12],
+        "errors": (list(relic_errors) + list(profile_errors))[:24],
+    }
+    _cache_set(cache_key, payload)
+    return payload, list(payload.get("errors") or [])
+
+
 def _build_warframe_farm_plan(query: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
     q = str(query or "").strip()
     platform_key = str(platform or "pc").strip().lower()
@@ -2006,11 +2125,11 @@ def _build_warframe_farm_plan(query: str, platform: str = "pc") -> tuple[dict[st
     return payload, errors[:24]
 
 
-def _build_warframe_watchlist_payload(platform: str = "pc") -> tuple[list[dict[str, Any]], list[str]]:
+def _build_warframe_watchlist_payload(platform: str = "pc", sort_by: str = "priority") -> tuple[list[dict[str, Any]], list[str]]:
     items = _load_warframe_watchlist()
     out: list[dict[str, Any]] = []
     errors: list[str] = []
-    for item in items[:20]:
+    for item in items[:24]:
         name = str(item.get("name") or "").strip()
         if not name:
             continue
@@ -2018,9 +2137,15 @@ def _build_warframe_watchlist_payload(platform: str = "pc") -> tuple[list[dict[s
         plan, plan_errors = _build_warframe_farm_plan(name, platform=platform)
         errors.extend((market_errors or [])[:2])
         errors.extend((plan_errors or [])[:2])
+        priority = _coerce_watch_priority(item.get("priority"))
+        price_value = float(market.get("last_avg_price") or 0.0)
+        volume_value = float(market.get("volume_total") or 0.0)
+        best_relic = (plan.get("relic_targets") or [{}])[0]
         out.append(
             {
                 **item,
+                "priority": priority,
+                "tags": _normalize_tag_list(item.get("tags") or []),
                 "market": {
                     "best_sell": market.get("best_sell"),
                     "last_avg_price": market.get("last_avg_price"),
@@ -2031,12 +2156,22 @@ def _build_warframe_watchlist_payload(platform: str = "pc") -> tuple[list[dict[s
                 },
                 "planner": {
                     "relic_count": len(plan.get("relic_targets") or []),
-                    "best_relic": (plan.get("relic_targets") or [{}])[0],
+                    "best_relic": best_relic,
                     "blueprint_count": len(plan.get("blueprints") or []),
                     "mod_count": len(plan.get("mods") or []),
                 },
+                "score": round(priority * 1000 + price_value * 10 + min(volume_value, 1000), 2),
             }
         )
+
+    if sort_by == "value":
+        out.sort(key=lambda item: (float((item.get("market") or {}).get("last_avg_price") or 0.0), int(item.get("priority") or 0), str(item.get("name") or "")), reverse=True)
+    elif sort_by == "volume":
+        out.sort(key=lambda item: (float((item.get("market") or {}).get("volume_total") or 0.0), int(item.get("priority") or 0), str(item.get("name") or "")), reverse=True)
+    elif sort_by == "recent":
+        out.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
+    else:
+        out.sort(key=lambda item: (int(item.get("priority") or 0), float((item.get("market") or {}).get("last_avg_price") or 0.0), str(item.get("created_at") or "")), reverse=True)
     return out, errors[:24]
 
 
@@ -3146,10 +3281,16 @@ def warframe_planner(q: str = "", platform: str = "pc"):
     return {**payload, "errors": errors}
 
 
+@app.get("/api/warframe/relics/profit")
+def warframe_relic_profit(platform: str = "pc"):
+    payload, errors = _build_warframe_relic_profit_radar(platform)
+    return {**payload, "errors": errors}
+
+
 @app.get("/api/warframe/watchlist")
-def get_warframe_watchlist(platform: str = "pc"):
-    items, errors = _build_warframe_watchlist_payload(platform)
-    return {"items": items, "count": len(items), "errors": errors}
+def get_warframe_watchlist(platform: str = "pc", sort_by: str = "priority"):
+    items, errors = _build_warframe_watchlist_payload(platform, sort_by=sort_by)
+    return {"items": items, "count": len(items), "sort_by": sort_by, "errors": errors}
 
 
 @app.post("/api/warframe/watchlist")
@@ -3166,7 +3307,9 @@ async def add_warframe_watchlist_item(request: Request):
         "id": item_id,
         "name": name,
         "kind": str(item.get("kind") or "item").strip() or "item",
-        "note": str(item.get("note") or "").strip(),
+        "priority": _coerce_watch_priority(item.get("priority")),
+        "tags": _normalize_tag_list(item.get("tags") or []),
+        "note": str(item.get("note") or "").strip()[:180],
         "created_at": datetime.now().isoformat(timespec="seconds"),
     }
     items.insert(0, record)

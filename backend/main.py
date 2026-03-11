@@ -6,6 +6,7 @@ import re
 import shutil
 import requests
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import quote, quote_plus
 from statistics import median
 from copy import deepcopy
@@ -318,6 +319,8 @@ def _warframe_payload_has_data(payload: dict[str, Any]) -> bool:
     worldstate = payload.get("worldstate") or {}
     market = payload.get("market") or {}
     if (market.get("best_sell") is not None) or (market.get("best_buy") is not None):
+        return True
+    if len(payload.get("top_sells") or []) > 0:
         return True
     for key in ["alerts", "fissures", "invasions", "events", "news"]:
         if len(worldstate.get(key) or []) > 0:
@@ -909,6 +912,264 @@ def _normalize_warframe_item_name(item: str) -> str:
     return s.strip("_")
 
 
+_WARFRAME_MARKET_WATCHLIST = [
+    "Arcane Energize",
+    "Arcane Grace",
+    "Arcane Avenger",
+    "Arcane Fury",
+    "Arcane Strike",
+    "Arcane Guardian",
+    "Arcane Blessing",
+    "Arcane Nullifier",
+    "Molt Augmented",
+    "Primary Merciless",
+    "Melee Duplicate",
+    "Revenant Prime Set",
+    "Wisp Prime Set",
+    "Gauss Prime Set",
+    "Saryn Prime Set",
+    "Nekros Prime Set",
+    "Xaku Prime Set",
+    "Glaive Prime Set",
+]
+
+
+def _fetch_warframe_market_catalog() -> tuple[list[dict[str, Any]], list[str]]:
+    cache_key = "warframe:market:catalog:v2"
+    cached = _cache_get(cache_key, ttl_seconds=24 * 3600)
+    if isinstance(cached, dict):
+        return list(cached.get("items") or []), list(cached.get("errors") or [])
+
+    raw, err = _http_get_json("https://api.warframe.market/v2/items", timeout=20)
+    if err:
+        return [], [f"catalog:{err}"]
+
+    payload = raw.get("data") if isinstance(raw, dict) else []
+    if not isinstance(payload, list):
+        return [], ["catalog:invalid_payload"]
+
+    items: list[dict[str, Any]] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        i18n = item.get("i18n") or {}
+        en = i18n.get("en") if isinstance(i18n, dict) else {}
+        if not isinstance(en, dict):
+            en = {}
+        name = en.get("name") or item.get("slug") or "Unknown Item"
+        items.append(
+            {
+                "id": item.get("id"),
+                "slug": item.get("slug"),
+                "name": name,
+                "thumb": en.get("thumb"),
+                "icon": en.get("icon"),
+                "rarity": item.get("rarity"),
+                "max_rank": item.get("maxRank"),
+                "tradable": bool(item.get("tradable", True)),
+                "tags": item.get("tags") if isinstance(item.get("tags"), list) else [],
+            }
+        )
+
+    _cache_set(cache_key, {"items": items, "errors": []})
+    return items, []
+
+
+def _find_warframe_market_item(catalog: list[dict[str, Any]], item: str) -> Optional[dict[str, Any]]:
+    query = str(item or "").strip()
+    if not query:
+        return None
+    q_slug = _normalize_warframe_item_name(query)
+    q_name = query.casefold()
+
+    for entry in catalog:
+        slug = str(entry.get("slug") or "")
+        name = str(entry.get("name") or "")
+        if slug == q_slug or name.casefold() == q_name:
+            return entry
+
+    for entry in catalog:
+        slug = str(entry.get("slug") or "")
+        name = str(entry.get("name") or "")
+        if q_slug in slug or q_name in name.casefold():
+            return entry
+
+    return None
+
+
+def _extract_warframe_stats_history(stats_payload: Any, max_rank: Optional[int] = None) -> tuple[list[dict[str, Any]], Optional[str], Optional[int]]:
+    stats_closed = _dig(stats_payload, "payload", "statistics_closed") or {}
+    if not isinstance(stats_closed, dict):
+        return [], None, None
+
+    period_key = "48hours" if isinstance(stats_closed.get("48hours"), list) and stats_closed.get("48hours") else None
+    if not period_key and isinstance(stats_closed.get("90days"), list) and stats_closed.get("90days"):
+        period_key = "90days"
+    raw_points = stats_closed.get(period_key, []) if period_key else []
+    if not isinstance(raw_points, list):
+        return [], period_key, None
+
+    rank_volume: dict[int, int] = {}
+    has_rank_dimension = False
+    for point in raw_points:
+        if not isinstance(point, dict):
+            continue
+        if point.get("mod_rank") is None:
+            continue
+        has_rank_dimension = True
+        try:
+            rank = int(point.get("mod_rank") or 0)
+        except Exception:
+            rank = 0
+        try:
+            volume = int(point.get("volume") or 0)
+        except Exception:
+            volume = 0
+        rank_volume[rank] = rank_volume.get(rank, 0) + volume
+
+    selected_rank: Optional[int] = None
+    if has_rank_dimension and rank_volume:
+        if max_rank is not None and int(max_rank) in rank_volume:
+            selected_rank = int(max_rank)
+        else:
+            selected_rank = max(rank_volume.items(), key=lambda item: (item[1], item[0]))[0]
+
+    history: list[dict[str, Any]] = []
+    for point in raw_points[-60:]:
+        if not isinstance(point, dict):
+            continue
+        if selected_rank is not None:
+            try:
+                point_rank = int(point.get("mod_rank") or 0)
+            except Exception:
+                point_rank = 0
+            if point_rank != selected_rank:
+                continue
+        avg_price = point.get("avg_price")
+        if avg_price is None:
+            continue
+        history.append(
+            {
+                "datetime": point.get("datetime"),
+                "avg_price": avg_price,
+                "volume": point.get("volume"),
+                "min_price": point.get("min_price"),
+                "max_price": point.get("max_price"),
+                "closed_price": point.get("closed_price"),
+                "wa_price": point.get("wa_price"),
+                "median": point.get("median"),
+                "mod_rank": point.get("mod_rank"),
+            }
+        )
+
+    return history, period_key, selected_rank
+
+
+def _summarize_warframe_statistics(stats_payload: Any, *, max_rank: Optional[int] = None) -> dict[str, Any]:
+    history, period_key, selected_rank = _extract_warframe_stats_history(stats_payload, max_rank=max_rank)
+    latest = history[-1] if history else {}
+    first = history[0] if history else {}
+
+    first_avg = first.get("avg_price")
+    latest_avg = latest.get("avg_price")
+    price_change_pct = None
+    try:
+        if first_avg not in (None, 0) and latest_avg is not None:
+            price_change_pct = round(((float(latest_avg) - float(first_avg)) / float(first_avg)) * 100.0, 1)
+    except Exception:
+        price_change_pct = None
+
+    volume_total = 0
+    for point in history:
+        try:
+            volume_total += int(point.get("volume") or 0)
+        except Exception:
+            continue
+
+    return {
+        "history": history,
+        "history_period": period_key,
+        "selected_rank": selected_rank,
+        "last_avg_price": latest.get("avg_price"),
+        "last_closed_price": latest.get("closed_price"),
+        "last_volume": latest.get("volume"),
+        "price_floor_estimate": latest.get("min_price"),
+        "price_ceiling_estimate": latest.get("max_price"),
+        "price_change_pct": price_change_pct,
+        "volume_total": volume_total,
+    }
+
+
+def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]], list[str]]:
+    cache_key = f"warframe:hot_items:{platform}"
+    cached = _cache_get(cache_key, ttl_seconds=10 * 60)
+    if isinstance(cached, dict):
+        return list(cached.get("items") or []), list(cached.get("errors") or [])
+
+    catalog, catalog_errors = _fetch_warframe_market_catalog()
+    selected_items: list[dict[str, Any]] = []
+    for name in _WARFRAME_MARKET_WATCHLIST:
+        found = _find_warframe_market_item(catalog, name)
+        if found and found not in selected_items:
+            selected_items.append(found)
+
+    errors = list(catalog_errors)
+    hot_items: list[dict[str, Any]] = []
+
+    def load_item(entry: dict[str, Any]) -> tuple[Optional[dict[str, Any]], list[str]]:
+        slug = str(entry.get("slug") or "")
+        raw, err = _http_get_json(
+            f"https://api.warframe.market/v1/items/{slug}/statistics",
+            params={"platform": platform},
+            headers={"Accept": "application/json", "Language": "en", "User-Agent": "HolocronHub/0.5"},
+            timeout=12,
+        )
+        if err:
+            return None, [f"hot:{slug}:{err}"]
+        summary = _summarize_warframe_statistics(raw, max_rank=entry.get("max_rank"))
+        if not summary.get("history"):
+            return None, [f"hot:{slug}:no_history"]
+        hot = {
+            "name": entry.get("name") or slug.replace("_", " ").title(),
+            "slug": slug,
+            "rarity": entry.get("rarity"),
+            "thumb": entry.get("thumb"),
+            "icon": entry.get("icon"),
+            "selected_rank": summary.get("selected_rank"),
+            "last_avg_price": summary.get("last_avg_price"),
+            "last_closed_price": summary.get("last_closed_price"),
+            "price_change_pct": summary.get("price_change_pct"),
+            "volume_48h": summary.get("volume_total") or 0,
+            "history": summary.get("history") or [],
+            "history_period": summary.get("history_period"),
+        }
+        return hot, []
+
+    with ThreadPoolExecutor(max_workers=min(6, max(1, len(selected_items)))) as pool:
+        futures = {pool.submit(load_item, entry): entry for entry in selected_items}
+        for future in as_completed(futures):
+            try:
+                item_payload, item_errors = future.result()
+            except Exception as exc:
+                errors.append(f"hot:worker:{exc}")
+                continue
+            errors.extend(item_errors[:2])
+            if item_payload:
+                hot_items.append(item_payload)
+
+    hot_items.sort(
+        key=lambda item: (
+            int(item.get("volume_48h") or 0),
+            float(item.get("last_avg_price") or 0.0),
+            str(item.get("name") or ""),
+        ),
+        reverse=True,
+    )
+    hot_items = hot_items[:8]
+    _cache_set(cache_key, {"items": hot_items, "errors": errors[:16]})
+    return hot_items, errors[:16]
+
+
 def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str, Any]:
     news_out: list[dict[str, Any]] = []
     for n in (data.get("news") or [])[:10]:
@@ -1061,27 +1322,32 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
 
 
 def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
-    slug = _normalize_warframe_item_name(item)
+    catalog, catalog_errors = _fetch_warframe_market_catalog()
+    item_meta = _find_warframe_market_item(catalog, item)
+    slug = str((item_meta or {}).get("slug") or _normalize_warframe_item_name(item))
+    canonical_name = str((item_meta or {}).get("name") or item or "Unknown Item")
+    max_rank = (item_meta or {}).get("max_rank")
     if not slug:
-        return {"item": item, "slug": "", "best_sell": None, "best_buy": None}, ["invalid_item"]
+        return {"item": item, "canonical_name": canonical_name, "slug": "", "best_sell": None, "best_buy": None}, ["invalid_item"]
 
     req_headers = {"Accept": "application/json", "Language": "en", "User-Agent": "HolocronHub/0.5"}
     orders_url = f"https://api.warframe.market/v1/items/{slug}/orders"
 
-    errors: list[str] = []
+    errors: list[str] = list(catalog_errors)
     data: Optional[dict[str, Any]] = None
     for params in [{"platform": platform}, {"platform": platform, "include": "item"}, None]:
-        raw, err = _http_get_json(orders_url, params=params, headers=req_headers, timeout=15)
+        raw, err = _http_get_json(orders_url, params=params, headers=req_headers, timeout=12)
         if err:
-            errors.append(f"orders:{err}")
+            err_text = str(err)
+            if "403" in err_text:
+                errors.append("orders:403_forbidden")
+                break
+            errors.append(f"orders:{err_text}")
             continue
         if isinstance(raw, dict):
             data = raw
             break
         errors.append("orders:invalid_payload")
-
-    if not isinstance(data, dict):
-        return {"item": item, "slug": slug, "best_sell": None, "best_buy": None}, errors[:8] or ["invalid_market_payload"]
 
     orders = _dig(data, "payload", "orders") or []
     sells_live: list[int] = []
@@ -1142,33 +1408,29 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
         headers=req_headers,
         timeout=15,
     )
-    stats_closed = _dig(stats_data, "payload", "statistics_closed") or {}
-    period_key = "48hours" if isinstance(stats_closed, dict) and stats_closed.get("48hours") else ("90days" if isinstance(stats_closed, dict) and stats_closed.get("90days") else None)
-    history_raw = stats_closed.get(period_key, []) if period_key else []
-    history: list[dict[str, Any]] = []
-    for point in history_raw[-40:]:
-        if not isinstance(point, dict):
-            continue
-        avg_price = point.get("avg_price")
-        if avg_price is None:
-            continue
-        history.append(
-            {
-                "datetime": point.get("datetime"),
-                "avg_price": avg_price,
-                "volume": point.get("volume"),
-            }
-        )
+    stats_summary = _summarize_warframe_statistics(stats_data, max_rank=max_rank)
 
     if stats_err:
         errors.append(f"statistics:{stats_err}")
 
+    price_floor = stats_summary.get("price_floor_estimate")
+    price_ceiling = stats_summary.get("price_ceiling_estimate")
+    last_avg = stats_summary.get("last_avg_price")
+    best_sell = sell_base[0] if sell_base else price_floor
+    best_buy = buy_base[0] if buy_base else None
+    source_mode = "orders_live" if sell_base or buy_base else ("statistics_fallback" if stats_summary.get("history") else "unavailable")
+
     return {
         "item": item,
+        "canonical_name": canonical_name,
         "slug": slug,
-        "best_sell": sell_base[0] if sell_base else None,
-        "best_buy": buy_base[0] if buy_base else None,
-        "median_sell": float(median(sell_base[:20])) if sell_base else None,
+        "thumb": (item_meta or {}).get("thumb"),
+        "icon": (item_meta or {}).get("icon"),
+        "rarity": (item_meta or {}).get("rarity"),
+        "selected_rank": stats_summary.get("selected_rank"),
+        "best_sell": best_sell,
+        "best_buy": best_buy,
+        "median_sell": float(median(sell_base[:20])) if sell_base else last_avg,
         "median_buy": float(median(buy_base[:20])) if buy_base else None,
         "sample_sell_orders": sorted(sell_rows_live, key=lambda x: x["price"])[:8] if sell_rows_live else sorted(sell_rows_all, key=lambda x: x["price"])[:8],
         "sample_buy_orders": sorted(buy_rows_live, key=lambda x: x["price"], reverse=True)[:8] if buy_rows_live else sorted(buy_rows_all, key=lambda x: x["price"], reverse=True)[:8],
@@ -1176,10 +1438,18 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
         "buy_count_live": len(buys_live),
         "sell_count_total": len(sells_all),
         "buy_count_total": len(buys_all),
-        "history_period": period_key,
-        "history": history,
-        "selected_scope": "live" if sells_live or buys_live else "all_visible",
-    }, errors[:12]
+        "history_period": stats_summary.get("history_period"),
+        "history": stats_summary.get("history") or [],
+        "selected_scope": "live" if sells_live or buys_live else ("stats" if stats_summary.get("history") else "all_visible"),
+        "snapshot_source": source_mode,
+        "last_avg_price": last_avg,
+        "last_closed_price": stats_summary.get("last_closed_price"),
+        "last_volume": stats_summary.get("last_volume"),
+        "volume_total": stats_summary.get("volume_total"),
+        "price_floor_estimate": price_floor,
+        "price_ceiling_estimate": price_ceiling,
+        "price_change_pct": stats_summary.get("price_change_pct"),
+    }, errors[:16]
 
 
 def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
@@ -1968,6 +2238,7 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
     if isinstance(cached, dict):
         ws = cached.get("worldstate") or {}
         market = cached.get("market") or {}
+        hot_items = cached.get("top_sells") or []
         duration_ms = int((time.perf_counter() - started) * 1000)
         _record_provider_health(
             "warframe",
@@ -1977,6 +2248,7 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
                 "alerts": len(ws.get("alerts") or []),
                 "fissures": len(ws.get("fissures") or []),
                 "best_sell": market.get("best_sell"),
+                "hot_items": len(hot_items),
             },
             duration_ms=duration_ms,
         )
@@ -1984,6 +2256,7 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
 
     worldstate, world_errors = _fetch_warframe_worldstate(platform_key)
     market, market_errors = _fetch_warframe_market(item, platform_key)
+    top_sells, hot_errors = _fetch_warframe_hot_items(platform_key)
 
     generated_at = datetime.now().isoformat(timespec="seconds")
     payload = {
@@ -1995,7 +2268,8 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
         "item_query": item,
         "worldstate": worldstate,
         "market": market,
-        "errors": world_errors + market_errors,
+        "top_sells": top_sells,
+        "errors": world_errors + market_errors + hot_errors,
     }
 
     if _warframe_payload_has_data(payload):
@@ -2003,12 +2277,13 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
     else:
         stale_payload, age = _get_last_good(cache_key, max_age_seconds=3 * 3600)
         if isinstance(stale_payload, dict):
-            fallback_errors = list(world_errors or []) + list(market_errors or []) + [f"fallback:last_good:warframe:{age}s"]
+            fallback_errors = list(world_errors or []) + list(market_errors or []) + list(hot_errors or []) + [f"fallback:last_good:warframe:{age}s"]
             stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
             stale_payload["errors"] = fallback_errors[:24]
             _cache_set(cache_key, stale_payload)
             ws = stale_payload.get("worldstate") or {}
             mk = stale_payload.get("market") or {}
+            hot_items = stale_payload.get("top_sells") or []
             duration_ms = int((time.perf_counter() - started) * 1000)
             _record_provider_health(
                 "warframe",
@@ -2018,6 +2293,7 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
                     "alerts": len(ws.get("alerts") or []),
                     "fissures": len(ws.get("fissures") or []),
                     "best_sell": mk.get("best_sell"),
+                    "hot_items": len(hot_items),
                 },
                 duration_ms=duration_ms,
             )
@@ -2027,12 +2303,13 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
     duration_ms = int((time.perf_counter() - started) * 1000)
     _record_provider_health(
         "warframe",
-        errors=list(world_errors or []) + list(market_errors or []),
+        errors=list(world_errors or []) + list(market_errors or []) + list(hot_errors or []),
         cached=False,
         summary={
             "alerts": len((worldstate or {}).get("alerts") or []),
             "fissures": len((worldstate or {}).get("fissures") or []),
             "best_sell": (market or {}).get("best_sell"),
+            "hot_items": len(top_sells),
         },
         duration_ms=duration_ms,
     )

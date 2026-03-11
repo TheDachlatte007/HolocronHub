@@ -140,6 +140,7 @@
     .f1-driver-card .actions{display:flex;gap:6px;flex-wrap:wrap}
     .f1-track-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
     .wf-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+    .wf-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 
     .warn-strip{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
     .warn-item{font-size:11px;padding:2px 8px;border-radius:999px;background:#3b1f1f;color:#fca5a5;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -382,6 +383,13 @@
           <h2 style="margin:0 0 6px">Warframe News</h2>
           <div id="wf-news" class="small-list"></div>
         </div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
+          <h2 style="margin:0">Top Sells Right Now</h2>
+          <span class="tool-minor">48h volume across a popular trading watchlist</span>
+        </div>
+        <div id="wf-hot" class="wf-top-grid"></div>
       </div>
     </div>
   </div>
@@ -1375,7 +1383,8 @@ async function loadWarframe() {
   const fissuresEl = document.getElementById('wf-fissures');
   const invasionsEl = document.getElementById('wf-invasions');
   const worldEl = document.getElementById('wf-world');
-  if (!itemInput || !platformSel || !metaEl || !marketEl || !alertsEl || !newsEl || !fissuresEl || !invasionsEl || !worldEl) return;
+  const hotEl = document.getElementById('wf-hot');
+  if (!itemInput || !platformSel || !metaEl || !marketEl || !alertsEl || !newsEl || !fissuresEl || !invasionsEl || !worldEl || !hotEl) return;
   if (errEl) errEl.innerHTML = '';
 
   if (!itemInput.value.trim()) itemInput.value = 'arcane energize';
@@ -1383,6 +1392,7 @@ async function loadWarframe() {
   const platform = platformSel.value || 'pc';
 
   marketEl.innerHTML = '<div class="muted">Loading market...</div>';
+  hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
   if (marketChartEl) marketChartEl.innerHTML = '';
   alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
   newsEl.innerHTML = '<div class="muted">Loading news...</div>';
@@ -1404,13 +1414,23 @@ async function loadWarframe() {
     }
 
     const m = data.market || {};
+    const sourceMode = String(m.snapshot_source || 'unavailable');
+    const sellLabel = sourceMode === 'statistics_fallback' ? 'Floor Est.' : 'Best Sell';
+    const buyLabel = sourceMode === 'statistics_fallback' ? 'Best Buy' : 'Best Buy';
+    const trendValue = Number(m.price_change_pct);
+    const trendClass = !Number.isFinite(trendValue) ? 'flat' : (trendValue >= 0 ? 'up' : 'down');
+    const sourceLabel = sourceMode === 'orders_live' ? 'live orders' : (sourceMode === 'statistics_fallback' ? '48h trade stats' : 'unavailable');
+    const selectedRank = m.selected_rank != null ? `R${esc(m.selected_rank)}` : 'base';
     marketEl.innerHTML = `
-      <div class="small-row"><span>Item</span><strong>${esc(m.item || item)}</strong></div>
-      <div class="small-row"><span>Best Sell</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
-      <div class="small-row"><span>Best Buy</span><strong>${m.best_buy != null ? fmtMarketNum(m.best_buy,0) + 'p' : '-'}</strong></div>
-      <div class="small-row"><span>Live Orders (S/B)</span><strong>${esc(m.sell_count_live ?? 0)} / ${esc(m.buy_count_live ?? 0)}</strong></div>
-      <div class="small-row"><span>Total Orders (S/B)</span><strong>${esc(m.sell_count_total ?? 0)} / ${esc(m.buy_count_total ?? 0)}</strong></div>
-      <div class="small-row"><span>Scope</span><strong>${esc(m.selected_scope || 'live')}</strong></div>
+      <div class="small-row"><span>Item</span><strong>${esc(m.canonical_name || m.item || item)}</strong></div>
+      <div class="small-row"><span>${sellLabel}</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
+      <div class="small-row"><span>${buyLabel}</span><strong>${m.best_buy != null ? fmtMarketNum(m.best_buy,0) + 'p' : '-'}</strong></div>
+      <div class="small-row"><span>Last Avg</span><strong>${m.last_avg_price != null ? fmtMarketNum(m.last_avg_price,0) + 'p' : '-'}</strong></div>
+      <div class="small-row"><span>48h Volume</span><strong>${fmtMarketNum(m.volume_total || 0,0)}</strong></div>
+      <div class="small-row"><span>Trend</span><span class="market-change ${trendClass}">${Number.isFinite(trendValue) ? `${trendValue >= 0 ? '+' : ''}${fmtMarketNum(trendValue,1)}%` : 'n/a'}</span></div>
+      <div class="small-row"><span>Rank</span><strong>${selectedRank}</strong></div>
+      <div class="small-row"><span>Source</span><strong>${sourceLabel}</strong></div>
+      <div class="small-row"><span>Orders (Live/All)</span><strong>${esc(m.sell_count_live ?? 0)}/${esc(m.buy_count_live ?? 0)} | ${esc(m.sell_count_total ?? 0)}/${esc(m.buy_count_total ?? 0)}</strong></div>
       <a href="https://warframe.market/items/${esc(m.slug || '')}" target="_blank" rel="noopener">Open on warframe.market</a>
     `;
 
@@ -1423,6 +1443,35 @@ async function loadWarframe() {
           <span>${hist.length ? `${fmtMarketNum(hist[0],0)}p -> ${fmtMarketNum(hist[hist.length-1],0)}p` : 'n/a'}</span>
         </div>
       `;
+    }
+
+    const hotItems = Array.isArray(data.top_sells) ? data.top_sells : [];
+    hotEl.innerHTML = '';
+    if (!hotItems.length) {
+      hotEl.innerHTML = '<div class="muted">No high-volume items available right now.</div>';
+    } else {
+      hotItems.forEach((entry, idx) => {
+        const hist = (entry.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
+        const move = Number(entry.price_change_pct);
+        const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+        const card = document.createElement('div');
+        card.className = 'market-card';
+        card.innerHTML = `
+          <div class="diag-head">
+            <strong>#${idx + 1} ${esc(entry.name || 'Unknown Item')}</strong>
+            <span class="rank-pill">${fmtMarketNum(entry.volume_48h || 0,0)} trades</span>
+          </div>
+          <div class="small-row"><span>Avg Price</span><strong>${entry.last_avg_price != null ? fmtMarketNum(entry.last_avg_price,0) + 'p' : '-'}</strong></div>
+          <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
+          <div class="small-row"><span>Rank</span><span class="muted">${entry.selected_rank != null ? `R${esc(entry.selected_rank)}` : esc(entry.rarity || 'base')}</span></div>
+          ${buildSparklineSvg(hist, 'sparkline-muted')}
+          <div class="sparkline-label">
+            <span>${esc((entry.history_period || '48hours').replace('_', ' '))}</span>
+            <a href="https://warframe.market/items/${esc(entry.slug || '')}" target="_blank" rel="noopener">Open</a>
+          </div>
+        `;
+        hotEl.appendChild(card);
+      });
     }
 
     const alerts = data.worldstate?.alerts || [];
@@ -1495,6 +1544,7 @@ async function loadWarframe() {
     }
   } catch (e) {
     marketEl.innerHTML = `<div class="err-msg">Warframe API failed: ${esc(e.message)}</div>`;
+    hotEl.innerHTML = '';
     if (marketChartEl) marketChartEl.innerHTML = '';
     alertsEl.innerHTML = '';
     newsEl.innerHTML = '';

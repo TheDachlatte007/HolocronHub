@@ -14,7 +14,10 @@
       "assistant"
     ],
     "usage_count": 220,
-    "rating": 5
+    "rating": 5,
+    "favorite": true,
+    "pinned": true,
+    "service_kind": "ai_chat"
   },
   {
     "id": "claude",
@@ -31,7 +34,10 @@
       "assistant"
     ],
     "usage_count": 180,
-    "rating": 5
+    "rating": 5,
+    "favorite": true,
+    "pinned": true,
+    "service_kind": "ai_chat"
   },
   {
     "id": "gemini",
@@ -48,7 +54,9 @@
       "multimodal"
     ],
     "usage_count": 170,
-    "rating": 4
+    "rating": 4,
+    "favorite": true,
+    "service_kind": "ai_chat"
   },
   {
     "id": "perplexity",
@@ -252,7 +260,10 @@
       "llm"
     ],
     "usage_count": 125,
-    "rating": 5
+    "rating": 5,
+    "favorite": true,
+    "service_kind": "local_llm",
+    "environment": "Local"
   },
   {
     "id": "open-webui",
@@ -269,7 +280,10 @@
       "ui"
     ],
     "usage_count": 98,
-    "rating": 4
+    "rating": 4,
+    "favorite": true,
+    "service_kind": "local_ai_ui",
+    "environment": "Local"
   },
   {
     "id": "claude-code",
@@ -1068,7 +1082,12 @@
       "security"
     ],
     "usage_count": 80,
-    "rating": 5
+    "rating": 5,
+    "group": "Network",
+    "service_kind": "dns",
+    "environment": "Home Lab",
+    "host": "pi.hole",
+    "favorite": true
   },
   {
     "id": "home-assistant",
@@ -1085,7 +1104,13 @@
       "smarthome"
     ],
     "usage_count": 88,
-    "rating": 5
+    "rating": 5,
+    "group": "Automation",
+    "service_kind": "smarthome",
+    "environment": "Home Lab",
+    "host": "homeassistant.local",
+    "port": 8123,
+    "favorite": true
   },
   {
     "id": "proxmox",
@@ -1102,7 +1127,14 @@
       "infra"
     ],
     "usage_count": 75,
-    "rating": 5
+    "rating": 5,
+    "group": "Infra",
+    "service_kind": "vm_host",
+    "environment": "Home Lab",
+    "host": "proxmox.local",
+    "port": 8006,
+    "favorite": true,
+    "pinned": true
   },
   {
     "id": "truenas",
@@ -1119,7 +1151,12 @@
       "storage"
     ],
     "usage_count": 67,
-    "rating": 5
+    "rating": 5,
+    "group": "Storage",
+    "service_kind": "storage",
+    "environment": "Home Lab",
+    "host": "truenas.local",
+    "favorite": true
   },
   {
     "id": "portainer",
@@ -1136,7 +1173,14 @@
       "infra"
     ],
     "usage_count": 72,
-    "rating": 5
+    "rating": 5,
+    "group": "Infra",
+    "service_kind": "container_admin",
+    "environment": "Home Lab",
+    "host": "portainer.local",
+    "port": 9000,
+    "favorite": true,
+    "pinned": true
   },
   {
     "id": "grafana",
@@ -1153,7 +1197,46 @@
       "dashboard"
     ],
     "usage_count": 50,
-    "rating": 4
+    "rating": 4,
+    "group": "Observability",
+    "service_kind": "monitoring",
+    "environment": "Home Lab",
+    "host": "grafana.local",
+    "port": 3000
+  },
+  {
+    "id": "jellyfin",
+    "name": "Jellyfin",
+    "category": "Home Network",
+    "provider": "Local",
+    "link": "http://jellyfin.local:8096",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "self-hosted",
+    "notes": "Media library and streaming launcher",
+    "tags": [
+      "media",
+      "streaming"
+    ],
+    "usage_count": 44,
+    "rating": 4,
+    "group": "Media",
+    "favorite": true,
+    "host": "jellyfin.local",
+    "port": 8096,
+    "environment": "Home Lab",
+    "status": "unknown",
+    "service_kind": "media",
+    "links": [
+      {
+        "label": "Library",
+        "url": "http://jellyfin.local:8096/web/index.html#!/home.html"
+      },
+      {
+        "label": "Admin",
+        "url": "http://jellyfin.local:8096/web/index.html#!/dashboard.html"
+      }
+    ]
   },
   {
     "id": "futurepedia",

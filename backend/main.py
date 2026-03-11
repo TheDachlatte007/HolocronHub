@@ -7,7 +7,7 @@ import shutil
 import requests
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.parse import quote, quote_plus
+from urllib.parse import quote, quote_plus, urlparse
 from statistics import median
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -49,6 +49,16 @@ class Tool(BaseModel):
     rating: Optional[int] = None        # 1-5, personal score
     last_used: Optional[str] = None     # ISO timestamp
     usage_count: int = 0
+    group: Optional[str] = ""
+    favorite: bool = False
+    pinned: bool = False
+    host: Optional[str] = ""
+    port: Optional[int] = None
+    environment: Optional[str] = ""
+    status: str = "unknown"
+    status_checked_at: Optional[str] = None
+    service_kind: Optional[str] = ""
+    links: List[dict[str, str]] = Field(default_factory=list)
 
 
 class AgentStatus(BaseModel):
@@ -89,16 +99,124 @@ def _ensure_data_file() -> None:
         DATA_FILE.write_text(src.read_text(encoding="utf-8") if src else "[]", encoding="utf-8")
 
 
+def _parse_tool_host_port(link: str) -> tuple[str, Optional[int]]:
+    try:
+        parsed = urlparse(str(link or '').strip())
+    except Exception:
+        return '', None
+    return parsed.hostname or '', parsed.port
+
+
+def _normalize_tool_status(raw: Any) -> str:
+    status = str(raw or 'unknown').strip().lower()
+    if status in {'online', 'offline', 'unknown'}:
+        return status
+    return 'unknown'
+
+
+def _normalize_tool_links(raw: Any) -> list[dict[str, str]]:
+    items = raw if isinstance(raw, list) else []
+    normalized: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get('label') or '').strip()
+        url = str(item.get('url') or '').strip()
+        if not label or not url:
+            continue
+        key = (label.lower(), url)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append({'label': label[:40], 'url': url})
+    return normalized[:6]
+
+
+def _infer_tool_group(tool: dict[str, Any]) -> str:
+    category = str(tool.get('category') or '').strip().lower()
+    if 'home' not in category and 'network' not in category:
+        return str(tool.get('group') or '').strip()
+    existing = str(tool.get('group') or '').strip()
+    if existing:
+        return existing
+    service_kind = str(tool.get('service_kind') or '').strip().lower()
+    tags = {str(tag).strip().lower() for tag in tool.get('tags') or [] if str(tag).strip()}
+    name = str(tool.get('name') or '').lower()
+    if {'media', 'streaming'} & tags or service_kind == 'media' or 'jellyfin' in name:
+        return 'Media'
+    if {'monitoring', 'dashboard', 'metrics'} & tags or service_kind in {'monitoring', 'observability'}:
+        return 'Observability'
+    if {'nas', 'storage', 'backup'} & tags or service_kind == 'storage':
+        return 'Storage'
+    if {'dns', 'network', 'security'} & tags or service_kind in {'dns', 'network'}:
+        return 'Network'
+    if {'automation', 'smarthome'} & tags or service_kind in {'automation', 'smarthome'}:
+        return 'Automation'
+    return 'Infra'
+
+
+def _normalize_tool_record(raw: dict[str, Any]) -> dict[str, Any]:
+    tool = dict(raw or {})
+    host, port = _parse_tool_host_port(tool.get('link') or '')
+    tags = [str(tag).strip() for tag in (tool.get('tags') or []) if str(tag).strip()]
+    rating = tool.get('rating')
+    try:
+        rating = int(rating) if rating not in (None, '') else None
+    except Exception:
+        rating = None
+    if rating is not None:
+        rating = max(1, min(5, rating))
+    try:
+        usage_count = max(0, int(tool.get('usage_count') or 0))
+    except Exception:
+        usage_count = 0
+    normalized = {
+        'id': str(tool.get('id') or '').strip(),
+        'name': str(tool.get('name') or '').strip(),
+        'category': str(tool.get('category') or '').strip(),
+        'provider': str(tool.get('provider') or '').strip(),
+        'link': str(tool.get('link') or '').strip(),
+        'icon_url': str(tool.get('icon_url') or '').strip() or None,
+        'local_or_cloud': str(tool.get('local_or_cloud') or 'unknown').strip(),
+        'auth_type': str(tool.get('auth_type') or 'none').strip(),
+        'cost_hint': str(tool.get('cost_hint') or 'unknown').strip(),
+        'notes': str(tool.get('notes') or '').strip(),
+        'tags': tags,
+        'rating': rating,
+        'last_used': str(tool.get('last_used') or '').strip() or None,
+        'usage_count': usage_count,
+        'group': str(tool.get('group') or '').strip(),
+        'favorite': bool(tool.get('favorite')),
+        'pinned': bool(tool.get('pinned')),
+        'host': str(tool.get('host') or host or '').strip(),
+        'port': tool.get('port') if tool.get('port') not in ('', None) else port,
+        'environment': str(tool.get('environment') or '').strip(),
+        'status': _normalize_tool_status(tool.get('status')),
+        'status_checked_at': str(tool.get('status_checked_at') or '').strip() or None,
+        'service_kind': str(tool.get('service_kind') or '').strip(),
+        'links': _normalize_tool_links(tool.get('links')),
+    }
+    try:
+        normalized['port'] = int(normalized['port']) if normalized['port'] is not None else None
+    except Exception:
+        normalized['port'] = port
+    normalized['group'] = _infer_tool_group(normalized)
+    return normalized
+
+
 def _load_tools() -> list[dict]:
     _ensure_data_file()
     try:
-        return json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        return [_normalize_tool_record(item) for item in data if isinstance(item, dict)]
     except Exception:
         return []
 
 
 def _save_tools(items: list[dict]) -> None:
-    DATA_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False), encoding="utf-8")
+    normalized = [_normalize_tool_record(item) for item in items if isinstance(item, dict)]
+    DATA_FILE.write_text(json.dumps(normalized, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def _load_sources() -> list[dict]:
@@ -2927,16 +3045,29 @@ def list_tools(
             t for t in tools
             if ql in t.get("name", "").lower()
             or ql in t.get("provider", "").lower()
+            or ql in t.get("category", "").lower()
+            or ql in str(t.get("group") or "").lower()
+            or ql in str(t.get("service_kind") or "").lower()
+            or ql in str(t.get("environment") or "").lower()
+            or ql in str(t.get("host") or "").lower()
+            or ql in str(t.get("status") or "").lower()
             or any(ql in tag.lower() for tag in t.get("tags", []))
+            or any(ql in str(link.get("label") or "").lower() or ql in str(link.get("url") or "").lower() for link in t.get("links", []))
         ]
     if sort == "rating":
-        tools = sorted(tools, key=lambda t: t.get("rating") or 0, reverse=True)
+        tools = sorted(tools, key=lambda t: (t.get("rating") or 0, int(t.get("usage_count") or 0)), reverse=True)
     elif sort == "last_used":
         tools = sorted(tools, key=lambda t: t.get("last_used") or "", reverse=True)
     elif sort == "popular":
         tools = sorted(
             tools,
             key=lambda t: (int(t.get("usage_count") or 0), t.get("last_used") or ""),
+            reverse=True,
+        )
+    elif sort == "favorites":
+        tools = sorted(
+            tools,
+            key=lambda t: (bool(t.get("pinned")), bool(t.get("favorite")), int(t.get("usage_count") or 0), t.get("last_used") or ""),
             reverse=True,
         )
     return tools
@@ -2947,9 +3078,10 @@ def add_tool(tool: Tool):
     tools = _load_tools()
     if any(t.get("id") == tool.id for t in tools):
         raise HTTPException(status_code=409, detail="Tool id already exists")
-    tools.append(tool.model_dump())
+    normalized = Tool(**_normalize_tool_record(tool.model_dump())).model_dump()
+    tools.append(normalized)
     _save_tools(tools)
-    return tool
+    return normalized
 
 
 @app.patch("/api/tools/{tool_id}", response_model=Tool)
@@ -2960,7 +3092,9 @@ async def update_tool(tool_id: str, request: Request):
     if idx is None:
         raise HTTPException(status_code=404, detail="Tool not found")
     patch.pop("id", None)
-    tools[idx].update(patch)
+    merged = dict(tools[idx])
+    merged.update(patch)
+    tools[idx] = Tool(**_normalize_tool_record(merged)).model_dump()
     _save_tools(tools)
     return tools[idx]
 
@@ -2974,6 +3108,7 @@ def mark_tool_used(tool_id: str):
         raise HTTPException(status_code=404, detail="Tool not found")
     tools[idx]["last_used"] = datetime.now().isoformat(timespec="seconds")
     tools[idx]["usage_count"] = int(tools[idx].get("usage_count") or 0) + 1
+    tools[idx] = _normalize_tool_record(tools[idx])
     _save_tools(tools)
     return {"ok": True, "usage_count": tools[idx]["usage_count"]}
 

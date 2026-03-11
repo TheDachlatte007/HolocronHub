@@ -41,10 +41,47 @@
     .nav-tab.active{background:#1e293b;border-color:#334155;color:#e2e8f0}
 
     /* tool cards */
-    .tool-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:5px}
-    .tool-card .card-actions{display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap}
-    .tool-head{display:flex;align-items:center;gap:8px}
+    .tool-section{margin-top:22px}
+    .tool-section[hidden]{display:none !important}
+    .tool-section-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #334155}
+    .tool-section-title{font-size:1rem;color:#e2e8f0;font-weight:700}
+    .tool-section-sub{font-size:12px;color:#64748b;max-width:720px}
+    .tool-focus-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}
+    .tool-focus-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:5px}
+    .tool-focus-card strong{font-size:14px;color:#f8fafc}
+    .tool-group-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+    .tool-group-tab{padding:7px 11px;border-radius:999px;border:1px solid #334155;background:#0b1220;color:#94a3b8;font-size:12px;cursor:pointer}
+    .tool-group-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
+    .home-groups{display:flex;flex-direction:column;gap:14px}
+    .tool-group-block{background:linear-gradient(145deg,#0b1220,#0f172a);border:1px solid #1f2d44;border-radius:14px;padding:14px}
+    .tool-group-header{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+    .tool-group-title{font-size:14px;font-weight:700;color:#f8fafc}
+    .tool-group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+    .tool-card{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:100%}
+    .tool-card-home{background:linear-gradient(160deg,#0f172a 0%,#0b1220 100%);border-color:#334b7a;box-shadow:0 10px 20px rgba(2,6,23,.16)}
+    .tool-card-quick{background:linear-gradient(145deg,#172554,#0b1220);border-color:#315285}
+    .tool-card .card-actions{display:flex;gap:5px;margin-top:2px;align-items:center;flex-wrap:wrap}
+    .tool-card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+    .tool-head{display:flex;align-items:center;gap:8px;min-width:0}
+    .tool-head strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .tool-icon{width:20px;height:20px;border-radius:4px;object-fit:cover;background:#0f172a;border:1px solid #334155}
+    .tool-badge-row{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+    .tool-open-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .tool-open{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:#1d4ed8;color:#fff;text-decoration:none;font-size:12px;font-weight:600}
+    .tool-open:hover{text-decoration:none;background:#2563eb}
+    .tool-link-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid #334155;background:#111827;color:#cbd5e1;font-size:12px;text-decoration:none}
+    .tool-link-chip:hover{text-decoration:none;border-color:#475569;background:#172033}
+    .tool-kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#94a3b8;padding-top:4px;border-top:1px solid #1f2937}
+    .tool-kv strong{color:#cbd5e1;font-weight:600}
+    .tool-card-note{font-size:12px;color:#64748b}
+    .check-inline{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#cbd5e1;padding:0 4px}
+    .check-inline input{margin:0}
+    .pill.featured{background:#172554;color:#bfdbfe}
+    .pill.pinned{background:#3b1f1f;color:#fecaca}
+    .pill.status-online{background:#14532d;color:#86efac}
+    .pill.status-offline{background:#7f1d1d;color:#fecaca}
+    .pill.status-unknown{background:#1f2937;color:#cbd5e1}
+
     /* star rating */
     .stars{display:flex;gap:2px;cursor:pointer}
     .star{font-size:16px;color:#374151;line-height:1;transition:color .1s}
@@ -54,7 +91,7 @@
     .stars .star:hover~.star{color:#374151}
 
     /* edit form */
-    .edit-form{background:#0b1220;border:1px solid #2563eb;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
+    .edit-form{background:#0b1220;border:1px solid #2563eb;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;grid-column:1/-1}
     .edit-form input,.edit-form select,.edit-form textarea{width:100%}
     .edit-form .row{margin-bottom:0}
 
@@ -238,7 +275,7 @@
       .nav{overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;padding-bottom:6px;gap:6px}
       .nav-tab{flex:0 0 auto;border:1px solid #334155;border-radius:8px;margin-bottom:0}
       .nav-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
-      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels{grid-template-columns:1fr}
+      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-focus-strip,.tool-group-grid{grid-template-columns:1fr}
       .row>input,.row>select,.row>button{flex:1 1 100%;min-width:0 !important;width:100%}
       input,select,textarea,button{font-size:14px}
     }
@@ -276,25 +313,56 @@
       <h2>Tool Hub</h2>
       <div class="row" id="cat-tabs"><button class="active" onclick="setCategory('',this)">All</button></div>
       <div class="row">
-        <input id="q" placeholder="Search name, tags, provider…" style="flex:1;min-width:180px" />
+        <input id="q" placeholder="Search name, tags, provider, group, host…" style="flex:1;min-width:180px" />
         <select id="tool-sort" onchange="loadTools()">
           <option value="">Default order</option>
+          <option value="favorites">Favorites first</option>
           <option value="popular">Most used</option>
           <option value="rating">By rating</option>
           <option value="last_used">Recently used</option>
         </select>
         <button class="primary" onclick="loadTools()">Search</button>
       </div>
-      <div id="ai-tools-section" style="margin-top:20px;">
-        <h3 style="font-size:1rem;color:#e2e8f0;margin-bottom:12px;border-bottom:1px solid #334155;padding-bottom:5px;">AI Tools</h3>
+      <div id="tool-focus-strip" class="tool-focus-strip"></div>
+
+      <div id="quick-tools-section" class="tool-section" hidden>
+        <div class="tool-section-head">
+          <div>
+            <div class="tool-section-title">Quick Access</div>
+            <div class="tool-section-sub">Pinned and favorite launch points for the tools and services you open most.</div>
+          </div>
+        </div>
+        <div id="tools-quick" class="grid"><div class="empty">No favorites yet.</div></div>
+      </div>
+
+      <div id="ai-tools-section" class="tool-section">
+        <div class="tool-section-head">
+          <div>
+            <div class="tool-section-title">AI Tools</div>
+            <div class="tool-section-sub">Cloud and local AI services, coding tools, media generation, research, and orchestration.</div>
+          </div>
+        </div>
         <div id="tools-ai" class="grid"><div class="empty">No AI tools.</div></div>
       </div>
-      <div id="home-tools-section" style="margin-top:24px;">
-        <h3 style="font-size:1rem;color:#e2e8f0;margin-bottom:12px;border-bottom:1px solid #334155;padding-bottom:5px;">Home Network</h3>
-        <div id="tools-home" class="grid"><div class="empty">No Home Network tools.</div></div>
+
+      <div id="home-tools-section" class="tool-section">
+        <div class="tool-section-head">
+          <div>
+            <div class="tool-section-title">Home Lab</div>
+            <div class="tool-section-sub">Canonical launcher for local services with groups, host context, status, and optional deep links.</div>
+          </div>
+        </div>
+        <div id="home-group-tabs" class="tool-group-tabs"><button class="tool-group-tab active" onclick="setHomeGroup('',this)">All services</button></div>
+        <div id="tools-home" class="home-groups"><div class="empty">No Home Lab services.</div></div>
       </div>
-      <div id="other-tools-section" style="margin-top:24px;display:none;">
-        <h3 style="font-size:1rem;color:#e2e8f0;margin-bottom:12px;border-bottom:1px solid #334155;padding-bottom:5px;">Other Tools</h3>
+
+      <div id="other-tools-section" class="tool-section" hidden>
+        <div class="tool-section-head">
+          <div>
+            <div class="tool-section-title">Other Tools</div>
+            <div class="tool-section-sub">Everything that does not fit the AI or Home Lab launcher lanes.</div>
+          </div>
+        </div>
         <div id="tools-other" class="grid"></div>
       </div>
     </div>
@@ -312,6 +380,20 @@
         <select id="new_loc"><option value="cloud">cloud</option><option value="local">local</option></select>
         <select id="new_auth"><option value="none">none</option><option value="api-key">api-key</option><option value="oauth">oauth</option><option value="subscription">subscription</option><option value="token">token</option><option value="local">local</option></select>
         <input id="new_cost" placeholder="cost" style="width:90px" />
+      </div>
+      <div class="row">
+        <input id="new_group" placeholder="group (Media, Infra, Storage…)" style="flex:1" />
+        <input id="new_service_kind" placeholder="service kind" style="flex:1" />
+        <input id="new_environment" placeholder="environment" style="flex:1" />
+        <input id="new_host" placeholder="host / IP" style="flex:1" />
+        <input id="new_port" type="number" min="1" max="65535" placeholder="port" style="width:90px" />
+        <select id="new_status"><option value="unknown">unknown</option><option value="online">online</option><option value="offline">offline</option></select>
+      </div>
+      <div class="row">
+        <input id="new_notes" placeholder="short description" style="flex:1.4" />
+        <input id="new_links" placeholder="deep links: Label|URL, Label|URL" style="flex:1.6" />
+        <label class="check-inline"><input type="checkbox" id="new_favorite" /> Favorite</label>
+        <label class="check-inline"><input type="checkbox" id="new_pinned" /> Pin</label>
         <button class="primary" onclick="addTool()">Add</button>
       </div>
       <div id="addResult" class="muted"></div>
@@ -908,11 +990,181 @@ async function loadCategories() {
 // ══ tools ════════════════════════════════════════════════════
 
 let activeCategory = '';
+let activeHomeGroup = '';
+let _toolCache = [];
+
 function setCategory(cat, btn) {
   activeCategory = cat;
+  activeHomeGroup = '';
   document.querySelectorAll('#cat-tabs button').forEach(b=>b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   loadTools();
+}
+
+function setHomeGroup(group, btn) {
+  activeHomeGroup = group;
+  document.querySelectorAll('#home-group-tabs .tool-group-tab').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderToolSections(_toolCache);
+}
+
+function isHomeTool(tool) {
+  const cat = String(tool?.category || '').toLowerCase();
+  return cat.includes('home') || cat.includes('network') || cat.includes('nas') || cat.includes('infra');
+}
+
+function isAiTool(tool) {
+  const cat = String(tool?.category || '').toLowerCase();
+  return ['ai','code','image','video','voice','audio','research','orchestration','automation'].some(k => cat.includes(k));
+}
+
+function normalizeToolGroup(group) {
+  const raw = String(group || 'General').replace(/[_-]+/g, ' ').trim();
+  if (!raw) return 'General';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function normalizeToolStatus(status) {
+  const value = String(status || 'unknown').toLowerCase();
+  return ['online','offline','unknown'].includes(value) ? value : 'unknown';
+}
+
+function getToolHostPort(tool) {
+  const host = String(tool?.host || '').trim();
+  const port = tool?.port !== null && tool?.port !== undefined && String(tool.port).trim() !== '' ? String(tool.port).trim() : '';
+  if (host && port) return `${host}:${port}`;
+  if (host) return host;
+  if (port) return `port ${port}`;
+  try {
+    const u = new URL(tool?.link || '');
+    return u.port ? `${u.hostname}:${u.port}` : u.hostname;
+  } catch {
+    return '';
+  }
+}
+
+function formatToolLinksInput(links) {
+  return (Array.isArray(links) ? links : [])
+    .filter(link => link && link.label && link.url)
+    .map(link => `${link.label}|${link.url}`)
+    .join(', ');
+}
+
+function parseToolLinksInput(raw) {
+  return String(raw || '')
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => {
+      const idx = part.indexOf('|');
+      if (idx === -1) return null;
+      const label = part.slice(0, idx).trim();
+      const url = part.slice(idx + 1).trim();
+      return label && url ? { label, url } : null;
+    })
+    .filter(Boolean);
+}
+
+function buildFocusCards(tools) {
+  const strip = document.getElementById('tool-focus-strip');
+  if (!strip) return;
+  const home = tools.filter(isHomeTool);
+  const favorites = tools.filter(t => t.favorite || t.pinned);
+  const groups = [...new Set(home.map(t => normalizeToolGroup(t.group)).filter(Boolean))];
+  strip.innerHTML = `
+    <div class="tool-focus-card">
+      <strong>${esc(String(favorites.length))} quick launch${favorites.length === 1 ? '' : 'es'}</strong>
+      <span class="muted">Pinned and favorite tools stay visible as your first launcher row.</span>
+    </div>
+    <div class="tool-focus-card">
+      <strong>${esc(String(home.length))} Home Lab service${home.length === 1 ? '' : 's'}</strong>
+      <span class="muted">Grouped by ${esc(String(groups.length || 1))} lane${groups.length === 1 ? '' : 's'} for faster scanning.</span>
+    </div>
+    <div class="tool-focus-card">
+      <strong>${esc(String(tools.filter(t => isAiTool(t)).length))} AI tools</strong>
+      <span class="muted">Short links for chats, coding, research, orchestration, and media generation.</span>
+    </div>`;
+}
+
+function renderHomeGroupTabs(tools) {
+  const tabs = document.getElementById('home-group-tabs');
+  if (!tabs) return;
+  const groups = [...new Set(tools.filter(isHomeTool).map(t => normalizeToolGroup(t.group)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  tabs.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'tool-group-tab' + (!activeHomeGroup ? ' active' : '');
+  allBtn.textContent = 'All services';
+  allBtn.onclick = function(){ setHomeGroup('', this); };
+  tabs.appendChild(allBtn);
+  groups.forEach(group => {
+    const btn = document.createElement('button');
+    btn.className = 'tool-group-tab' + (activeHomeGroup === group ? ' active' : '');
+    btn.textContent = group;
+    btn.onclick = function(){ setHomeGroup(group, this); };
+    tabs.appendChild(btn);
+  });
+}
+
+function renderToolGrid(target, tools, variant, emptyText) {
+  target.innerHTML = '';
+  if (!tools.length) {
+    target.innerHTML = `<div class="empty">${esc(emptyText)}</div>`;
+    return;
+  }
+  tools.forEach(tool => target.appendChild(buildToolCard(tool, variant)));
+}
+
+function renderToolSections(tools) {
+  const elQuick = document.getElementById('tools-quick');
+  const secQuick = document.getElementById('quick-tools-section');
+  const elAi = document.getElementById('tools-ai');
+  const elHome = document.getElementById('tools-home');
+  const elOther = document.getElementById('tools-other');
+  const secOther = document.getElementById('other-tools-section');
+
+  buildFocusCards(tools);
+  renderHomeGroupTabs(tools);
+
+  const favorites = tools
+    .filter(t => t.favorite || t.pinned)
+    .sort((a,b) => (Number(b.pinned) - Number(a.pinned)) || (Number(b.favorite) - Number(a.favorite)) || ((b.usage_count||0) - (a.usage_count||0)) || String(b.last_used||'').localeCompare(String(a.last_used||'')));
+  secQuick.hidden = favorites.length === 0;
+  if (favorites.length) renderToolGrid(elQuick, favorites, 'quick', 'No favorites yet.');
+
+  const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
+  renderToolGrid(elAi, aiTools, 'default', 'No AI tools found.');
+
+  const homeTools = tools.filter(isHomeTool);
+  const filteredHome = activeHomeGroup ? homeTools.filter(t => normalizeToolGroup(t.group) === activeHomeGroup) : homeTools;
+  elHome.innerHTML = '';
+  if (!filteredHome.length) {
+    elHome.innerHTML = '<div class="empty">No Home Lab services found for this view.</div>';
+  } else {
+    const groups = {};
+    filteredHome.forEach(tool => {
+      const group = normalizeToolGroup(tool.group);
+      (groups[group] = groups[group] || []).push(tool);
+    });
+    Object.entries(groups).sort(([a],[b]) => a.localeCompare(b)).forEach(([group, items]) => {
+      const block = document.createElement('div');
+      block.className = 'tool-group-block';
+      block.innerHTML = `
+        <div class="tool-group-header">
+          <div class="tool-group-title">${esc(group)}</div>
+          <div class="muted">${esc(String(items.length))} service${items.length === 1 ? '' : 's'}</div>
+        </div>`;
+      const grid = document.createElement('div');
+      grid.className = 'tool-group-grid';
+      items.sort((a,b) => (Number(b.pinned) - Number(a.pinned)) || (Number(b.favorite) - Number(a.favorite)) || String(a.name||'').localeCompare(String(b.name||'')));
+      items.forEach(tool => grid.appendChild(buildToolCard(tool, 'home')));
+      block.appendChild(grid);
+      elHome.appendChild(block);
+    });
+  }
+
+  const otherTools = tools.filter(t => !isAiTool(t) && !isHomeTool(t));
+  secOther.hidden = otherTools.length === 0;
+  if (otherTools.length) renderToolGrid(elOther, otherTools, 'default', 'No other tools found.');
 }
 
 async function loadTools() {
@@ -923,47 +1175,18 @@ async function loadTools() {
   if (activeCategory) params.set('category', activeCategory);
   if (sort) params.set('sort', sort);
 
-  const elAi = document.getElementById('tools-ai');
-  const elHome = document.getElementById('tools-home');
-  const elOther = document.getElementById('tools-other');
-  const secOther = document.getElementById('other-tools-section');
-
-  elAi.innerHTML = '<div class="empty">Loading...</div>';
-  elHome.innerHTML = '<div class="empty">Loading...</div>';
-  elOther.innerHTML = '';
-  secOther.style.display = 'none';
+  document.getElementById('tools-ai').innerHTML = '<div class="empty">Loading...</div>';
+  document.getElementById('tools-home').innerHTML = '<div class="empty">Loading...</div>';
+  document.getElementById('tools-other').innerHTML = '';
+  document.getElementById('tools-quick').innerHTML = '';
 
   try {
-    const data = await fetch(`${API}/tools?${params}`).then(r=>r.json());
-    elAi.innerHTML = '';
-    elHome.innerHTML = '';
-    
-    let cntAi = 0, cntHome = 0, cntOther = 0;
-    
-    data.forEach(t => {
-      const cat = (t.category || '').toLowerCase();
-      const card = buildToolCard(t);
-      const isHome = cat.includes('home') || cat.includes('network') || cat.includes('nas') || cat.includes('infra');
-      const isAi = ['ai','code','image','video','voice','audio','research','orchestration','automation'].some(k => cat.includes(k));
-      if (isHome) {
-        elHome.appendChild(card);
-        cntHome++;
-      } else if (isAi) {
-        elAi.appendChild(card);
-        cntAi++;
-      } else {
-        elOther.appendChild(card);
-        cntOther++;
-      }
-    });
-    
-    if (cntAi === 0) elAi.innerHTML = '<div class="empty">No AI tools found.</div>';
-    if (cntHome === 0) elHome.innerHTML = '<div class="empty">No Home Network tools found.</div>';
-    if (cntOther > 0) secOther.style.display = 'block';
-
+    _toolCache = await fetch(`${API}/tools?${params}`).then(r=>r.json());
+    renderToolSections(_toolCache);
   } catch(e) {
-    elAi.innerHTML = `<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
-    elHome.innerHTML = '';
+    document.getElementById('tools-ai').innerHTML = `<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
+    document.getElementById('tools-home').innerHTML = '';
+    document.getElementById('tools-quick').innerHTML = '';
   }
 }
 
@@ -989,34 +1212,72 @@ function buildStars(toolId, currentRating) {
   return wrap;
 }
 
-function buildToolCard(t) {
+function buildToolCard(t, variant='default') {
   const d = document.createElement('div');
-  d.className = 'tool-card';
+  d.className = `tool-card tool-card-${variant}`;
   d.dataset.id = t.id;
   const icon = t.icon_url || deriveToolIcon(t.link);
   const category = normalizeToolCategory(t.category);
+  const group = normalizeToolGroup(t.group);
   const summary = (t.notes || '').trim() || `${category} tool`;
   const usage = Number(t.usage_count || 0);
+  const status = normalizeToolStatus(t.status);
+  const hostPort = getToolHostPort(t);
+  const links = Array.isArray(t.links) ? t.links.filter(link => link && link.label && link.url) : [];
+  const badges = [];
+  if (t.pinned) badges.push('<span class="pill pinned">pinned</span>');
+  if (t.favorite) badges.push('<span class="pill featured">favorite</span>');
+  if (variant === 'home') badges.push(`<span class="pill status-${esc(status)}">${esc(status)}</span>`);
   d.innerHTML = `
-    <div class="tool-head">
-      ${icon ? `<img class="tool-icon" src="${esc(icon)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ''}
-      <strong>${esc(t.name)}</strong>
+    <div class="tool-card-top">
+      <div class="tool-head">
+        ${icon ? `<img class="tool-icon" src="${esc(icon)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ''}
+        <strong>${esc(t.name)}</strong>
+      </div>
+      <div class="tool-badge-row">${badges.join('')}</div>
     </div>
-    <div class="tool-minor">${esc(t.provider)} | ${esc(category)}</div>
+    <div class="tool-minor">${esc(t.provider)} | ${esc(category)}${variant === 'home' ? ` | ${esc(group)}` : ''}</div>
     <div class="tool-summary">${esc(summary)}</div>
     <div class="meta">
       <span class="pill">${esc(t.local_or_cloud || 'unknown')}</span>
       <span class="pill">${esc(t.cost_hint || 'unknown')}</span>
+      ${t.environment ? `<span class="pill">${esc(t.environment)}</span>` : ''}
+      ${t.service_kind ? `<span class="pill">${esc(t.service_kind)}</span>` : ''}
       ${usage > 0 ? `<span class="pill">used ${esc(usage)}x</span>` : ''}
     </div>
+    ${hostPort ? `<div class="tool-card-note">${esc(hostPort)}</div>` : ''}
     ${t.last_used ? `<div class="muted" style="font-size:11px">Last used: ${relTime(t.last_used)}</div>` : ''}
-    <div><a href="${esc(t.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">Open ↗</a></div>
+    ${t.status_checked_at ? `<div class="muted" style="font-size:11px">Status checked: ${relTime(t.status_checked_at)}</div>` : ''}
+    <div class="tool-open-row">
+      <a class="tool-open" href="${esc(t.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">Open</a>
+      ${links.map(link => `<a class="tool-link-chip" href="${esc(link.url)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">${esc(link.label)}</a>`).join('')}
+    </div>
+    <div class="tool-kv">
+      <span><strong>Auth:</strong> ${esc(t.auth_type || 'n/a')}</span>
+      <span><strong>Rating:</strong> ${esc(String(t.rating || 0))}/5</span>
+    </div>
     <div class="card-actions">
+      <button class="sm ${t.favorite ? 'active' : ''}" onclick="toggleToolFlag('${esc(t.id)}','favorite',${t.favorite ? 'false' : 'true'},this)">${t.favorite ? 'Unfav' : 'Fav'}</button>
+      <button class="sm ${t.pinned ? 'active' : ''}" onclick="toggleToolFlag('${esc(t.id)}','pinned',${t.pinned ? 'false' : 'true'},this)">${t.pinned ? 'Unpin' : 'Pin'}</button>
       <button class="sm" onclick="showEditForm('${esc(t.id)}')">Edit</button>
       <button class="sm danger" onclick="deleteTool('${esc(t.id)}',this)">Delete</button>
     </div>`;
   d.querySelector('.card-actions').prepend(buildStars(t.id, t.rating));
   return d;
+}
+
+async function toggleToolFlag(toolId, key, value, btn) {
+  btn.disabled = true;
+  const res = await fetch(`${API}/tools/${encodeURIComponent(toolId)}`, {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ [key]: value }),
+  });
+  if (res.ok) loadTools();
+  else {
+    btn.disabled = false;
+    alert('Update failed: '+res.status);
+  }
 }
 
 async function markToolUsed(toolId) {
@@ -1038,6 +1299,7 @@ function showEditForm(toolId) {
     const catOpts = _categories.map(c=>`<option value="${esc(c)}" ${c===t.category?'selected':''}>${esc(c)}</option>`).join('');
     const locOpts = ['cloud','local'].map(v=>`<option ${v===t.local_or_cloud?'selected':''}>${v}</option>`).join('');
     const authOpts = ['none','api-key','oauth','subscription','token','local'].map(v=>`<option ${v===t.auth_type?'selected':''}>${v}</option>`).join('');
+    const statusOpts = ['unknown','online','offline'].map(v=>`<option value="${v}" ${normalizeToolStatus(t.status)===v?'selected':''}>${v}</option>`).join('');
     form.innerHTML = `
       <div class="row">
         <input id="e_name" value="${esc(t.name)}" placeholder="Name" style="flex:1"/>
@@ -1052,6 +1314,19 @@ function showEditForm(toolId) {
         <select id="e_auth">${authOpts}</select>
         <input id="e_cost" value="${esc(t.cost_hint)}" placeholder="cost" style="width:80px"/>
       </div>
+      <div class="row">
+        <input id="e_group" value="${esc(t.group||'')}" placeholder="group" style="flex:1"/>
+        <input id="e_service_kind" value="${esc(t.service_kind||'')}" placeholder="service kind" style="flex:1"/>
+        <input id="e_environment" value="${esc(t.environment||'')}" placeholder="environment" style="flex:1"/>
+        <input id="e_host" value="${esc(t.host||'')}" placeholder="host / IP" style="flex:1"/>
+        <input id="e_port" value="${esc(t.port||'')}" type="number" min="1" max="65535" placeholder="port" style="width:90px"/>
+        <select id="e_status">${statusOpts}</select>
+      </div>
+      <div class="row">
+        <label class="check-inline"><input type="checkbox" id="e_favorite" ${t.favorite ? 'checked' : ''} /> Favorite</label>
+        <label class="check-inline"><input type="checkbox" id="e_pinned" ${t.pinned ? 'checked' : ''} /> Pin</label>
+        <input id="e_links" value="${esc(formatToolLinksInput(t.links))}" placeholder="deep links: Label|URL, Label|URL" style="flex:1.5"/>
+      </div>
       <textarea id="e_notes" placeholder="Notes…">${esc(t.notes||'')}</textarea>
       <div class="row">
         <button class="primary" onclick="saveEdit('${esc(toolId)}')">Save</button>
@@ -1063,6 +1338,7 @@ function showEditForm(toolId) {
 }
 
 async function saveEdit(toolId) {
+  const portRaw = document.getElementById('e_port').value.trim();
   const patch = {
     name: document.getElementById('e_name').value.trim(),
     provider: document.getElementById('e_provider').value.trim(),
@@ -1074,6 +1350,15 @@ async function saveEdit(toolId) {
     auth_type: document.getElementById('e_auth').value,
     cost_hint: document.getElementById('e_cost').value.trim() || 'unknown',
     notes: document.getElementById('e_notes').value.trim(),
+    group: document.getElementById('e_group').value.trim(),
+    service_kind: document.getElementById('e_service_kind').value.trim(),
+    environment: document.getElementById('e_environment').value.trim(),
+    host: document.getElementById('e_host').value.trim(),
+    port: portRaw ? parseInt(portRaw, 10) : null,
+    status: document.getElementById('e_status').value,
+    favorite: document.getElementById('e_favorite').checked,
+    pinned: document.getElementById('e_pinned').checked,
+    links: parseToolLinksInput(document.getElementById('e_links').value),
   };
   const res = await fetch(`${API}/tools/${encodeURIComponent(toolId)}`, {
     method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(patch),
@@ -1100,6 +1385,7 @@ async function addTool() {
   const resultEl = document.getElementById('addResult');
   if (!name||!provider||!link) { resultEl.textContent='Name, Provider and Link are required.'; return; }
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const portRaw = document.getElementById('new_port').value.trim();
   const payload = {
     id, name, provider, link,
     icon_url: document.getElementById('new_icon').value.trim(),
@@ -1107,12 +1393,25 @@ async function addTool() {
     local_or_cloud: document.getElementById('new_loc').value,
     auth_type: document.getElementById('new_auth').value,
     cost_hint: document.getElementById('new_cost').value.trim()||'unknown',
-    notes: '', tags: document.getElementById('new_tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    notes: document.getElementById('new_notes').value.trim(),
+    tags: document.getElementById('new_tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    group: document.getElementById('new_group').value.trim(),
+    service_kind: document.getElementById('new_service_kind').value.trim(),
+    environment: document.getElementById('new_environment').value.trim(),
+    host: document.getElementById('new_host').value.trim(),
+    port: portRaw ? parseInt(portRaw, 10) : null,
+    status: document.getElementById('new_status').value,
+    favorite: document.getElementById('new_favorite').checked,
+    pinned: document.getElementById('new_pinned').checked,
+    links: parseToolLinksInput(document.getElementById('new_links').value),
   };
   const res = await fetch(`${API}/tools`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   if (res.ok) {
     resultEl.textContent='Tool added.';
-    ['new_name','new_provider','new_link','new_icon','new_tags','new_cost'].forEach(id=>document.getElementById(id).value='');
+    ['new_name','new_provider','new_link','new_icon','new_tags','new_cost','new_group','new_service_kind','new_environment','new_host','new_port','new_notes','new_links'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('new_status').value = 'unknown';
+    document.getElementById('new_favorite').checked = false;
+    document.getElementById('new_pinned').checked = false;
     loadTools(); loadCategories();
   } else {
     const err = await res.json().catch(()=>({detail:'Unknown error'}));

@@ -211,22 +211,49 @@ _PREWARM_STATE: dict[str, Any] = {
 }
 
 _provider_health: dict[str, dict[str, Any]] = {
-    "markets": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}},
-    "f1": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}},
-    "warframe": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}},
+    "markets": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}, "last_duration_ms": None, "avg_duration_ms": None, "max_duration_ms": None, "sample_count": 0, "slow_count": 0},
+    "f1": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}, "last_duration_ms": None, "avg_duration_ms": None, "max_duration_ms": None, "sample_count": 0, "slow_count": 0},
+    "warframe": {"status": "unknown", "last_checked": None, "cached": False, "errors": [], "summary": {}, "last_duration_ms": None, "avg_duration_ms": None, "max_duration_ms": None, "sample_count": 0, "slow_count": 0},
 }
 
 
-def _record_provider_health(name: str, *, errors: list[str], cached: bool, summary: Optional[dict[str, Any]] = None) -> None:
+def _record_provider_health(
+    name: str,
+    *,
+    errors: list[str],
+    cached: bool,
+    summary: Optional[dict[str, Any]] = None,
+    duration_ms: Optional[int] = None,
+) -> None:
     state = "ok"
     if errors:
         state = "warn"
+    prev = _provider_health.get(name) if isinstance(_provider_health.get(name), dict) else {}
+    prev_samples = int(prev.get("sample_count") or 0)
+    prev_avg = float(prev.get("avg_duration_ms") or 0) if prev_samples else 0.0
+    dur = None if duration_ms is None else max(0, int(duration_ms))
+    sample_count = prev_samples
+    avg_duration_ms = prev.get("avg_duration_ms")
+    max_duration_ms = prev.get("max_duration_ms")
+    slow_count = int(prev.get("slow_count") or 0)
+    if dur is not None:
+        sample_count = prev_samples + 1
+        avg_duration_ms = round(((prev_avg * prev_samples) + dur) / sample_count)
+        prev_max = int(prev.get("max_duration_ms") or 0)
+        max_duration_ms = max(prev_max, dur)
+        if dur >= 1200:
+            slow_count += 1
     _provider_health[name] = {
         "status": state,
         "last_checked": datetime.now().isoformat(timespec="seconds"),
         "cached": bool(cached),
         "errors": list(errors or [])[:12],
         "summary": dict(summary or {}),
+        "last_duration_ms": dur,
+        "avg_duration_ms": avg_duration_ms,
+        "max_duration_ms": max_duration_ms,
+        "sample_count": sample_count,
+        "slow_count": slow_count,
     }
 
 
@@ -1786,6 +1813,7 @@ async def update_settings(request: Request):
 
 @app.get("/api/markets/overview")
 def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", history_interval: str = "1d"):
+    started = time.perf_counter()
     symbol_list = _coerce_symbol_list(symbols)
 
     range_key = str(history_range or "1mo").strip().lower()
@@ -1799,11 +1827,13 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
     cache_key = f"markets:{','.join(symbol_list)}:{range_key}:{interval_key}"
     cached = _cache_get(cache_key, ttl_seconds=180)
     if isinstance(cached, dict):
+        duration_ms = int((time.perf_counter() - started) * 1000)
         _record_provider_health(
             "markets",
             errors=list((cached.get("errors") or [])) + list((cached.get("history_errors") or [])),
             cached=True,
             summary={"quotes": int(cached.get("count") or 0)},
+            duration_ms=duration_ms,
         )
         return {**cached, "cached": True}
 
@@ -1836,26 +1866,31 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
             stale_payload["errors"] = fallback_errors[:24]
             stale_payload["history_errors"] = list(history_errors or [])[:24]
             _cache_set(cache_key, stale_payload)
+            duration_ms = int((time.perf_counter() - started) * 1000)
             _record_provider_health(
                 "markets",
                 errors=fallback_errors,
                 cached=False,
                 summary={"quotes": int(stale_payload.get("count") or 0)},
+                duration_ms=duration_ms,
             )
             return {**stale_payload, "cached": False}
 
     _cache_set(cache_key, payload)
+    duration_ms = int((time.perf_counter() - started) * 1000)
     _record_provider_health(
         "markets",
         errors=list(errors or []) + list(history_errors or []),
         cached=False,
         summary={"quotes": len(quotes)},
+        duration_ms=duration_ms,
     )
     return {**payload, "cached": False}
 
 
 @app.get("/api/f1/overview")
 def f1_overview(season: Optional[str] = None):
+    started = time.perf_counter()
     season_key = str(season or "current").strip().lower()
     if season_key != "current" and (not season_key.isdigit() or len(season_key) != 4):
         raise HTTPException(status_code=422, detail="season must be 'current' or YYYY")
@@ -1863,11 +1898,13 @@ def f1_overview(season: Optional[str] = None):
     cache_key = f"f1:{season_key}"
     cached = _cache_get(cache_key, ttl_seconds=300)
     if isinstance(cached, dict):
+        duration_ms = int((time.perf_counter() - started) * 1000)
         _record_provider_health(
             "f1",
             errors=list(cached.get("errors") or []),
             cached=True,
             summary={"standings": int(cached.get("standings_count") or 0)},
+            duration_ms=duration_ms,
         )
         return {**cached, "cached": True}
 
@@ -1896,26 +1933,31 @@ def f1_overview(season: Optional[str] = None):
             stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
             stale_payload["errors"] = fallback_errors[:24]
             _cache_set(cache_key, stale_payload)
+            duration_ms = int((time.perf_counter() - started) * 1000)
             _record_provider_health(
                 "f1",
                 errors=fallback_errors,
                 cached=False,
                 summary={"standings": int(stale_payload.get("standings_count") or 0)},
+                duration_ms=duration_ms,
             )
             return {**stale_payload, "cached": False}
 
     _cache_set(cache_key, payload)
+    duration_ms = int((time.perf_counter() - started) * 1000)
     _record_provider_health(
         "f1",
         errors=list(errors or []),
         cached=False,
         summary={"standings": len(standings)},
+        duration_ms=duration_ms,
     )
     return {**payload, "cached": False}
 
 
 @app.get("/api/warframe/overview")
 def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
+    started = time.perf_counter()
     platform_key = str(platform or "pc").strip().lower()
     if platform_key not in {"pc", "ps4", "xb1", "swi"}:
         platform_key = "pc"
@@ -1926,6 +1968,7 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
     if isinstance(cached, dict):
         ws = cached.get("worldstate") or {}
         market = cached.get("market") or {}
+        duration_ms = int((time.perf_counter() - started) * 1000)
         _record_provider_health(
             "warframe",
             errors=list(cached.get("errors") or []),
@@ -1935,6 +1978,7 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
                 "fissures": len(ws.get("fissures") or []),
                 "best_sell": market.get("best_sell"),
             },
+            duration_ms=duration_ms,
         )
         return {**cached, "cached": True}
 
@@ -1965,6 +2009,7 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
             _cache_set(cache_key, stale_payload)
             ws = stale_payload.get("worldstate") or {}
             mk = stale_payload.get("market") or {}
+            duration_ms = int((time.perf_counter() - started) * 1000)
             _record_provider_health(
                 "warframe",
                 errors=fallback_errors,
@@ -1974,10 +2019,12 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
                     "fissures": len(ws.get("fissures") or []),
                     "best_sell": mk.get("best_sell"),
                 },
+                duration_ms=duration_ms,
             )
             return {**stale_payload, "cached": False}
 
     _cache_set(cache_key, payload)
+    duration_ms = int((time.perf_counter() - started) * 1000)
     _record_provider_health(
         "warframe",
         errors=list(world_errors or []) + list(market_errors or []),
@@ -1987,6 +2034,7 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
             "fissures": len((worldstate or {}).get("fissures") or []),
             "best_sell": (market or {}).get("best_sell"),
         },
+        duration_ms=duration_ms,
     )
     return {**payload, "cached": False}
 
@@ -2005,12 +2053,30 @@ def debug_providers():
         "f1": sum(1 for k in _LAST_GOOD.keys() if k.startswith("f1:")),
         "warframe": sum(1 for k in _LAST_GOOD.keys() if k.startswith("warframe:")),
     }
+    slowest = sorted(
+        [
+            {
+                "name": name,
+                "status": state.get("status"),
+                "cached": state.get("cached"),
+                "last_duration_ms": state.get("last_duration_ms"),
+                "avg_duration_ms": state.get("avg_duration_ms"),
+                "max_duration_ms": state.get("max_duration_ms"),
+                "sample_count": state.get("sample_count"),
+                "slow_count": state.get("slow_count"),
+            }
+            for name, state in _provider_health.items()
+        ],
+        key=lambda item: float(item.get("avg_duration_ms") or item.get("last_duration_ms") or 0),
+        reverse=True,
+    )
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "providers": _provider_health,
         "cache": cache_counts,
         "last_good": last_good_counts,
         "prewarm": deepcopy(_PREWARM_STATE),
+        "slowest": slowest[:3],
     }
 
 

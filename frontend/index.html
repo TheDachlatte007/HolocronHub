@@ -1787,8 +1787,10 @@ async function loadProviderDiagnostics() {
     const cache = data.cache || {};
     const lastGood = data.last_good || {};
     const prewarm = data.prewarm || {};
+    const slowest = Array.isArray(data.slowest) ? data.slowest : [];
     const prewarmLabel = prewarm.running ? 'running' : (prewarm.last_run ? relTime(prewarm.last_run) : 'n/a');
-    metaEl.textContent = `updated ${relTime(data.generated_at)} | cache ${cache.entries ?? 0} | last-good ${lastGood.entries ?? 0} | prewarm ${prewarmLabel}`;
+    const slowestLabel = slowest.length ? `${String(slowest[0]?.name || 'n/a').toUpperCase()} ${slowest[0]?.avg_duration_ms ?? slowest[0]?.last_duration_ms ?? 0}ms` : 'n/a';
+    metaEl.textContent = `updated ${relTime(data.generated_at)} | cache ${cache.entries ?? 0} | last-good ${lastGood.entries ?? 0} | prewarm ${prewarmLabel} | slowest ${slowestLabel}`;
     const providers = data.providers || {};
     const rows = Object.entries(providers);
     listEl.innerHTML = '';
@@ -1803,6 +1805,12 @@ async function loadProviderDiagnostics() {
       const status = String(p?.status || 'unknown').toLowerCase();
       const summary = p?.summary || {};
       const summaryText = Object.keys(summary).map(k => `${k}: ${summary[k]}`).join(' | ');
+      const perfText = [
+        `last: ${p?.last_duration_ms ?? '-'}ms`,
+        `avg: ${p?.avg_duration_ms ?? '-'}ms`,
+        `max: ${p?.max_duration_ms ?? '-'}ms`,
+        `slow hits: ${p?.slow_count ?? 0}/${p?.sample_count ?? 0}`,
+      ].join(' | ');
       const errs = (p?.errors || []).slice(0, 3);
       row.innerHTML = `
         <div class="diag-head">
@@ -1810,6 +1818,7 @@ async function loadProviderDiagnostics() {
           <span class="diag-pill ${esc(status)}">${esc(status)}${p?.cached ? ' (cache)' : ''}</span>
         </div>
         <div class="muted">last check: ${esc(p?.last_checked || '-')}</div>
+        <div class="muted">${esc(perfText)}</div>
         ${summaryText ? `<div class="muted">${esc(summaryText)}</div>` : ''}
         ${errs.length ? `<div class="diag-err">${errs.map(e => esc(e)).join(' | ')}</div>` : '<div class="muted">No errors</div>'}
       `;

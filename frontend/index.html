@@ -865,6 +865,19 @@
 const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8787' : window.location.origin;
 const API = API_BASE + '/api';
 
+async function fetchJson(url, options) {
+  const res = await fetch(url, options);
+  const raw = await res.text();
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error('Invalid JSON response');
+  }
+}
+
 // ══ helpers ══════════════════════════════════════════════════
 
 function esc(s) {
@@ -2439,6 +2452,8 @@ async function loadWarframe() {
   const invasionsEl = document.getElementById('wf-invasions');
   const worldEl = document.getElementById('wf-world');
   const hotEl = document.getElementById('wf-hot');
+  const arsenalEl = document.getElementById('wf-arsenal');
+  const arsenalMetaEl = document.getElementById('wf-arsenal-meta');
   if (!itemInput || !platformSel || !metaEl || !marketEl || !alertsEl || !newsEl || !fissuresEl || !invasionsEl || !worldEl || !hotEl) return;
   if (errEl) errEl.innerHTML = '';
 
@@ -2448,7 +2463,8 @@ async function loadWarframe() {
 
   marketEl.innerHTML = '<div class="muted">Loading market...</div>';
   renderWarframeTools();
-  void loadWarframeArsenal();
+  if (arsenalEl) arsenalEl.innerHTML = '<div class="muted">Search a frame to inspect stats and abilities.</div>';
+  if (arsenalMetaEl) arsenalMetaEl.textContent = 'search on demand';
   void loadWarframeWatchlist();
   void loadWarframePlanner(item);
   void loadWarframePulse();
@@ -2463,7 +2479,7 @@ async function loadWarframe() {
 
   try {
     const params = new URLSearchParams({ item, platform });
-    const data = await fetch(`${API}/warframe/overview?${params}`).then(r=>r.json());
+    const data = await fetchJson(`${API}/warframe/overview?${params}`);
     const errInfo = data.errors?.length ? ` | ${data.errors.length} warning(s)` : '';
     const cacheTag = data.cached ? ' | cache' : '';
     const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
@@ -2691,7 +2707,7 @@ async function loadWarframePulse() {
 
   try {
     const params = new URLSearchParams({ platform: platformEl?.value || 'pc' });
-    const data = await fetch(`${API}/warframe/marketpulse?${params}`).then(r => r.json());
+    const data = await fetchJson(`${API}/warframe/marketpulse?${params}`);
     const demand = Array.isArray(data.demand_leaders) ? data.demand_leaders : [];
     const liquidity = Array.isArray(data.liquidity_leaders) ? data.liquidity_leaders : [];
     const signals = Array.isArray(data.watch_signals) ? data.watch_signals : [];
@@ -2716,7 +2732,7 @@ async function loadWarframeRadar() {
   if (metaEl) metaEl.textContent = `scanning ${String(platformEl?.value || 'pc').toUpperCase()} relics from your watchlist and hot items`;
   try {
     const params = new URLSearchParams({ platform: platformEl?.value || 'pc' });
-    const data = await fetch(`${API}/warframe/relics/profit?${params}`).then(r => r.json());
+    const data = await fetchJson(`${API}/warframe/relics/profit?${params}`);
     const items = Array.isArray(data.items) ? data.items : [];
     if (metaEl) metaEl.textContent = `${items.length} profitable relic candidates`;
     if (!items.length) {
@@ -2768,7 +2784,7 @@ async function loadWarframePlanner(seedQuery = '') {
   try {
     const platformEl = document.getElementById('wf-platform');
     const params = new URLSearchParams({ q, platform: platformEl?.value || 'pc' });
-    const data = await fetch(`${API}/warframe/planner?${params}`).then(r => r.json());
+    const data = await fetchJson(`${API}/warframe/planner?${params}`);
     const targetPrice = data.target_market?.last_avg_price;
     if (metaEl) metaEl.textContent = `${(data.relic_targets || []).length} relic routes | ${(data.blueprints || []).length} blueprint routes | ${(data.mods || []).length} mod routes${targetPrice != null ? ` | target ${fmtMarketNum(targetPrice,0)}p` : ''}`;
     const blocks = [];
@@ -2836,7 +2852,7 @@ async function loadWarframeWatchlist() {
   if (metaEl) metaEl.textContent = `syncing ${String(platform).toUpperCase()} watchlist`;
   try {
     const params = new URLSearchParams({ platform, sort_by: sortBy });
-    const data = await fetch(`${API}/warframe/watchlist?${params}`).then(r => r.json());
+    const data = await fetchJson(`${API}/warframe/watchlist?${params}`);
     const items = Array.isArray(data.items) ? data.items : [];
     if (metaEl) metaEl.textContent = `${items.length} tracked item(s) | sorted by ${sortBy}`;
     if (!items.length) {
@@ -2917,17 +2933,20 @@ async function loadWarframeArsenal() {
   const gridEl = document.getElementById('wf-arsenal');
   if (!gridEl) return;
   const q = (inputEl?.value || '').trim();
+  if (!q) {
+    gridEl.innerHTML = '<div class="muted">Search a frame name to inspect abilities, stats and links.</div>';
+    if (metaEl) metaEl.textContent = 'search on demand';
+    return;
+  }
   gridEl.innerHTML = '<div class="muted">Loading frames...</div>';
-  if (metaEl) metaEl.textContent = q ? `searching for "${q}"` : 'loading frame catalog';
+  if (metaEl) metaEl.textContent = `searching for "${q}"`;
 
   try {
     const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    const data = await fetch(`${API}/warframe/arsenal?${params}`).then(r => r.json());
-    const items = Array.isArray(data.items) ? data.items : [];
-    if (metaEl) metaEl.textContent = q
-      ? `${data.total ?? items.length} match(es) for "${q}"`
-      : `showing ${data.count ?? items.length} of ${data.total ?? items.length} frames`;
+    params.set('q', q);
+    const data = await fetchJson(`${API}/warframe/arsenal?${params}`);
+    const items = (Array.isArray(data.items) ? data.items : []).slice(0, 4);
+    if (metaEl) metaEl.textContent = `${items.length} shown | ${data.total ?? items.length} match(es) for "${q}"`;
 
     if (!items.length) {
       gridEl.innerHTML = '<div class="muted">No frames found for that search.</div>';

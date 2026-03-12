@@ -2408,6 +2408,121 @@ def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str,
     }
 
 
+def _official_wf_date(value: Any) -> Optional[str]:
+    if isinstance(value, dict):
+        value = _dig(value, "$date", "$numberLong") or value.get("$date") or value.get("sec")
+    if value in (None, ""):
+        return None
+    try:
+        ms = int(value)
+        if ms > 10_000_000_000:
+            return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat()
+        return datetime.fromtimestamp(ms, tz=timezone.utc).isoformat()
+    except Exception:
+        return None
+
+
+def _official_wf_text(raw: Any) -> str:
+    text = str(raw or "").split("/")[-1]
+    text = re.sub(r"(?<!^)([A-Z])", r" \1", text).replace("_", " ").strip()
+    return text or "Reward"
+
+
+def _official_wf_reward_name(payload: Any) -> str:
+    if isinstance(payload, dict):
+        counted = payload.get("countedItems") or []
+        if counted and isinstance(counted[0], dict):
+            item_type = counted[0].get("ItemType")
+            count = counted[0].get("ItemCount")
+            label = _official_wf_text(item_type)
+            return f"{count}x {label}" if count not in (None, 1) else label
+        items = payload.get("items") or []
+        if items and isinstance(items[0], str):
+            return ", ".join(_official_wf_text(item) for item in items[:2])
+        credits = payload.get("credits")
+        if credits:
+            return f"{credits} credits"
+    return "Reward"
+
+
+def _parse_official_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str, Any]:
+    alerts_out: list[dict[str, Any]] = []
+    for alert in (data.get("Alerts") or [])[:12]:
+        if not isinstance(alert, dict):
+            continue
+        mission = alert.get("MissionInfo") or {}
+        alerts_out.append(
+            {
+                "node": mission.get("location") or mission.get("node") or alert.get("Node"),
+                "faction": mission.get("faction"),
+                "type": mission.get("missionType"),
+                "reward": _official_wf_reward_name(mission.get("missionReward") or {}),
+                "eta": _official_wf_date(alert.get("Expiry")) or _official_wf_date(alert.get("Activation")),
+            }
+        )
+
+    fissures_out: list[dict[str, Any]] = []
+    for mission in (data.get("ActiveMissions") or [])[:20]:
+        if not isinstance(mission, dict):
+            continue
+        modifier = str(mission.get("Modifier") or "")
+        if not modifier.startswith("Void"):
+            continue
+        fissures_out.append(
+            {
+                "tier": modifier,
+                "mission_type": mission.get("MissionType"),
+                "node": mission.get("Node"),
+                "is_storm": False,
+                "is_hard": bool(mission.get("Hard")),
+                "eta": _official_wf_date(mission.get("Expiry")),
+            }
+        )
+
+    invasions_out: list[dict[str, Any]] = []
+    for inv in (data.get("Invasions") or [])[:10]:
+        if not isinstance(inv, dict) or inv.get("Completed"):
+            continue
+        progress = None
+        try:
+            progress = f"{int(inv.get('Count') or 0)}/{int(inv.get('Goal') or 0)}"
+        except Exception:
+            progress = None
+        invasions_out.append(
+            {
+                "node": inv.get("Node"),
+                "attacker": inv.get("Faction"),
+                "defender": inv.get("DefenderFaction"),
+                "attacker_reward": _official_wf_reward_name(inv.get("AttackerReward") or {}),
+                "defender_reward": _official_wf_reward_name(inv.get("DefenderReward") or {}),
+                "eta": progress or _official_wf_date(inv.get("Activation")),
+            }
+        )
+
+    sortie = {}
+    sorties = data.get("Sorties") or []
+    if sorties and isinstance(sorties[0], dict):
+        sortie = {
+            "eta": _official_wf_date(sorties[0].get("Expiry")),
+            "boss": sorties[0].get("Boss"),
+        }
+
+    return {
+        "platform": platform,
+        "timestamp": _official_wf_date(data.get("Time")),
+        "news": [],
+        "alerts": alerts_out,
+        "fissures": fissures_out,
+        "invasions": invasions_out,
+        "events": [],
+        "sortie": sortie,
+        "nightwave": {},
+        "arbitration": {},
+        "steel_path": {},
+        "world_cycles": {"cetus": {"state": None, "eta": None}, "vallis": {"state": None, "eta": None}, "cambion": {"state": None, "eta": None}},
+    }
+
+
 def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     headers = {"Accept": "application/json"}
@@ -2431,9 +2546,25 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
     if isinstance(data, dict):
         return _parse_warframe_worldstate(data, platform), errors[:12]
 
+    official_raw, official_err = _http_get_json("https://content.warframe.com/dynamic/worldState.php", headers=headers, timeout=20)
+    if isinstance(official_raw, dict):
+        return _parse_official_warframe_worldstate(official_raw, platform), errors[:16]
+    if official_err:
+        errors.append(f"official:{official_err}")
+
     # Fallback: segmented endpoints can still work even when root endpoint fails.
     segment_payload: dict[str, Any] = {"timestamp": None, "sortie": {}, "nightwave": {}, "arbitration": {}, "steelPath": {}}
-    for seg in ["news", "alerts", "fissures", "invasions", "events"]:
+    list_segments = ["news", "alerts", "fissures", "invasions", "events"]
+    object_segments = {
+        "sortie": "sortie",
+        "nightwave": "nightwave",
+        "arbitration": "arbitration",
+        "steel_path": "steelPath",
+        "cetus_cycle": "cetusCycle",
+        "vallis_cycle": "vallisCycle",
+        "cambion_cycle": "cambionCycle",
+    }
+    for seg in list_segments:
         raw, err = _http_get_json(f"https://api.warframestat.us/{platform}/{seg}", params={"language": "en"}, headers=headers, timeout=15)
         if err:
             errors.append(f"{seg}:{err}")
@@ -2441,12 +2572,27 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
             continue
         if isinstance(raw, list):
             segment_payload[seg] = raw
+            if segment_payload.get("timestamp") is None and raw:
+                first = raw[0] if isinstance(raw[0], dict) else {}
+                segment_payload["timestamp"] = first.get("date") or first.get("activation") or first.get("expiry")
         else:
             segment_payload[seg] = []
             errors.append(f"{seg}:invalid_payload")
 
+    for endpoint, target_key in object_segments.items():
+        raw, err = _http_get_json(f"https://api.warframestat.us/{platform}/{endpoint}", params={"language": "en"}, headers=headers, timeout=15)
+        if err:
+            errors.append(f"{endpoint}:{err}")
+            continue
+        if isinstance(raw, dict):
+            segment_payload[target_key] = raw
+            if segment_payload.get("timestamp") is None:
+                segment_payload["timestamp"] = raw.get("expiry") or raw.get("activation") or raw.get("date")
+        else:
+            errors.append(f"{endpoint}:invalid_payload")
+
     parsed = _parse_warframe_worldstate(segment_payload, platform)
-    return parsed, errors[:16]
+    return parsed, errors[:20]
 
 
 def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
@@ -2554,7 +2700,7 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
     best_buy = buy_base[0] if buy_base else None
     source_mode = "orders_live" if sell_base or buy_base else ("statistics_fallback" if stats_summary.get("history") else "unavailable")
 
-    return {
+    payload = {
         "item": item,
         "canonical_name": canonical_name,
         "slug": slug,
@@ -3693,9 +3839,13 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
         )
         return {**cached, "cached": True}
 
-    worldstate, world_errors = _fetch_warframe_worldstate(platform_key)
-    market, market_errors = _fetch_warframe_market(item, platform_key)
-    top_sells, hot_errors = _fetch_warframe_hot_items(platform_key)
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        world_future = pool.submit(_fetch_warframe_worldstate, platform_key)
+        market_future = pool.submit(_fetch_warframe_market, item, platform_key)
+        hot_future = pool.submit(_fetch_warframe_hot_items, platform_key)
+        worldstate, world_errors = world_future.result()
+        market, market_errors = market_future.result()
+        top_sells, hot_errors = hot_future.result()
 
     generated_at = datetime.now().isoformat(timespec="seconds")
     payload = {
@@ -3863,6 +4013,7 @@ def status():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8787, reload=True)
+
 
 
 

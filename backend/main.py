@@ -506,6 +506,7 @@ _DEFAULT_SETTINGS = {
         "marketaux_api_key": "",
         "finnhub_api_key": "",
         "alphavantage_api_key": "",
+        "twelvedata_api_key": "",
     },
 }
 
@@ -513,13 +514,14 @@ _ALLOWED_SETTINGS_PATCH = {
     "ux": {"language", "default_category", "show_disabled_sources"},
     "feed": {"refresh_interval_minutes", "digest_mode"},
     "models": {"openclaw_model"},
-    "api_keys": {"marketaux_api_key", "finnhub_api_key", "alphavantage_api_key"},
+    "api_keys": {"marketaux_api_key", "finnhub_api_key", "alphavantage_api_key", "twelvedata_api_key"},
 }
 
 _API_KEY_ENV_MAP = {
     "marketaux_api_key": "MARKETAUX_API_KEY",
     "finnhub_api_key": "FINNHUB_API_KEY",
     "alphavantage_api_key": "ALPHAVANTAGE_API_KEY",
+    "twelvedata_api_key": "TWELVEDATA_API_KEY",
 }
 
 _DEFAULT_MARKET_SYMBOLS = [
@@ -742,19 +744,199 @@ def _build_market_quote_from_series(symbol: str, series: list[dict[str, Any]]) -
 
 
 def _fallback_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
-    out: list[dict[str, Any]] = []
+    out_map: dict[str, dict[str, Any]] = {}
     errors: list[str] = []
-    for sym in symbols:
-        series, err = _fetch_market_history(sym, range_key="5d", interval="1d")
-        if err:
-            errors.append(f"fallback:{sym}:{err}")
+    safe_symbols = [str(sym or "").strip() for sym in symbols if str(sym or "").strip()]
+    if not safe_symbols:
+        return [], []
+
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(safe_symbols)))) as pool:
+        futures = {pool.submit(_fetch_market_history, sym, range_key="5d", interval="1d"): sym for sym in safe_symbols}
+        for future in as_completed(futures):
+            sym = futures[future]
+            try:
+                series, err = future.result()
+            except Exception as exc:
+                errors.append(f"fallback:{sym}:{exc}")
+                continue
+            if err:
+                errors.append(f"fallback:{sym}:{err}")
+                continue
+            q = _build_market_quote_from_series(sym, series)
+            if not q:
+                errors.append(f"fallback:{sym}:no_series")
+                continue
+            out_map[sym.upper()] = q
+
+    ordered = [out_map[sym.upper()] for sym in safe_symbols if sym.upper() in out_map]
+    return ordered, errors
+
+
+def _load_api_key(name: str) -> str:
+    env_name = _API_KEY_ENV_MAP.get(name)
+    if env_name:
+        val = os.getenv(env_name, "").strip()
+        if val:
+            return val
+    try:
+        return str((_load_settings().get("api_keys", {}) or {}).get(name, "")).strip()
+    except Exception:
+        return ""
+
+
+def _alpha_vantage_series_key(payload: dict[str, Any]) -> Optional[str]:
+    for key in payload.keys():
+        if "Time Series" in str(key):
+            return str(key)
+    return None
+
+
+def _fetch_market_history_twelvedata(symbol: str, *, range_key: str = "1mo", interval: str = "1d") -> tuple[list[dict[str, Any]], Optional[str]]:
+    api_key = _load_api_key("twelvedata_api_key")
+    if not api_key:
+        return [], "twelvedata:no_api_key"
+
+    interval_map = {
+        "15m": "15min",
+        "30m": "30min",
+        "1h": "1h",
+        "1d": "1day",
+        "1wk": "1week",
+    }
+    outputsize_map = {
+        "5d": 5,
+        "1mo": 31,
+        "3mo": 93,
+        "6mo": 186,
+        "1y": 366,
+    }
+    params = {
+        "symbol": str(symbol or "").strip(),
+        "interval": interval_map.get(str(interval or "1d").lower(), "1day"),
+        "outputsize": outputsize_map.get(str(range_key or "1mo").lower(), 31),
+        "apikey": api_key,
+        "format": "JSON",
+    }
+    data, err = _http_get_json("https://api.twelvedata.com/time_series", params=params, timeout=18)
+    if err:
+        return [], f"twelvedata:{err}"
+    if not isinstance(data, dict):
+        return [], "twelvedata:invalid_payload"
+    if str(data.get("status") or "").lower() == "error":
+        return [], f"twelvedata:{data.get('message') or 'error'}"
+
+    values = data.get("values") or []
+    if not isinstance(values, list) or not values:
+        return [], "twelvedata:empty_series"
+
+    out: list[dict[str, Any]] = []
+    for row in reversed(values):
+        if not isinstance(row, dict):
             continue
-        q = _build_market_quote_from_series(sym, series)
-        if not q:
-            errors.append(f"fallback:{sym}:no_series")
+        dt_raw = str(row.get("datetime") or "").strip()
+        raw_close = row.get("close")
+        if not dt_raw or raw_close is None:
             continue
-        out.append(q)
-    return out, errors
+        try:
+            close_val = float(raw_close)
+        except Exception:
+            continue
+        iso_dt = dt_raw.replace(" ", "T")
+        if len(iso_dt) == 10:
+            iso_dt = f"{iso_dt}T00:00:00"
+        if not iso_dt.endswith("Z") and "+" not in iso_dt:
+            iso_dt = f"{iso_dt}+00:00"
+        out.append({"datetime": iso_dt, "close": close_val})
+
+    if not out:
+        return [], "twelvedata:no_points"
+    return out, None
+
+
+def _fetch_market_history_alpha(symbol: str, *, range_key: str = "1mo") -> tuple[list[dict[str, Any]], Optional[str]]:
+    api_key = _load_api_key("alphavantage_api_key")
+    if not api_key:
+        return [], "alphavantage:no_api_key"
+
+    sym = str(symbol or "").strip().upper()
+    if not sym:
+        return [], "alphavantage:invalid_symbol"
+
+    params: dict[str, Any]
+    close_key = "4. close"
+    kind = "equity"
+    if sym.endswith("=X") and len(sym) >= 7:
+        pair = sym[:-2]
+        if len(pair) != 6:
+            return [], f"alphavantage:unsupported_symbol:{sym}"
+        params = {
+            "function": "FX_DAILY",
+            "from_symbol": pair[:3],
+            "to_symbol": pair[3:],
+            "outputsize": "compact",
+            "apikey": api_key,
+        }
+        kind = "fx"
+    elif "-" in sym and len(sym.split("-", 1)[0]) >= 2:
+        base, market = sym.split("-", 1)
+        params = {
+            "function": "DIGITAL_CURRENCY_DAILY",
+            "symbol": base,
+            "market": market,
+            "apikey": api_key,
+        }
+        close_key = f"4a. close ({market.upper()})"
+        kind = "crypto"
+    else:
+        params = {
+            "function": "TIME_SERIES_DAILY_ADJUSTED",
+            "symbol": sym,
+            "outputsize": "compact",
+            "apikey": api_key,
+        }
+
+    data, err = _http_get_json("https://www.alphavantage.co/query", params=params, timeout=18)
+    if err:
+        return [], f"alphavantage:{err}"
+    if not isinstance(data, dict):
+        return [], "alphavantage:invalid_payload"
+    if data.get("Error Message"):
+        return [], f"alphavantage:{data.get('Error Message')}"
+    if data.get("Information"):
+        return [], f"alphavantage:{data.get('Information')}"
+    if data.get("Note"):
+        return [], f"alphavantage:{data.get('Note')}"
+
+    series_key = _alpha_vantage_series_key(data)
+    if not series_key:
+        return [], f"alphavantage:no_series:{kind}"
+
+    raw_series = data.get(series_key) or {}
+    if not isinstance(raw_series, dict):
+        return [], "alphavantage:invalid_series"
+
+    max_points_map = {"5d": 5, "1mo": 31, "3mo": 93, "6mo": 186, "1y": 366}
+    max_points = max_points_map.get(range_key, 31)
+    out: list[dict[str, Any]] = []
+    for day in sorted(raw_series.keys())[-max_points:]:
+        row = raw_series.get(day) if isinstance(raw_series, dict) else None
+        if not isinstance(row, dict):
+            continue
+        raw_close = row.get(close_key) or row.get("4. close")
+        try:
+            close_val = float(raw_close)
+        except Exception:
+            continue
+        out.append(
+            {
+                "datetime": datetime.fromisoformat(f"{day}T00:00:00+00:00").isoformat(),
+                "close": close_val,
+            }
+        )
+
+    if not out:
+        return [], "alphavantage:empty_series"
+    return out, None
 
 
 def _fetch_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
@@ -811,11 +993,36 @@ def _fetch_market_history(symbol: str, *, range_key: str = "1mo", interval: str 
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{safe_symbol}"
     data, err = _http_get_json(url, params={"range": range_key, "interval": interval}, timeout=15)
     if err:
-        return [], err
+        td_series, td_err = _fetch_market_history_twelvedata(symbol, range_key=range_key, interval=interval)
+        if td_series:
+            return td_series, f"yahoo:{err}"
+        alpha_series, alpha_err = _fetch_market_history_alpha(symbol, range_key=range_key)
+        if alpha_series:
+            suffix = f" | {td_err}" if td_err else ""
+            return alpha_series, f"yahoo:{err}{suffix}"
+        combined = []
+        combined.append(str(err))
+        if td_err:
+            combined.append(td_err)
+        if alpha_err:
+            combined.append(alpha_err)
+        return [], " | ".join(combined)
 
     result = _dig(data, "chart", "result") or []
     if not isinstance(result, list) or not result:
-        return [], "empty_chart_result"
+        td_series, td_err = _fetch_market_history_twelvedata(symbol, range_key=range_key, interval=interval)
+        if td_series:
+            return td_series, "yahoo:empty_chart_result"
+        alpha_series, alpha_err = _fetch_market_history_alpha(symbol, range_key=range_key)
+        if alpha_series:
+            suffix = f" | {td_err}" if td_err else ""
+            return alpha_series, f"yahoo:empty_chart_result{suffix}"
+        combined = ["empty_chart_result"]
+        if td_err:
+            combined.append(td_err)
+        if alpha_err:
+            combined.append(alpha_err)
+        return [], " | ".join(combined)
 
     r0 = result[0] if isinstance(result[0], dict) else {}
     timestamps = r0.get("timestamp") or []
@@ -843,7 +1050,22 @@ def _fetch_market_history(symbol: str, *, range_key: str = "1mo", interval: str 
             }
         )
 
-    return points, None
+    if points:
+        return points, None
+
+    td_series, td_err = _fetch_market_history_twelvedata(symbol, range_key=range_key, interval=interval)
+    if td_series:
+        return td_series, "yahoo:empty_points"
+    alpha_series, alpha_err = _fetch_market_history_alpha(symbol, range_key=range_key)
+    if alpha_series:
+        suffix = f" | {td_err}" if td_err else ""
+        return alpha_series, f"yahoo:empty_points{suffix}"
+    combined = ["empty_points"]
+    if td_err:
+        combined.append(td_err)
+    if alpha_err:
+        combined.append(alpha_err)
+    return [], " | ".join(combined)
 
 
 def _fetch_markets_history(
@@ -855,11 +1077,23 @@ def _fetch_markets_history(
 ) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
     out: dict[str, list[dict[str, Any]]] = {}
     errors: list[str] = []
-    for sym in symbols[:max_symbols]:
-        series, err = _fetch_market_history(sym, range_key=range_key, interval=interval)
-        out[sym] = series
-        if err:
-            errors.append(f"{sym}:{err}")
+    target_symbols = [str(sym or "").strip() for sym in symbols[:max_symbols] if str(sym or "").strip()]
+    if not target_symbols:
+        return out, errors
+
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(target_symbols)))) as pool:
+        futures = {pool.submit(_fetch_market_history, sym, range_key=range_key, interval=interval): sym for sym in target_symbols}
+        for future in as_completed(futures):
+            sym = futures[future]
+            try:
+                series, err = future.result()
+            except Exception as exc:
+                out[sym] = []
+                errors.append(f"{sym}:{exc}")
+                continue
+            out[sym] = series
+            if err:
+                errors.append(f"{sym}:{err}")
     return out, errors
 
 
@@ -1105,7 +1339,7 @@ def _fetch_openf1_weekend_context(
     focus_session = current_session or next_session or latest_session or (sessions_summary[0] if sessions_summary else None)
 
     weather_rows, err = _openf1_get("weather", params={"meeting_key": meeting_key}, timeout=15)
-    if err:
+    if err and "404" not in str(err):
         errors.append(err)
     latest_weather = weather_rows[-1] if weather_rows else {}
 
@@ -1338,19 +1572,19 @@ def _fetch_f1_overview(season: str) -> tuple[dict[str, Any], list[str], str]:
     source = "unknown"
 
     standings_urls = [
-        ("ergast", f"https://ergast.com/api/f1/{season}/driverStandings.json"),
         ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/driverStandings.json"),
         ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/driverStandings/"),
+        ("ergast", f"https://ergast.com/api/f1/{season}/driverStandings.json"),
     ]
     schedule_urls = [
-        ("ergast", f"https://ergast.com/api/f1/{season}.json"),
         ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}.json"),
         ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/races/"),
+        ("ergast", f"https://ergast.com/api/f1/{season}.json"),
     ]
     results_urls = [
-        ("ergast", f"https://ergast.com/api/f1/{season}/results.json?limit=500"),
         ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/results.json?limit=500"),
         ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/results/?limit=500"),
+        ("ergast", f"https://ergast.com/api/f1/{season}/results.json?limit=500"),
     ]
 
     standings_payload: Optional[dict[str, Any]] = None
@@ -1954,7 +2188,7 @@ def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]
         ),
         reverse=True,
     )
-    hot_items = hot_items[:8]
+    hot_items = hot_items[:16]
     trimmed_errors = errors[:16]
     payload = {"items": hot_items, "errors": trimmed_errors}
     if hot_items:
@@ -2922,13 +3156,14 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
     orders_url = f"https://api.warframe.market/v1/items/{slug}/orders"
 
     errors: list[str] = list(catalog_errors)
+    orders_restricted = False
     data: Optional[dict[str, Any]] = None
     for params in [{"platform": platform}, {"platform": platform, "include": "item"}, None]:
         raw, err = _http_get_json(orders_url, params=params, headers=req_headers, timeout=12)
         if err:
             err_text = str(err)
             if "403" in err_text:
-                errors.append("orders:403_forbidden")
+                orders_restricted = True
                 break
             errors.append(f"orders:{err_text}")
             continue
@@ -3000,6 +3235,8 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
 
     if stats_err:
         errors.append(f"statistics:{stats_err}")
+    elif orders_restricted and not stats_summary.get("history"):
+        errors.append("orders:403_forbidden")
 
     price_floor = stats_summary.get("price_floor_estimate")
     price_ceiling = stats_summary.get("price_ceiling_estimate")

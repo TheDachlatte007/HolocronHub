@@ -202,11 +202,31 @@
     .market-chip.down{border-color:#ef4444;color:#fca5a5}
     .market-chip.flat{border-color:#475569;color:#cbd5e1}
     .market-card .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+    .market-card.interactive{cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+    .market-card.interactive:hover{transform:translateY(-1px);border-color:#475569;box-shadow:0 10px 30px rgba(2,6,23,.18)}
     .market-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
     .market-stat-grid .small-row{padding:6px 8px;border-radius:8px;background:#101827;border:1px solid #1f2937}
+    .market-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:12px;align-items:start}
+    .market-main{min-width:0}
+    .market-side{display:flex;flex-direction:column;gap:10px}
+    .market-focus-card{background:linear-gradient(145deg,#111827,#0f172a);border:1px solid #334155;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:220px}
+    .market-focus-card strong{font-size:22px;color:#f8fafc}
+    .market-focus-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+    .market-focus-chart .sparkline{height:84px}
+    .market-preset-list{display:flex;flex-wrap:wrap;gap:8px}
+    .market-preset-btn{padding:8px 10px;border-radius:999px;border:1px solid #334155;background:#0f172a;color:#cbd5e1;font-size:12px;cursor:pointer;display:flex;gap:6px;align-items:center}
+    .market-preset-btn.active{border-color:#3b82f6;background:#172554;color:#eff6ff}
+    .market-preset-btn .tool-minor{color:inherit;opacity:.88}
+    .market-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:0 0 8px}
+    .market-section-head h3{margin:0}
+    .sparkline-tooltip{position:fixed;z-index:9999;pointer-events:none;padding:6px 8px;border-radius:8px;background:rgba(15,23,42,.96);border:1px solid #475569;color:#e2e8f0;font-size:12px;box-shadow:0 14px 30px rgba(2,6,23,.32);opacity:0;transform:translate(-50%,-120%);transition:opacity .12s ease}
+    .sparkline-tooltip.visible{opacity:1}
     .wf-farm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px}
     .wf-reco-card{background:linear-gradient(145deg,#0b1220,#101827);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
     .wf-reco-score{font-size:11px;padding:3px 8px;border-radius:999px;background:#16351f;color:#86efac;border:1px solid #16a34a;width:max-content}
+    .wf-grid-stack{display:flex;flex-direction:column;gap:14px}
+    .wf-lane-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:0 0 8px}
+    .wf-lane-head h3{margin:0}
     .f1-driver-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
     .f1-driver-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:11px;display:flex;flex-direction:column;gap:6px}
     .f1-driver-card .actions{display:flex;gap:6px;flex-wrap:wrap}
@@ -310,7 +330,7 @@
       .nav{overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;padding-bottom:6px;gap:6px}
       .nav-tab{flex:0 0 auto;border:1px solid #334155;border-radius:8px;margin-bottom:0}
       .nav-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
-      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-focus-strip,.tool-group-grid,.ai-overview-grid,.ai-layout{grid-template-columns:1fr}
+      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-focus-strip,.tool-group-grid,.ai-overview-grid,.ai-layout,.market-layout{grid-template-columns:1fr}
       .row>input,.row>select,.row>button{flex:1 1 100%;min-width:0 !important;width:100%}
       input,select,textarea,button{font-size:14px}
     }
@@ -512,9 +532,27 @@
       </div>
       <div id="market-meta" class="muted" style="margin-bottom:4px"></div>
       <div id="market-errors" class="warn-strip"></div>
-      <div id="market-hero" class="market-hero-grid"><div class="market-hero-card"><strong>Market radar</strong><span class="muted">Hot movers, stress points and high-volatility instruments will appear here after the feed loads.</span></div></div>
-      <div id="market-spotlight" class="market-mini-grid"></div>
-      <div id="market-grid" class="grid"><div class="empty">Loading...</div></div>
+      <div class="market-layout">
+        <div class="market-main">
+          <div id="market-hero" class="market-hero-grid"><div class="market-hero-card"><strong>Market radar</strong><span class="muted">Hot movers, stress points and high-volatility instruments will appear here after the feed loads.</span></div></div>
+          <div id="market-spotlight" class="market-mini-grid"></div>
+          <div id="market-grid" class="grid"><div class="empty">Loading...</div></div>
+        </div>
+        <div class="market-side">
+          <div id="market-focus" class="market-focus-card">
+            <div class="tool-minor">Market Focus</div>
+            <strong>Waiting for tape</strong>
+            <div class="muted">Click a core market, stock or mover to pin a larger view here.</div>
+          </div>
+          <div class="stat-card">
+            <div class="market-section-head">
+              <h3>Core Board</h3>
+              <span class="tool-minor">Click to focus or load</span>
+            </div>
+            <div id="market-presets" class="market-preset-list"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <!-- ═══ SAVED ═══ -->
@@ -606,6 +644,7 @@
         <input id="wf-track-tags" placeholder="Tags, e.g. sell, craft, hold" style="flex:1;min-width:180px" />
         <input id="wf-track-note" placeholder="Short note for this item" style="flex:1.4;min-width:220px" />
       </div>
+      <div class="tool-minor" style="margin:-2px 0 10px">Priority only affects your personal watchlist order and how farm targets are ranked for you.</div>
       <div id="wf-meta" class="muted" style="margin-bottom:4px"></div>
       <div id="wf-errors" class="warn-strip"></div>
       <div class="wf-grid-3" style="margin-bottom:10px">
@@ -641,7 +680,7 @@
         <div class="diag-head">
           <h2 style="margin:0">Top Sells Right Now</h2>
           <div class="row" style="margin:0">
-            <span id="wf-hot-meta" class="tool-minor">48h volume across a popular trading watchlist</span>
+            <span id="wf-hot-meta" class="tool-minor">48h volume from curated warframe.market watch items</span>
             <button id="wf-hot-toggle" class="sm" onclick="toggleWarframeHot()" hidden>See more</button>
           </div>
         </div>
@@ -656,18 +695,36 @@
           <h3 class="wf-section-title">Farm Right Now</h3>
           <div id="wf-farm-now" class="wf-farm-grid"><div class="muted">Recommendations will appear after the market pulse scan finishes.</div></div>
         </div>
-        <div class="wf-grid-3">
+        <div class="wf-grid-stack">
           <div>
-            <h3 class="wf-section-title">Demand Leaders</h3>
-            <div id="wf-demand" class="wf-plan-grid"></div>
+            <div class="wf-lane-head">
+              <h3 class="wf-section-title">Demand Leaders</h3>
+              <div class="row" style="margin:0">
+                <span id="wf-demand-meta" class="tool-minor">Highest urgency and trade pressure right now.</span>
+                <button id="wf-demand-toggle" class="sm" onclick="toggleWarframePulseLane('demand')" hidden>See more</button>
+              </div>
+            </div>
+            <div id="wf-demand" class="wf-farm-grid"></div>
           </div>
           <div>
-            <h3 class="wf-section-title">Liquidity Leaders</h3>
-            <div id="wf-liquidity" class="wf-plan-grid"></div>
+            <div class="wf-lane-head">
+              <h3 class="wf-section-title">Liquidity Leaders</h3>
+              <div class="row" style="margin:0">
+                <span id="wf-liquidity-meta" class="tool-minor">Fast-moving items with enough flow to trade quickly.</span>
+                <button id="wf-liquidity-toggle" class="sm" onclick="toggleWarframePulseLane('liquidity')" hidden>See more</button>
+              </div>
+            </div>
+            <div id="wf-liquidity" class="wf-farm-grid"></div>
           </div>
           <div>
-            <h3 class="wf-section-title">Trader Signals</h3>
-            <div id="wf-signals" class="wf-plan-grid"></div>
+            <div class="wf-lane-head">
+              <h3 class="wf-section-title">Personal Trader Signals</h3>
+              <div class="row" style="margin:0">
+                <span id="wf-signals-meta" class="tool-minor">Signals are derived from your tracked items, price trend, spread and trade flow.</span>
+                <button id="wf-signals-toggle" class="sm" onclick="toggleWarframePulseLane('signals')" hidden>See more</button>
+              </div>
+            </div>
+            <div id="wf-signals" class="wf-farm-grid"></div>
           </div>
         </div>
       </div>
@@ -899,6 +956,10 @@
             <label>Alpha Vantage API Key</label>
             <input id="set-api-alphavantage" type="password" placeholder="..." />
           </div>
+          <div class="settings-field">
+            <label>Twelve Data API Key</label>
+            <input id="set-api-twelvedata" type="password" placeholder="..." />
+          </div>
         </div>
         <div class="settings-actions">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -1012,7 +1073,7 @@ function showTab(name, btn) {
   if (name !== 'f1') { clearF1SessionPolling(); clearF1ClockTicker(); }
   document.getElementById(`tab-${name}`).style.display='';
   if (btn) btn.classList.add('active');
-  if (name==='f1' && tabLoaded[name]) { loadF1(); return; }
+  if (tabLoaded[name]) return;
   if (!tabLoaded[name]) {
     tabLoaded[name] = true;
     if (name==='feed') {
@@ -1906,7 +1967,19 @@ async function loadDigest() {
   }
 }
 
-const DEFAULT_MARKET_SYMBOLS = '^GSPC,^IXIC,^DJI,BTC-USD,ETH-USD,EURUSD=X,GC=F,CL=F';
+const DEFAULT_MARKET_SYMBOLS = 'NVDA,MSFT,AAPL,^GSPC,^IXIC,BTC-USD,ETH-USD,GC=F,CL=F,EUNL.DE';
+const MARKET_CORE_PRESETS = [
+  { symbol: 'EUNL.DE', label: 'MSCI World', hint: 'Acc ETF' },
+  { symbol: 'NVDA', label: 'Nvidia', hint: 'AI leader' },
+  { symbol: 'MSFT', label: 'Microsoft', hint: 'Mega cap' },
+  { symbol: 'AAPL', label: 'Apple', hint: 'Mega cap' },
+  { symbol: '^GSPC', label: 'S&P 500', hint: 'US equities' },
+  { symbol: '^IXIC', label: 'Nasdaq', hint: 'Growth risk' },
+  { symbol: 'GC=F', label: 'Gold', hint: 'Defensive' },
+  { symbol: 'CL=F', label: 'Oil', hint: 'Volatility' },
+  { symbol: 'BTC-USD', label: 'Bitcoin', hint: 'Crypto beta' },
+  { symbol: 'ETH-USD', label: 'Ethereum', hint: 'Crypto beta' },
+];
 const WARFRAME_TOOL_LINKS = [
   { name:'Warframe Wiki', url:'https://wiki.warframe.com/w/Main_Page', summary:'Frame abilities, farm paths, drop tables and patch context.' },
   { name:'Warframe Market', url:'https://warframe.market/', summary:'Trading, price discovery and item drill-down.' },
@@ -1919,6 +1992,30 @@ const WARFRAME_TOOL_LINKS = [
   { name:'Deal Finder', url:'https://github.com/Luis-Munu/Warframe-Market-deal-finder', summary:'Community market-analysis project for inspiration and scanning ideas.' },
 ];
 
+
+function getSparklineTooltip() {
+  let el = document.getElementById('sparkline-tooltip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sparkline-tooltip';
+    el.className = 'sparkline-tooltip';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function showSparklineTooltip(event, label) {
+  const tip = getSparklineTooltip();
+  tip.textContent = label || '';
+  tip.style.left = `${event.clientX}px`;
+  tip.style.top = `${event.clientY - 10}px`;
+  tip.classList.add('visible');
+}
+
+function hideSparklineTooltip() {
+  const tip = document.getElementById('sparkline-tooltip');
+  if (tip) tip.classList.remove('visible');
+}
 
 function buildSparklineSvg(points, cls = '') {
   const vals = (points || []).map(v => Number(v)).filter(v => Number.isFinite(v));
@@ -1941,7 +2038,7 @@ function buildSparklineSvg(points, cls = '') {
   const dots = coords.map(([x, y], idx) => {
     const value = vals[idx];
     const label = `Point ${idx + 1}: ${Number(value).toLocaleString(undefined, {maximumFractionDigits: 2})}`;
-    return `<circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.8"><title>${esc(label)}</title></circle>`;
+    return `<circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.8" onmousemove='showSparklineTooltip(event, ${JSON.stringify(label)})' onmouseleave="hideSparklineTooltip()"><title>${esc(label)}</title></circle>`;
   }).join('');
 
   return `<svg class="sparkline ${esc(cls)}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polygon class="sparkline-fill" points="${fill}" /><polyline class="sparkline-line" points="${line}" />${dots}</svg>`;
@@ -1958,6 +2055,80 @@ function fmtMarketNum(v, digits=2) {
   return Number(v).toLocaleString(undefined, {maximumFractionDigits: digits});
 }
 
+function getMarketDecoratedEntry(symbol) {
+  return _marketDecorated.find(item => String(item.q?.symbol || '').toUpperCase() === String(symbol || '').toUpperCase()) || null;
+}
+
+function setMarketFocus(symbol) {
+  _marketFocusSymbol = String(symbol || '').trim();
+  renderMarketFocus();
+  renderMarketPresetRail();
+}
+
+function renderMarketPresetRail() {
+  const el = document.getElementById('market-presets');
+  const inputEl = document.getElementById('market-symbols');
+  if (!el || !inputEl) return;
+
+  const loadedSymbols = new Set(_marketDecorated.map(item => String(item.q?.symbol || '').toUpperCase()));
+  el.innerHTML = MARKET_CORE_PRESETS.map(item => {
+    const isActive = String(item.symbol).toUpperCase() === String(_marketFocusSymbol || '').toUpperCase();
+    const isLoaded = loadedSymbols.has(String(item.symbol).toUpperCase());
+    return `
+      <button class="market-preset-btn ${isActive ? 'active' : ''}" onclick="handleMarketPresetClick('${esc(item.symbol)}')">
+        <span>${esc(item.label)}</span>
+        <span class="tool-minor">${esc(item.hint)}${isLoaded ? '' : ' | load'}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function handleMarketPresetClick(symbol) {
+  const inputEl = document.getElementById('market-symbols');
+  if (!inputEl) return;
+  const parts = (inputEl.value || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!parts.some(part => part.toUpperCase() === String(symbol).toUpperCase())) {
+    parts.unshift(symbol);
+    inputEl.value = parts.join(',');
+    loadMarkets();
+    return;
+  }
+  setMarketFocus(symbol);
+}
+
+function renderMarketFocus() {
+  const el = document.getElementById('market-focus');
+  if (!el) return;
+  const focusEntry = getMarketDecoratedEntry(_marketFocusSymbol) || _marketDecorated[0];
+  if (!focusEntry) {
+    el.innerHTML = '<div class="tool-minor">Market Focus</div><strong>Waiting for tape</strong><div class="muted">Click a core market, stock or mover to pin a larger view here.</div>';
+    return;
+  }
+
+  const { q, series, pct, ch, min, max, volPct, trendPct } = focusEntry;
+  const moveClass = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+  const trendClass = trendPct == null ? 'flat' : (trendPct > 0 ? 'up' : (trendPct < 0 ? 'down' : 'flat'));
+  el.innerHTML = `
+    <div class="tool-minor">Market Focus</div>
+    <div class="market-focus-top">
+      <div>
+        <strong>${esc(q.name || q.symbol)}</strong>
+        <div class="muted">${esc(q.symbol)}${q.currency ? ` | ${esc(q.currency)}` : ''}</div>
+      </div>
+      <span class="market-chip ${moveClass}">${pct >= 0 ? '+' : ''}${fmtMarketNum(pct, 2)}%</span>
+    </div>
+    <div class="market-price">${fmtMarketNum(q.price, 4)}</div>
+    <div class="market-change ${moveClass}">${ch >= 0 ? '+' : ''}${fmtMarketNum(ch, 4)} (${pct >= 0 ? '+' : ''}${fmtMarketNum(pct, 2)}%)</div>
+    <div class="market-focus-chart">${buildSparklineSvg(series)}</div>
+    <div class="market-stat-grid">
+      <div class="small-row"><span>30d range</span><strong>${min == null || max == null ? 'n/a' : `${fmtMarketNum(min,2)} -> ${fmtMarketNum(max,2)}`}</strong></div>
+      <div class="small-row"><span>Volatility</span><strong>${volPct == null ? 'n/a' : `${fmtMarketNum(volPct,1)}%`}</strong></div>
+      <div class="small-row"><span>Trend</span><strong class="market-change ${trendClass}">${trendPct == null ? 'n/a' : `${trendPct >= 0 ? '+' : ''}${fmtMarketNum(trendPct,2)}%`}</strong></div>
+      <div class="small-row"><span>State</span><strong>${esc(q.market_state || 'n/a')}</strong></div>
+    </div>
+  `;
+}
+
 async function loadMarkets() {
   const symbolsInput = document.getElementById('market-symbols');
   const metaEl = document.getElementById('market-meta');
@@ -1965,7 +2136,8 @@ async function loadMarkets() {
   const gridEl = document.getElementById('market-grid');
   const heroEl = document.getElementById('market-hero');
   const spotlightEl = document.getElementById('market-spotlight');
-  if (!symbolsInput || !metaEl || !gridEl || !heroEl || !spotlightEl) return;
+  const focusEl = document.getElementById('market-focus');
+  if (!symbolsInput || !metaEl || !gridEl || !heroEl || !spotlightEl || !focusEl) return;
   if (errEl) errEl.innerHTML = '';
 
   if (!symbolsInput.value.trim()) symbolsInput.value = DEFAULT_MARKET_SYMBOLS;
@@ -1973,6 +2145,8 @@ async function loadMarkets() {
 
   heroEl.innerHTML = '<div class="market-hero-card"><strong>Scanning market tape</strong><span class="muted">Building movers, volatility and spotlight summaries.</span></div>';
   spotlightEl.innerHTML = '';
+  focusEl.innerHTML = '<div class="tool-minor">Market Focus</div><strong>Loading focus panel</strong><div class="muted">Core assets and the selected instrument will appear here.</div>';
+  renderMarketPresetRail();
   gridEl.innerHTML = '<div class="empty">Loading...</div>';
   try {
     const params = new URLSearchParams();
@@ -2011,6 +2185,7 @@ async function loadMarkets() {
       const trendPct = pctChangeFromSeries(series);
       return { q, series, pct, ch, max, min, volPct, trendPct };
     });
+    _marketDecorated = decorated;
 
     const topUp = [...decorated].sort((a, b) => b.pct - a.pct)[0];
     const topDown = [...decorated].sort((a, b) => a.pct - b.pct)[0];
@@ -2034,6 +2209,12 @@ async function loadMarkets() {
       renderHeroCard('Volatility Leader', mostVolatile, 'widest 30d range', mostVolatile?.volPct != null ? `${fmtMarketNum(mostVolatile.volPct, 1)}% range` : 'n/a', mostVolatile?.trendPct > 0 ? 'up' : mostVolatile?.trendPct < 0 ? 'down' : 'flat'),
     ].join('');
 
+    if (!_marketFocusSymbol || !getMarketDecoratedEntry(_marketFocusSymbol)) {
+      _marketFocusSymbol = (getMarketDecoratedEntry('EUNL.DE')?.q?.symbol) || (hottest?.q?.symbol) || (decorated[0]?.q?.symbol) || '';
+    }
+    renderMarketFocus();
+    renderMarketPresetRail();
+
     const spotlight = [...decorated]
       .sort((a, b) => ((Math.abs(b.pct) * 1.6) + (b.volPct || 0)) - ((Math.abs(a.pct) * 1.6) + (a.volPct || 0)))
       .slice(0, 4);
@@ -2042,7 +2223,7 @@ async function loadMarkets() {
       const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
       const trendCls = trendPct == null ? 'flat' : (trendPct > 0 ? 'up' : (trendPct < 0 ? 'down' : 'flat'));
       return `
-        <div class="market-card">
+        <div class="market-card interactive" onclick="setMarketFocus('${esc(q.symbol)}')">
           <div class="diag-head">
             <strong>${esc(q.name || q.symbol)}</strong>
             <span class="market-chip ${cls}">${pct >= 0 ? '+' : ''}${fmtMarketNum(pct, 2)}%</span>
@@ -2064,7 +2245,8 @@ async function loadMarkets() {
       const trendCls = trendPct == null ? 'flat' : (trendPct > 0 ? 'up' : (trendPct < 0 ? 'down' : 'flat'));
 
       const card = document.createElement('div');
-      card.className = 'market-card';
+      card.className = 'market-card interactive';
+      card.onclick = () => setMarketFocus(q.symbol);
       card.innerHTML = `
         <div class="diag-head">
           <strong>${esc(q.name || q.symbol)}</strong>
@@ -2091,8 +2273,10 @@ async function loadMarkets() {
       gridEl.appendChild(card);
     });
   } catch (e) {
+    _marketDecorated = [];
     heroEl.innerHTML = '';
     spotlightEl.innerHTML = '';
+    focusEl.innerHTML = '<div class="tool-minor">Market Focus</div><strong>Market feed unavailable</strong><div class="muted">Refresh to retry loading the overview and focus board.</div>';
     gridEl.innerHTML = `<div class="empty err-msg">Market API failed: ${esc(e.message)}</div>`;
   }
 }
@@ -2106,8 +2290,15 @@ let _f1SelectedSessionKey = '';
 let _f1Weekend = null;
 let _f1SessionTimer = null;
 let _f1ClockTicker = null;
+let _marketDecorated = [];
+let _marketFocusSymbol = '';
+let _warframeStaticCache = { platform: '', worldstate: null, top_sells: [] };
 let _warframeHotItems = [];
 let _warframeHotExpanded = false;
+let _warframeDemandItems = [];
+let _warframeLiquidityItems = [];
+let _warframeSignalItems = [];
+let _warframePulseExpanded = { demand: false, liquidity: false, signals: false };
 
 function clearF1SessionPolling() {
   if (_f1SessionTimer) {
@@ -2667,7 +2858,7 @@ async function loadF1() {
     const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
     metaEl.textContent = `${data.standings_count || 0} drivers | overview ${data.source || 'unknown'} | weekend ${data.weekend_source || 'unknown'} | updated ${relTime(data.generated_at)}${cacheTag}${staleTag}${asOfTag}${errInfo}`;
     if (errEl) {
-      const errs = (data.errors || []).slice(0, 6);
+      const errs = [...new Set((data.errors || []).map(e => String(e || '').trim()).filter(Boolean))].slice(0, 6);
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
     }
 
@@ -2819,12 +3010,12 @@ function renderWarframeHotItems() {
   if (!hotItems.length) {
     hotEl.innerHTML = '<div class="muted">No high-volume items available right now.</div>';
     toggleBtn.hidden = true;
-    metaEl.textContent = '48h volume across a popular trading watchlist';
+    metaEl.textContent = '48h volume from curated warframe.market watch items';
     return;
   }
 
   const visible = _warframeHotExpanded ? hotItems : hotItems.slice(0, 6);
-  metaEl.textContent = `${hotItems.length} hot items across the current watchlist`;
+  metaEl.textContent = `${hotItems.length} hot items from curated warframe.market stats`;
   toggleBtn.hidden = hotItems.length <= 6;
   toggleBtn.textContent = _warframeHotExpanded ? 'Show less' : `See more (${hotItems.length - visible.length})`;
 
@@ -2864,6 +3055,120 @@ function toggleWarframeHot() {
   renderWarframeHotItems();
 }
 
+function warframePulseCard(item, mode = 'demand') {
+  const move = Number(item.price_change_pct);
+  const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+  const score = mode === 'liquidity' ? item.liquidity_score : item.demand_score;
+  const scoreLabel = mode === 'liquidity' ? 'Liq' : 'Demand';
+  const localHistory = item.local_history || {};
+  const apiHist = Array.isArray(item.history) ? item.history.map(x => Number(x.avg_price)).filter(v => Number.isFinite(v)) : [];
+  const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
+  const hist = apiHist.length ? apiHist : localHist;
+  const localChange = Number(localHistory.change_pct_24h);
+  const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
+  return `
+    <div class="market-card">
+      <div class="diag-head">
+        <strong>${esc(item.name || 'Unknown Item')}</strong>
+        <span class="rank-pill">${scoreLabel} ${fmtMarketNum(score || 0,0)}</span>
+      </div>
+      <div class="row" style="margin:0;justify-content:space-between">
+        ${warframeSignalChip(item.signal)}
+        <span class="muted">${esc(item.momentum || 'quiet')}</span>
+      </div>
+      <div class="small-row"><span>Price</span><strong>${item.price != null ? fmtMarketNum(item.price,0) + 'p' : '-'}</strong></div>
+      <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
+      <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.volume_total || 0,0)}</span></div>
+      <div class="small-row"><span>Local 24h</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
+      <div class="small-row"><span>Spread</span><span class="muted">${item.spread != null ? `${fmtMarketNum(item.spread,0)}p (${fmtMarketNum(item.spread_pct || 0,1)}%)` : 'n/a'}</span></div>
+      <div class="small-row"><span>Live B/S</span><span class="muted">${fmtMarketNum(item.live_buyers || 0,0)} / ${fmtMarketNum(item.live_sellers || 0,0)}</span></div>
+      ${buildSparklineSvg(hist, 'sparkline-muted')}
+      <div class="sparkline-label">
+        <button class="sm" onclick='trackWarframeNamedItem(${JSON.stringify(item.name || '')}, "item")'>Track</button>
+        ${item.slug ? `<a href="https://warframe.market/items/${esc(item.slug)}" target="_blank" rel="noopener">Open</a>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function warframeSignalCard(item) {
+  const move = Number(item.price_change_pct);
+  const signalLocalHistory = item.local_history || {};
+  const signalLocalChange = Number(signalLocalHistory.change_pct_24h);
+  const signalLocalClass = !Number.isFinite(signalLocalChange) ? 'flat' : (signalLocalChange >= 0 ? 'up' : 'down');
+  const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+  return `
+    <div class="market-card">
+      <div class="diag-head">
+        <strong>${esc(item.name || 'Tracked Item')}</strong>
+        ${warframeSignalChip(item.signal)}
+      </div>
+      <div class="tool-minor">Built from your watchlist, trend, spread, flow and local snapshots.</div>
+      <div class="small-row"><span>Demand / Liq</span><span class="muted">${fmtMarketNum(item.demand_score || 0,0)} / ${fmtMarketNum(item.liquidity_score || 0,0)}</span></div>
+      <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
+      <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.volume_total || 0,0)}</span></div>
+      <div class="small-row"><span>Local 24h</span><span class="market-change ${signalLocalClass}">${Number.isFinite(signalLocalChange) ? `${signalLocalChange >= 0 ? '+' : ''}${fmtMarketNum(signalLocalChange,1)}%` : 'n/a'}</span></div>
+      <div class="small-row"><span>Pressure</span><span class="muted">${item.pressure_ratio != null ? fmtMarketNum(item.pressure_ratio,2) + 'x' : 'n/a'}</span></div>
+      <div class="small-row"><span>Best Sell / Buy</span><span class="muted">${item.best_sell != null ? fmtMarketNum(item.best_sell,0) : '-'} / ${item.best_buy != null ? fmtMarketNum(item.best_buy,0) : '-'}</span></div>
+      <div class="sparkline-label">
+        ${item.slug ? `<a href="https://warframe.market/items/${esc(item.slug)}" target="_blank" rel="noopener">Open</a>` : ''}
+        <button class="sm" onclick='loadWarframePlanner(${JSON.stringify(item.name || '')})'>Plan</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderWarframePulseLane(kind) {
+  const map = {
+    demand: {
+      items: _warframeDemandItems,
+      gridId: 'wf-demand',
+      metaId: 'wf-demand-meta',
+      toggleId: 'wf-demand-toggle',
+      renderer: item => warframePulseCard(item, 'demand'),
+      empty: 'No demand leaders available right now.',
+      baseMeta: 'Highest urgency and trade pressure right now.',
+    },
+    liquidity: {
+      items: _warframeLiquidityItems,
+      gridId: 'wf-liquidity',
+      metaId: 'wf-liquidity-meta',
+      toggleId: 'wf-liquidity-toggle',
+      renderer: item => warframePulseCard(item, 'liquidity'),
+      empty: 'No liquid markets available right now.',
+      baseMeta: 'Fast-moving items with enough flow to trade quickly.',
+    },
+    signals: {
+      items: _warframeSignalItems,
+      gridId: 'wf-signals',
+      metaId: 'wf-signals-meta',
+      toggleId: 'wf-signals-toggle',
+      renderer: item => warframeSignalCard(item),
+      empty: 'Track items to see personalized trader signals.',
+      baseMeta: 'Signals are derived from your tracked items, price trend, spread and trade flow.',
+    },
+  };
+  const cfg = map[kind];
+  if (!cfg) return;
+  const gridEl = document.getElementById(cfg.gridId);
+  const metaEl = document.getElementById(cfg.metaId);
+  const toggleEl = document.getElementById(cfg.toggleId);
+  if (!gridEl || !metaEl || !toggleEl) return;
+
+  const items = Array.isArray(cfg.items) ? cfg.items : [];
+  const expanded = !!_warframePulseExpanded[kind];
+  const visible = expanded ? items : items.slice(0, 4);
+  metaEl.textContent = items.length ? `${items.length} items in this lane` : cfg.baseMeta;
+  toggleEl.hidden = items.length <= 4;
+  toggleEl.textContent = expanded ? 'Show less' : `See more (${items.length - visible.length})`;
+  gridEl.innerHTML = visible.length ? visible.map(cfg.renderer).join('') : `<div class="muted">${cfg.empty}</div>`;
+}
+
+function toggleWarframePulseLane(kind) {
+  _warframePulseExpanded[kind] = !_warframePulseExpanded[kind];
+  renderWarframePulseLane(kind);
+}
+
 async function loadWarframe() {
   const itemInput = document.getElementById('wf-item');
   const platformSel = document.getElementById('wf-platform');
@@ -2885,22 +3190,28 @@ async function loadWarframe() {
   if (!itemInput.value.trim()) itemInput.value = 'arcane energize';
   const item = itemInput.value.trim();
   const platform = platformSel.value || 'pc';
+  const samePlatformContext = _warframeStaticCache.platform === platform && (_warframeStaticCache.worldstate || (_warframeStaticCache.top_sells || []).length);
+  const hasWatchlistContent = !!document.getElementById('wf-watchlist')?.children.length;
+  const hasPulseContent = !!document.getElementById('wf-demand')?.children.length;
+  const hasRadarContent = !!document.getElementById('wf-profit')?.children.length;
 
   marketEl.innerHTML = '<div class="muted">Loading market...</div>';
   renderWarframeTools();
   if (arsenalEl) arsenalEl.innerHTML = '<div class="muted">Search a frame to inspect stats and abilities.</div>';
   if (arsenalMetaEl) arsenalMetaEl.textContent = 'search on demand';
-  void loadWarframeWatchlist();
+  if (!hasWatchlistContent) void loadWarframeWatchlist();
   void loadWarframePlanner(item);
-  void loadWarframePulse();
-  void loadWarframeRadar();
-  hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
+  if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
+  if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
+  if (!samePlatformContext) hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
   if (marketChartEl) marketChartEl.innerHTML = '';
-  alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
-  newsEl.innerHTML = '<div class="muted">Loading news...</div>';
-  fissuresEl.innerHTML = '<div class="muted">Loading fissures...</div>';
-  invasionsEl.innerHTML = '<div class="muted">Loading invasions...</div>';
-  worldEl.innerHTML = '<div class="muted">Loading world state...</div>';
+  if (!samePlatformContext) {
+    alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
+    newsEl.innerHTML = '<div class="muted">Loading news...</div>';
+    fissuresEl.innerHTML = '<div class="muted">Loading fissures...</div>';
+    invasionsEl.innerHTML = '<div class="muted">Loading invasions...</div>';
+    worldEl.innerHTML = '<div class="muted">Loading world state...</div>';
+  }
 
   try {
     const params = new URLSearchParams({ item, platform });
@@ -2911,7 +3222,7 @@ async function loadWarframe() {
     const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
     metaEl.textContent = `${String(data.platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${cacheTag}${staleTag}${asOfTag}${errInfo}`;
     if (errEl) {
-      const errs = (data.errors || []).slice(0, 6);
+      const errs = [...new Set((data.errors || []).map(e => String(e || '').trim()).filter(Boolean))].slice(0, 6);
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
     }
 
@@ -2956,6 +3267,11 @@ async function loadWarframe() {
     }
 
     _warframeHotItems = Array.isArray(data.top_sells) ? data.top_sells : [];
+    _warframeStaticCache = {
+      platform,
+      worldstate: data.worldstate || null,
+      top_sells: _warframeHotItems,
+    };
     renderWarframeHotItems();
 
     const alerts = data.worldstate?.alerts || [];
@@ -3028,13 +3344,15 @@ async function loadWarframe() {
     }
   } catch (e) {
     marketEl.innerHTML = `<div class="err-msg">Warframe API failed: ${esc(e.message)}</div>`;
-    hotEl.innerHTML = '';
     if (marketChartEl) marketChartEl.innerHTML = '';
-    alertsEl.innerHTML = '';
-    newsEl.innerHTML = '';
-    fissuresEl.innerHTML = '';
-    invasionsEl.innerHTML = '';
-    worldEl.innerHTML = '';
+    if (!_warframeStaticCache.worldstate) {
+      hotEl.innerHTML = '';
+      alertsEl.innerHTML = '';
+      newsEl.innerHTML = '';
+      fissuresEl.innerHTML = '';
+      invasionsEl.innerHTML = '';
+      worldEl.innerHTML = '';
+    }
   }
 }
 
@@ -3061,69 +3379,6 @@ async function loadWarframePulse() {
   signalsEl.innerHTML = '<div class="muted">Building trader signals...</div>';
   farmEl.innerHTML = '<div class="muted">Scoring the best farm targets right now...</div>';
   if (metaEl) metaEl.textContent = `scanning ${String(platformEl?.value || 'pc').toUpperCase()} market pulse`;
-
-  const renderCard = (item, mode = 'demand') => {
-    const move = Number(item.price_change_pct);
-    const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
-    const score = mode === 'liquidity' ? item.liquidity_score : item.demand_score;
-    const scoreLabel = mode === 'liquidity' ? 'Liq' : 'Demand';
-    const localHistory = item.local_history || {};
-    const apiHist = Array.isArray(item.history) ? item.history.map(x => Number(x.avg_price)).filter(v => Number.isFinite(v)) : [];
-    const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
-    const hist = apiHist.length ? apiHist : localHist;
-    const localChange = Number(localHistory.change_pct_24h);
-    const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
-    return `
-      <div class="market-card">
-        <div class="diag-head">
-          <strong>${esc(item.name || 'Unknown Item')}</strong>
-          <span class="rank-pill">${scoreLabel} ${fmtMarketNum(score || 0,0)}</span>
-        </div>
-        <div class="row" style="margin:0;justify-content:space-between">
-          ${warframeSignalChip(item.signal)}
-          <span class="muted">${esc(item.momentum || 'quiet')}</span>
-        </div>
-        <div class="small-row"><span>Price</span><strong>${item.price != null ? fmtMarketNum(item.price,0) + 'p' : '-'}</strong></div>
-        <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
-        <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.volume_total || 0,0)}</span></div>
-        <div class="small-row"><span>Local 24h</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
-        <div class="small-row"><span>Snapshots</span><span class="muted">${fmtMarketNum(localHistory.samples || 0,0)}</span></div>
-        <div class="small-row"><span>Spread</span><span class="muted">${item.spread != null ? `${fmtMarketNum(item.spread,0)}p (${fmtMarketNum(item.spread_pct || 0,1)}%)` : 'n/a'}</span></div>
-        <div class="small-row"><span>Live B/S</span><span class="muted">${fmtMarketNum(item.live_buyers || 0,0)} / ${fmtMarketNum(item.live_sellers || 0,0)}</span></div>
-        ${buildSparklineSvg(hist, 'sparkline-muted')}
-        <div class="sparkline-label">
-          <button class="sm" onclick='trackWarframeNamedItem(${JSON.stringify(item.name || '')}, "item")'>Track</button>
-          ${item.slug ? `<a href="https://warframe.market/items/${esc(item.slug)}" target="_blank" rel="noopener">Open</a>` : ''}
-        </div>
-      </div>
-    `;
-  };
-
-  const renderSignalCard = (item) => {
-    const move = Number(item.price_change_pct);
-    const signalLocalHistory = item.local_history || {};
-    const signalLocalChange = Number(signalLocalHistory.change_pct_24h);
-    const signalLocalClass = !Number.isFinite(signalLocalChange) ? 'flat' : (signalLocalChange >= 0 ? 'up' : 'down');
-    const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
-    return `
-      <div class="market-card">
-        <div class="diag-head">
-          <strong>${esc(item.name || 'Tracked Item')}</strong>
-          ${warframeSignalChip(item.signal)}
-        </div>
-        <div class="small-row"><span>Demand / Liq</span><span class="muted">${fmtMarketNum(item.demand_score || 0,0)} / ${fmtMarketNum(item.liquidity_score || 0,0)}</span></div>
-        <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
-        <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.volume_total || 0,0)}</span></div>
-        <div class="small-row"><span>Local 24h</span><span class="market-change ${signalLocalClass}">${Number.isFinite(signalLocalChange) ? `${signalLocalChange >= 0 ? '+' : ''}${fmtMarketNum(signalLocalChange,1)}%` : 'n/a'}</span></div>
-        <div class="small-row"><span>Pressure</span><span class="muted">${item.pressure_ratio != null ? fmtMarketNum(item.pressure_ratio,2) + 'x' : 'n/a'}</span></div>
-        <div class="small-row"><span>Best Sell / Buy</span><span class="muted">${item.best_sell != null ? fmtMarketNum(item.best_sell,0) : '-'} / ${item.best_buy != null ? fmtMarketNum(item.best_buy,0) : '-'}</span></div>
-        <div class="sparkline-label">
-          ${item.slug ? `<a href="https://warframe.market/items/${esc(item.slug)}" target="_blank" rel="noopener">Open</a>` : ''}
-          <button class="sm" onclick='loadWarframePlanner(${JSON.stringify(item.name || '')})'>Plan</button>
-        </div>
-      </div>
-    `;
-  };
 
   try {
     const params = new URLSearchParams({ platform: platformEl?.value || 'pc' });
@@ -3183,10 +3438,12 @@ async function loadWarframePulse() {
         </div>
       `;
     }).join('') : '<div class="muted">No clear farm recommendation yet. More history will make this sharper.</div>';
-
-    demandEl.innerHTML = demand.length ? demand.map(item => renderCard(item, 'demand')).join('') : '<div class="muted">No demand leaders available right now.</div>';
-    liquidityEl.innerHTML = liquidity.length ? liquidity.map(item => renderCard(item, 'liquidity')).join('') : '<div class="muted">No liquid markets available right now.</div>';
-    signalsEl.innerHTML = signals.length ? signals.map(renderSignalCard).join('') : '<div class="muted">Track items to see personalized trader signals.</div>';
+    _warframeDemandItems = demand;
+    _warframeLiquidityItems = liquidity;
+    _warframeSignalItems = signals;
+    renderWarframePulseLane('demand');
+    renderWarframePulseLane('liquidity');
+    renderWarframePulseLane('signals');
   } catch (e) {
     farmEl.innerHTML = '';
     demandEl.innerHTML = `<div class="err-msg">Market pulse failed: ${esc(e.message)}</div>`;
@@ -3708,6 +3965,7 @@ const DEFAULT_SETTINGS = {
     marketaux_api_key: '',
     finnhub_api_key: '',
     alphavantage_api_key: '',
+    twelvedata_api_key: '',
   },
 };
 
@@ -3855,6 +4113,7 @@ function populateSettingsForm(cfg) {
   document.getElementById('set-api-marketaux').value = cfg.api_keys.marketaux_api_key || '';
   document.getElementById('set-api-finnhub').value = cfg.api_keys.finnhub_api_key || '';
   document.getElementById('set-api-alphavantage').value = cfg.api_keys.alphavantage_api_key || '';
+  document.getElementById('set-api-twelvedata').value = cfg.api_keys.twelvedata_api_key || '';
   const showToggle = document.getElementById('set-api-show');
   if (showToggle) showToggle.checked = false;
   toggleApiKeyVisibility();
@@ -3965,6 +4224,7 @@ async function saveSettingsApi() {
         marketaux_api_key: document.getElementById('set-api-marketaux').value.trim(),
         finnhub_api_key: document.getElementById('set-api-finnhub').value.trim(),
         alphavantage_api_key: document.getElementById('set-api-alphavantage').value.trim(),
+        twelvedata_api_key: document.getElementById('set-api-twelvedata').value.trim(),
       },
     });
     setSettingsStatus('api', 'Saved.');

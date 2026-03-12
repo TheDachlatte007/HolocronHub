@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import shutil
 import requests
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 from urllib.parse import quote, quote_plus, urlparse
 from statistics import median
 from copy import deepcopy
@@ -27,6 +29,7 @@ SOURCES_FILE = BASE_DIR / "data" / "sources.json"
 FEED_FILE = BASE_DIR / "data" / "feed_items.json"
 SAVED_FILE = BASE_DIR / "data" / "saved_items.json"
 WARFRAME_WATCHLIST_FILE = BASE_DIR / "data" / "warframe_watchlist.json"
+WARFRAME_MARKET_HISTORY_FILE = BASE_DIR / "data" / "warframe_market_history.json"
 SCHEDULE_FILE = BASE_DIR / "data" / "schedule.json"
 SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
@@ -80,6 +83,7 @@ class AppStatus(BaseModel):
 app = FastAPI(title="Holocron API", version="0.2.0")
 
 _ingest_state: dict = {"running": False, "last_result": None, "started_at": None}
+_warframe_market_history_lock = Lock()
 
 app.add_middleware(
     CORSMiddleware,
@@ -267,6 +271,180 @@ def _load_warframe_watchlist() -> list[dict]:
 def _save_warframe_watchlist(items: list[dict]) -> None:
     WARFRAME_WATCHLIST_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False), encoding="utf-8")
 
+
+
+def _load_warframe_market_history_store() -> dict[str, Any]:
+    if not WARFRAME_MARKET_HISTORY_FILE.exists():
+        return {"updated_at": None, "platforms": {}}
+    try:
+        data = json.loads(WARFRAME_MARKET_HISTORY_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {"updated_at": None, "platforms": {}}
+    if not isinstance(data, dict):
+        return {"updated_at": None, "platforms": {}}
+    platforms = data.get("platforms")
+    if not isinstance(platforms, dict):
+        platforms = {}
+    return {"updated_at": data.get("updated_at"), "platforms": platforms}
+
+
+def _save_warframe_market_history_store(store: dict[str, Any]) -> None:
+    WARFRAME_MARKET_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    WARFRAME_MARKET_HISTORY_FILE.write_text(
+        json.dumps(store, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def _record_warframe_market_snapshot(market: dict[str, Any], platform: str = "pc") -> dict[str, Any]:
+    slug = str(market.get("slug") or "").strip()
+    if not slug:
+        return {}
+    price = market.get("last_avg_price")
+    if price is None:
+        price = market.get("best_sell")
+    try:
+        price_value = float(price) if price is not None else None
+    except Exception:
+        price_value = None
+    try:
+        best_sell = float(market.get("best_sell")) if market.get("best_sell") is not None else None
+    except Exception:
+        best_sell = None
+    try:
+        best_buy = float(market.get("best_buy")) if market.get("best_buy") is not None else None
+    except Exception:
+        best_buy = None
+    try:
+        volume_total = int(market.get("volume_total") or 0)
+    except Exception:
+        volume_total = 0
+    if price_value is None and best_sell is None and volume_total <= 0:
+        return {}
+
+    platform_key = str(platform or "pc").strip().lower()
+    captured_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    snapshot = {
+        "captured_at": captured_at,
+        "price": round(price_value, 2) if price_value is not None else None,
+        "best_sell": round(best_sell, 2) if best_sell is not None else None,
+        "best_buy": round(best_buy, 2) if best_buy is not None else None,
+        "volume_total": volume_total,
+        "price_change_pct": market.get("price_change_pct"),
+        "live_buyers": int(market.get("buy_count_live") or 0),
+        "live_sellers": int(market.get("sell_count_live") or 0),
+        "source": str(market.get("snapshot_source") or "unavailable"),
+    }
+
+    with _warframe_market_history_lock:
+        store = _load_warframe_market_history_store()
+        platforms = store.setdefault("platforms", {})
+        platform_items = platforms.setdefault(platform_key, {})
+        entry = platform_items.setdefault(
+            slug,
+            {
+                "name": market.get("canonical_name") or market.get("item") or slug.replace("_", " "),
+                "slug": slug,
+                "item": market.get("item") or market.get("canonical_name") or slug.replace("_", " "),
+                "snapshots": [],
+            },
+        )
+        entry["name"] = market.get("canonical_name") or entry.get("name") or slug.replace("_", " ")
+        entry["item"] = market.get("item") or entry.get("item") or entry.get("name")
+        snapshots = entry.setdefault("snapshots", [])
+        last = snapshots[-1] if snapshots else None
+        if isinstance(last, dict):
+            try:
+                last_dt = _parse_dt(last.get("captured_at"))
+                now_dt = _parse_dt(captured_at)
+                recent_age = (now_dt - last_dt).total_seconds() if last_dt and now_dt else None
+            except Exception:
+                recent_age = None
+            if (
+                recent_age is not None
+                and recent_age < 20 * 60
+                and last.get("price") == snapshot.get("price")
+                and last.get("best_sell") == snapshot.get("best_sell")
+                and last.get("best_buy") == snapshot.get("best_buy")
+                and int(last.get("volume_total") or 0) == volume_total
+                and str(last.get("source") or "") == snapshot["source"]
+            ):
+                snapshots[-1] = snapshot
+            else:
+                snapshots.append(snapshot)
+        else:
+            snapshots.append(snapshot)
+        entry["snapshots"] = snapshots[-240:]
+        if len(platform_items) > 160:
+            ordered = sorted(
+                platform_items.items(),
+                key=lambda item: str(((item[1] or {}).get("snapshots") or [{}])[-1].get("captured_at") or ""),
+                reverse=True,
+            )
+            platforms[platform_key] = dict(ordered[:160])
+        store["updated_at"] = captured_at
+        _save_warframe_market_history_store(store)
+
+    return _summarize_warframe_market_history(slug, platform_key)
+
+
+def _summarize_warframe_market_history(slug: str, platform: str = "pc") -> dict[str, Any]:
+    if not slug:
+        return {}
+    store = _load_warframe_market_history_store()
+    platform_items = ((store.get("platforms") or {}).get(str(platform or "pc").strip().lower()) or {})
+    entry = platform_items.get(slug)
+    if not isinstance(entry, dict):
+        return {}
+    snapshots = [snap for snap in (entry.get("snapshots") or []) if isinstance(snap, dict)]
+    if not snapshots:
+        return {}
+
+    prices = [float(snap["price"]) for snap in snapshots if snap.get("price") is not None]
+    volumes = [int(snap.get("volume_total") or 0) for snap in snapshots]
+    latest = snapshots[-1]
+    latest_dt = _parse_dt(latest.get("captured_at"))
+    cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+    recent_24h = [snap for snap in snapshots if (_parse_dt(snap.get("captured_at")) or datetime.min.replace(tzinfo=timezone.utc)) >= cutoff_24h]
+    baseline = next((snap for snap in recent_24h if snap.get("price") is not None), None)
+    if baseline is None:
+        baseline = next((snap for snap in snapshots if snap.get("price") is not None), None)
+
+    change_pct_24h = None
+    change_abs_24h = None
+    try:
+        if baseline and baseline.get("price") not in (None, 0) and latest.get("price") is not None:
+            change_abs_24h = round(float(latest.get("price")) - float(baseline.get("price")), 2)
+            change_pct_24h = round((change_abs_24h / float(baseline.get("price"))) * 100.0, 1)
+    except Exception:
+        change_pct_24h = None
+        change_abs_24h = None
+
+    series = [
+        {"captured_at": snap.get("captured_at"), "price": snap.get("price")}
+        for snap in snapshots[-24:]
+        if snap.get("price") is not None
+    ]
+    return {
+        "samples": len(snapshots),
+        "samples_24h": len(recent_24h),
+        "first_seen_at": snapshots[0].get("captured_at"),
+        "last_seen_at": latest.get("captured_at"),
+        "last_price": latest.get("price"),
+        "price_low": round(min(prices), 2) if prices else None,
+        "price_high": round(max(prices), 2) if prices else None,
+        "price_avg": round(sum(prices) / len(prices), 2) if prices else None,
+        "change_pct_24h": change_pct_24h,
+        "change_abs_24h": change_abs_24h,
+        "volume_peak": max(volumes) if volumes else 0,
+        "source_mix": list(dict.fromkeys(str(snap.get("source") or "unknown") for snap in snapshots[-12:])),
+        "series": series,
+        "last_source": latest.get("source"),
+        "last_live_buyers": latest.get("live_buyers"),
+        "last_live_sellers": latest.get("live_sellers"),
+        "updated_at": store.get("updated_at") or latest.get("captured_at"),
+        "age_minutes": max(0, int((datetime.now(timezone.utc) - latest_dt).total_seconds() // 60)) if latest_dt else None,
+    }
 
 def _coerce_watch_priority(raw: Any) -> int:
     try:
@@ -1710,6 +1888,24 @@ def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]
             "history": summary.get("history") or [],
             "history_period": summary.get("history_period"),
         }
+        local_history = _record_warframe_market_snapshot(
+            {
+                "item": entry.get("name") or slug.replace("_", " ").title(),
+                "canonical_name": entry.get("name") or slug.replace("_", " ").title(),
+                "slug": slug,
+                "last_avg_price": summary.get("last_avg_price"),
+                "best_sell": summary.get("price_floor_estimate"),
+                "best_buy": None,
+                "volume_total": summary.get("volume_total"),
+                "price_change_pct": summary.get("price_change_pct"),
+                "buy_count_live": 0,
+                "sell_count_live": 0,
+                "snapshot_source": "statistics_fallback",
+            },
+            platform,
+        )
+        if local_history:
+            hot["local_history"] = local_history
         return hot, []
 
     with ThreadPoolExecutor(max_workers=min(6, max(1, len(selected_items)))) as pool:
@@ -2600,7 +2796,11 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
     cache_key = f"warframe:market_snapshot:{platform}:{item_key}"
     cached = _cache_get(cache_key, ttl_seconds=10 * 60)
     if isinstance(cached, dict):
-        return dict(cached.get("payload") or {}), list(cached.get("errors") or [])
+        cached_payload = dict(cached.get("payload") or {})
+        local_history = _summarize_warframe_market_history(str(cached_payload.get("slug") or item_key), platform)
+        if local_history:
+            cached_payload["local_history"] = local_history
+        return cached_payload, list(cached.get("errors") or [])
 
     catalog, catalog_errors = _fetch_warframe_market_catalog()
     item_meta = _find_warframe_market_item(catalog, item)
@@ -2730,6 +2930,9 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
         "price_ceiling_estimate": price_ceiling,
         "price_change_pct": stats_summary.get("price_change_pct"),
     }
+    local_history = _record_warframe_market_snapshot(payload, platform)
+    if local_history:
+        payload["local_history"] = local_history
     trimmed_errors = errors[:16]
     _cache_set(cache_key, {"payload": payload, "errors": trimmed_errors})
     return payload, trimmed_errors
@@ -2744,10 +2947,18 @@ def _build_warframe_market_signal(market: dict[str, Any], *, tracked: bool = Fal
         best_buy = float(market.get("best_buy")) if market.get("best_buy") is not None else None
     except Exception:
         best_buy = None
+    local_history = market.get("local_history") if isinstance(market.get("local_history"), dict) else {}
+    raw_trend = market.get("price_change_pct")
     try:
-        trend = float(market.get("price_change_pct") or 0.0)
+        trend = float(raw_trend) if raw_trend is not None else 0.0
     except Exception:
         trend = 0.0
+    try:
+        local_trend = float(local_history.get("change_pct_24h")) if local_history.get("change_pct_24h") is not None else None
+    except Exception:
+        local_trend = None
+    if raw_trend is None and local_trend is not None:
+        trend = local_trend
     try:
         volume = float(market.get("volume_total") or 0.0)
     except Exception:
@@ -2757,6 +2968,7 @@ def _build_warframe_market_signal(market: dict[str, Any], *, tracked: bool = Fal
     sell_live = int(market.get("sell_count_live") or 0)
     buy_total = int(market.get("buy_count_total") or 0)
     sell_total = int(market.get("sell_count_total") or 0)
+    history_samples = int(local_history.get("samples_24h") or local_history.get("samples") or 0)
 
     spread = None
     spread_pct = None
@@ -2769,12 +2981,14 @@ def _build_warframe_market_signal(market: dict[str, Any], *, tracked: bool = Fal
         min(48.0, math.log10(volume + 1.0) * 18.0)
         + min(20.0, buy_live * 3.5)
         + min(12.0, max(trend, 0.0) * 1.4)
+        + min(8.0, history_samples * 0.8)
         + (8.0 if best_buy and best_sell and best_buy >= best_sell * 0.9 else 0.0)
         - min(14.0, max(sell_live - buy_live, 0) * 1.6)
     )
     liquidity_score = (
         min(42.0, math.log10(volume + 1.0) * 16.0)
         + min(18.0, (buy_live + sell_live) * 2.4)
+        + min(6.0, history_samples * 0.5)
         + max(0.0, 22.0 - min(spread_pct if spread_pct is not None else 18.0, 18.0))
         + (8.0 if str(market.get("snapshot_source") or "") == "orders_live" else 0.0)
     )
@@ -2902,6 +3116,7 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
             -float(item.get("liquidity_score") or 0.0),
         ),
     )[:12]
+    history_ready_count = sum(1 for item in cards if int(((item.get("local_history") or {}).get("samples") or 0)) >= 2)
 
     payload = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
@@ -2911,6 +3126,7 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
         "watch_signals": tracked_signals,
         "coverage_count": len(cards),
         "tracked_count": len(tracked_signals),
+        "history_ready_count": history_ready_count,
         "errors": errors[:24],
     }
     _cache_set(cache_key, payload)

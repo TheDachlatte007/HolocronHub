@@ -2498,6 +2498,10 @@ async function loadWarframe() {
     const trendClass = !Number.isFinite(trendValue) ? 'flat' : (trendValue >= 0 ? 'up' : 'down');
     const sourceLabel = sourceMode === 'orders_live' ? 'live orders' : (sourceMode === 'statistics_fallback' ? '48h trade stats' : 'unavailable');
     const selectedRank = m.selected_rank != null ? `R${esc(m.selected_rank)}` : 'base';
+    const localHistory = m.local_history || {};
+    const localSamples = Number(localHistory.samples || 0);
+    const localChange = Number(localHistory.change_pct_24h);
+    const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
     marketEl.innerHTML = `
       <div class="small-row"><span>Item</span><strong>${esc(m.canonical_name || m.item || item)}</strong></div>
       <div class="small-row"><span>${sellLabel}</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
@@ -2507,12 +2511,16 @@ async function loadWarframe() {
       <div class="small-row"><span>Trend</span><span class="market-change ${trendClass}">${Number.isFinite(trendValue) ? `${trendValue >= 0 ? '+' : ''}${fmtMarketNum(trendValue,1)}%` : 'n/a'}</span></div>
       <div class="small-row"><span>Rank</span><strong>${selectedRank}</strong></div>
       <div class="small-row"><span>Source</span><strong>${sourceLabel}</strong></div>
+      <div class="small-row"><span>Local Hist</span><strong>${localSamples ? `${localSamples} snaps` : 'warming up'}</strong></div>
+      <div class="small-row"><span>24h Local</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
       <div class="small-row"><span>Orders (Live/All)</span><strong>${esc(m.sell_count_live ?? 0)}/${esc(m.buy_count_live ?? 0)} | ${esc(m.sell_count_total ?? 0)}/${esc(m.buy_count_total ?? 0)}</strong></div>
       <a href="https://warframe.market/items/${esc(m.slug || '')}" target="_blank" rel="noopener">Open on warframe.market</a>
     `;
 
     if (marketChartEl) {
-      const hist = (m.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
+      const apiHist = (m.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
+      const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
+      const hist = apiHist.length ? apiHist : localHist;
       marketChartEl.innerHTML = `
         ${buildSparklineSvg(hist)}
         <div class="sparkline-label">
@@ -2528,9 +2536,14 @@ async function loadWarframe() {
       hotEl.innerHTML = '<div class="muted">No high-volume items available right now.</div>';
     } else {
       hotItems.forEach((entry, idx) => {
-        const hist = (entry.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
+        const localHistory = entry.local_history || {};
+        const apiHist = (entry.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
+        const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
+        const hist = apiHist.length ? apiHist : localHist;
         const move = Number(entry.price_change_pct);
         const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+        const localChange = Number(localHistory.change_pct_24h);
+        const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
         const card = document.createElement('div');
         card.className = 'market-card';
         card.innerHTML = `
@@ -2540,6 +2553,7 @@ async function loadWarframe() {
           </div>
           <div class="small-row"><span>Avg Price</span><strong>${entry.last_avg_price != null ? fmtMarketNum(entry.last_avg_price,0) + 'p' : '-'}</strong></div>
           <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
+          <div class="small-row"><span>Local 24h</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
           <div class="small-row"><span>Rank</span><span class="muted">${entry.selected_rank != null ? `R${esc(entry.selected_rank)}` : esc(entry.rarity || 'base')}</span></div>
           ${buildSparklineSvg(hist, 'sparkline-muted')}
           <div class="sparkline-label">
@@ -2658,7 +2672,12 @@ async function loadWarframePulse() {
     const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
     const score = mode === 'liquidity' ? item.liquidity_score : item.demand_score;
     const scoreLabel = mode === 'liquidity' ? 'Liq' : 'Demand';
-    const hist = Array.isArray(item.history) ? item.history.map(x => Number(x.avg_price)).filter(v => Number.isFinite(v)) : [];
+    const localHistory = item.local_history || {};
+    const apiHist = Array.isArray(item.history) ? item.history.map(x => Number(x.avg_price)).filter(v => Number.isFinite(v)) : [];
+    const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
+    const hist = apiHist.length ? apiHist : localHist;
+    const localChange = Number(localHistory.change_pct_24h);
+    const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
     return `
       <div class="market-card">
         <div class="diag-head">
@@ -2672,6 +2691,8 @@ async function loadWarframePulse() {
         <div class="small-row"><span>Price</span><strong>${item.price != null ? fmtMarketNum(item.price,0) + 'p' : '-'}</strong></div>
         <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
         <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.volume_total || 0,0)}</span></div>
+        <div class="small-row"><span>Local 24h</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
+        <div class="small-row"><span>Snapshots</span><span class="muted">${fmtMarketNum(localHistory.samples || 0,0)}</span></div>
         <div class="small-row"><span>Spread</span><span class="muted">${item.spread != null ? `${fmtMarketNum(item.spread,0)}p (${fmtMarketNum(item.spread_pct || 0,1)}%)` : 'n/a'}</span></div>
         <div class="small-row"><span>Live B/S</span><span class="muted">${fmtMarketNum(item.live_buyers || 0,0)} / ${fmtMarketNum(item.live_sellers || 0,0)}</span></div>
         ${buildSparklineSvg(hist, 'sparkline-muted')}
@@ -2685,6 +2706,9 @@ async function loadWarframePulse() {
 
   const renderSignalCard = (item) => {
     const move = Number(item.price_change_pct);
+    const signalLocalHistory = item.local_history || {};
+    const signalLocalChange = Number(signalLocalHistory.change_pct_24h);
+    const signalLocalClass = !Number.isFinite(signalLocalChange) ? 'flat' : (signalLocalChange >= 0 ? 'up' : 'down');
     const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
     return `
       <div class="market-card">
@@ -2695,6 +2719,7 @@ async function loadWarframePulse() {
         <div class="small-row"><span>Demand / Liq</span><span class="muted">${fmtMarketNum(item.demand_score || 0,0)} / ${fmtMarketNum(item.liquidity_score || 0,0)}</span></div>
         <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
         <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.volume_total || 0,0)}</span></div>
+        <div class="small-row"><span>Local 24h</span><span class="market-change ${signalLocalClass}">${Number.isFinite(signalLocalChange) ? `${signalLocalChange >= 0 ? '+' : ''}${fmtMarketNum(signalLocalChange,1)}%` : 'n/a'}</span></div>
         <div class="small-row"><span>Pressure</span><span class="muted">${item.pressure_ratio != null ? fmtMarketNum(item.pressure_ratio,2) + 'x' : 'n/a'}</span></div>
         <div class="small-row"><span>Best Sell / Buy</span><span class="muted">${item.best_sell != null ? fmtMarketNum(item.best_sell,0) : '-'} / ${item.best_buy != null ? fmtMarketNum(item.best_buy,0) : '-'}</span></div>
         <div class="sparkline-label">
@@ -2711,7 +2736,7 @@ async function loadWarframePulse() {
     const demand = Array.isArray(data.demand_leaders) ? data.demand_leaders : [];
     const liquidity = Array.isArray(data.liquidity_leaders) ? data.liquidity_leaders : [];
     const signals = Array.isArray(data.watch_signals) ? data.watch_signals : [];
-    if (metaEl) metaEl.textContent = `${data.coverage_count || 0} items scanned | ${data.tracked_count || 0} tracked signals`;
+    if (metaEl) metaEl.textContent = `${data.coverage_count || 0} items scanned | ${data.tracked_count || 0} tracked signals | ${data.history_ready_count || 0} history-ready`;
     demandEl.innerHTML = demand.length ? demand.map(item => renderCard(item, 'demand')).join('') : '<div class="muted">No demand leaders available right now.</div>';
     liquidityEl.innerHTML = liquidity.length ? liquidity.map(item => renderCard(item, 'liquidity')).join('') : '<div class="muted">No liquid markets available right now.</div>';
     signalsEl.innerHTML = signals.length ? signals.map(renderSignalCard).join('') : '<div class="muted">Track items to see personalized trader signals.</div>';
@@ -2867,6 +2892,9 @@ async function loadWarframeWatchlist() {
       const bestValue = bestRelic.value_lab?.best_value_state || {};
       const tags = Array.isArray(item.tags) ? item.tags : [];
       const signal = item.signal || {};
+      const localHistory = item.market?.local_history || {};
+      const localChange = Number(localHistory.change_pct_24h);
+      const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
       const card = document.createElement('div');
       card.className = 'market-card';
       card.innerHTML = `
@@ -2883,6 +2911,7 @@ async function loadWarframeWatchlist() {
         <div class="small-row"><span>Price</span><strong>${item.market?.last_avg_price != null ? fmtMarketNum(item.market.last_avg_price,0) + 'p' : '-'}</strong></div>
         <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
         <div class="small-row"><span>48h Volume</span><span class="muted">${fmtMarketNum(item.market?.volume_total || 0,0)}</span></div>
+        <div class="small-row"><span>Local 24h</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
         <div class="small-row"><span>Live B/S</span><span class="muted">${fmtMarketNum(item.market?.buy_count_live || 0,0)} / ${fmtMarketNum(item.market?.sell_count_live || 0,0)}</span></div>
         <div class="small-row"><span>Demand / Liq</span><span class="muted">${fmtMarketNum(signal.demand_score || 0,0)} / ${fmtMarketNum(signal.liquidity_score || 0,0)}</span></div>
         <div class="small-row"><span>Best Relic</span><span class="muted">${bestRelic.relic ? `${esc(bestRelic.relic)} ${esc(bestRelic.best_state || '')}` : 'no relic route'}</span></div>

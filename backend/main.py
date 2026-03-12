@@ -664,6 +664,19 @@ def _warframe_payload_has_data(payload: dict[str, Any]) -> bool:
     return False
 
 
+def _warframe_worldstate_has_data(payload: dict[str, Any]) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    for key in ["alerts", "fissures", "invasions", "events", "news"]:
+        if len(payload.get(key) or []) > 0:
+            return True
+    for cycle_name in ["cetus", "vallis", "cambion"]:
+        cycle = _dig(payload, "world_cycles", cycle_name) or {}
+        if cycle.get("state") or cycle.get("eta"):
+            return True
+    sortie = payload.get("sortie") or {}
+    return bool(sortie.get("eta") or sortie.get("boss"))
+
 def _cache_get(key: str, ttl_seconds: int) -> Optional[Any]:
     ent = _API_CACHE.get(key)
     if not isinstance(ent, dict):
@@ -1929,8 +1942,21 @@ def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]
         reverse=True,
     )
     hot_items = hot_items[:8]
-    _cache_set(cache_key, {"items": hot_items, "errors": errors[:16]})
-    return hot_items, errors[:16]
+    trimmed_errors = errors[:16]
+    payload = {"items": hot_items, "errors": trimmed_errors}
+    if hot_items:
+        _cache_set(cache_key, payload)
+        _set_last_good(cache_key, payload)
+        return hot_items, trimmed_errors
+
+    stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
+    if isinstance(stale_payload, dict):
+        fallback_errors = list(trimmed_errors or []) + [f"fallback:last_good:hot_items:{age}s"]
+        stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+        stale_payload["errors"] = fallback_errors[:16]
+        _cache_set(cache_key, stale_payload)
+        return list(stale_payload.get("items") or []), fallback_errors[:16]
+
 
 
 def _clean_warframe_text(value: Any) -> str:
@@ -2440,48 +2466,71 @@ def _build_warframe_farm_plan(query: str, platform: str = "pc") -> tuple[dict[st
 
 
 def _build_warframe_watchlist_payload(platform: str = "pc", sort_by: str = "priority") -> tuple[list[dict[str, Any]], list[str]]:
+    platform_key = str(platform or "pc").strip().lower()
+    cache_key = f"warframe:watchlist:{platform_key}:{sort_by}"
+    cached = _cache_get(cache_key, ttl_seconds=5 * 60)
+    if isinstance(cached, dict):
+        return list(cached.get("items") or []), list(cached.get("errors") or [])
+
     items = _load_warframe_watchlist()
+    if not items:
+        payload = {"items": [], "errors": []}
+        _cache_set(cache_key, payload)
+        return [], []
+
     out: list[dict[str, Any]] = []
     errors: list[str] = []
-    for item in items[:24]:
+
+    def load_item(item: dict[str, Any]) -> tuple[Optional[dict[str, Any]], list[str]]:
         name = str(item.get("name") or "").strip()
         if not name:
-            continue
-        market, market_errors = _fetch_warframe_market(name, platform)
-        plan, plan_errors = _build_warframe_farm_plan(name, platform=platform)
-        errors.extend((market_errors or [])[:2])
-        errors.extend((plan_errors or [])[:2])
+            return None, []
+        market, market_errors = _fetch_warframe_market(name, platform_key)
+        plan, plan_errors = _build_warframe_farm_plan(name, platform=platform_key)
         priority = _coerce_watch_priority(item.get("priority"))
         price_value = float(market.get("last_avg_price") or 0.0)
         volume_value = float(market.get("volume_total") or 0.0)
         best_relic = (plan.get("relic_targets") or [{}])[0]
         market_signal = _build_warframe_market_signal(market, tracked=True)
-        out.append(
-            {
-                **item,
-                "priority": priority,
-                "tags": _normalize_tag_list(item.get("tags") or []),
-                "market": {
-                    "best_sell": market.get("best_sell"),
-                    "best_buy": market.get("best_buy"),
-                    "last_avg_price": market.get("last_avg_price"),
-                    "volume_total": market.get("volume_total"),
-                    "price_change_pct": market.get("price_change_pct"),
-                    "slug": market.get("slug"),
-                    "snapshot_source": market.get("snapshot_source"),
-                    "buy_count_live": market.get("buy_count_live"),
-                    "sell_count_live": market.get("sell_count_live"),
-                },
-                "planner": {
-                    "relic_count": len(plan.get("relic_targets") or []),
-                    "best_relic": best_relic,
-                    "blueprint_count": len(plan.get("blueprints") or []),
-                    "mod_count": len(plan.get("mods") or []),
-                },
-                "signal": market_signal,
-                "score": round(priority * 1000 + price_value * 10 + min(volume_value, 1000), 2),
-            }
-        )
+        payload = {
+            **item,
+            "priority": priority,
+            "tags": _normalize_tag_list(item.get("tags") or []),
+            "market": {
+                "best_sell": market.get("best_sell"),
+                "best_buy": market.get("best_buy"),
+                "last_avg_price": market.get("last_avg_price"),
+                "volume_total": market.get("volume_total"),
+                "price_change_pct": market.get("price_change_pct"),
+                "slug": market.get("slug"),
+                "snapshot_source": market.get("snapshot_source"),
+                "buy_count_live": market.get("buy_count_live"),
+                "sell_count_live": market.get("sell_count_live"),
+                "local_history": market.get("local_history") or {},
+            },
+            "planner": {
+                "relic_count": len(plan.get("relic_targets") or []),
+                "best_relic": best_relic,
+                "blueprint_count": len(plan.get("blueprints") or []),
+                "mod_count": len(plan.get("mods") or []),
+            },
+            "signal": market_signal,
+            "score": round(priority * 1000 + price_value * 10 + min(volume_value, 1000), 2),
+        }
+        return payload, [*(market_errors or [])[:2], *(plan_errors or [])[:2]]
+
+    subset = items[:24]
+    with ThreadPoolExecutor(max_workers=min(6, max(1, len(subset)))) as pool:
+        futures = [pool.submit(load_item, item) for item in subset]
+        for future in as_completed(futures):
+            try:
+                item_payload, item_errors = future.result()
+            except Exception as exc:
+                errors.append(f"watchlist:worker:{exc}")
+                continue
+            errors.extend(item_errors[:4])
+            if item_payload:
+                out.append(item_payload)
 
     if sort_by == "value":
         out.sort(key=lambda item: (float((item.get("market") or {}).get("last_avg_price") or 0.0), int(item.get("priority") or 0), str(item.get("name") or "")), reverse=True)
@@ -2491,7 +2540,24 @@ def _build_warframe_watchlist_payload(platform: str = "pc", sort_by: str = "prio
         out.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
     else:
         out.sort(key=lambda item: (int(item.get("priority") or 0), float((item.get("market") or {}).get("last_avg_price") or 0.0), str(item.get("created_at") or "")), reverse=True)
-    return out, errors[:24]
+
+    trimmed_errors = errors[:24]
+    payload = {"items": out, "errors": trimmed_errors}
+    if out:
+        _cache_set(cache_key, payload)
+        _set_last_good(cache_key, payload)
+        return out, trimmed_errors
+
+    stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
+    if isinstance(stale_payload, dict):
+        fallback_errors = list(trimmed_errors or []) + [f"fallback:last_good:watchlist:{age}s"]
+        stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+        stale_payload["errors"] = fallback_errors[:24]
+        _cache_set(cache_key, stale_payload)
+        return list(stale_payload.get("items") or []), fallback_errors[:24]
+
+    _cache_set(cache_key, payload)
+    return out, trimmed_errors
 
 
 def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str, Any]:
@@ -2720,12 +2786,18 @@ def _parse_official_warframe_worldstate(data: dict[str, Any], platform: str) -> 
 
 
 def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]]:
+    platform_key = str(platform or "pc").strip().lower()
+    cache_key = f"warframe:worldstate:{platform_key}"
+    cached = _cache_get(cache_key, ttl_seconds=90)
+    if isinstance(cached, dict):
+        return cached, list(cached.get("errors") or [])
+
     errors: list[str] = []
     headers = {"Accept": "application/json"}
     candidates = [
-        (f"https://api.warframestat.us/{platform}", None),
-        (f"https://api.warframestat.us/{platform}", {"language": "en"}),
-        (f"https://api.warframestat.us/{platform}/", {"language": "en"}),
+        (f"https://api.warframestat.us/{platform_key}", None),
+        (f"https://api.warframestat.us/{platform_key}", {"language": "en"}),
+        (f"https://api.warframestat.us/{platform_key}/", {"language": "en"}),
     ]
 
     data: Optional[dict[str, Any]] = None
@@ -2739,16 +2811,23 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
             break
         errors.append("invalid_worldstate_payload")
 
+    parsed_candidates: list[dict[str, Any]] = []
     if isinstance(data, dict):
-        return _parse_warframe_worldstate(data, platform), errors[:12]
+        parsed_candidates.append(_parse_warframe_worldstate(data, platform_key))
 
     official_raw, official_err = _http_get_json("https://content.warframe.com/dynamic/worldState.php", headers=headers, timeout=20)
     if isinstance(official_raw, dict):
-        return _parse_official_warframe_worldstate(official_raw, platform), errors[:16]
-    if official_err:
+        parsed_candidates.append(_parse_official_warframe_worldstate(official_raw, platform_key))
+    elif official_err:
         errors.append(f"official:{official_err}")
 
-    # Fallback: segmented endpoints can still work even when root endpoint fails.
+    for parsed in parsed_candidates:
+        if _warframe_worldstate_has_data(parsed):
+            payload = {**parsed, "errors": errors[:16]}
+            _cache_set(cache_key, payload)
+            _set_last_good(cache_key, payload)
+            return payload, errors[:16]
+
     segment_payload: dict[str, Any] = {"timestamp": None, "sortie": {}, "nightwave": {}, "arbitration": {}, "steelPath": {}}
     list_segments = ["news", "alerts", "fissures", "invasions", "events"]
     object_segments = {
@@ -2761,7 +2840,7 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
         "cambion_cycle": "cambionCycle",
     }
     for seg in list_segments:
-        raw, err = _http_get_json(f"https://api.warframestat.us/{platform}/{seg}", params={"language": "en"}, headers=headers, timeout=15)
+        raw, err = _http_get_json(f"https://api.warframestat.us/{platform_key}/{seg}", params={"language": "en"}, headers=headers, timeout=15)
         if err:
             errors.append(f"{seg}:{err}")
             segment_payload[seg] = []
@@ -2776,7 +2855,7 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
             errors.append(f"{seg}:invalid_payload")
 
     for endpoint, target_key in object_segments.items():
-        raw, err = _http_get_json(f"https://api.warframestat.us/{platform}/{endpoint}", params={"language": "en"}, headers=headers, timeout=15)
+        raw, err = _http_get_json(f"https://api.warframestat.us/{platform_key}/{endpoint}", params={"language": "en"}, headers=headers, timeout=15)
         if err:
             errors.append(f"{endpoint}:{err}")
             continue
@@ -2787,8 +2866,24 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
         else:
             errors.append(f"{endpoint}:invalid_payload")
 
-    parsed = _parse_warframe_worldstate(segment_payload, platform)
-    return parsed, errors[:20]
+    parsed = _parse_warframe_worldstate(segment_payload, platform_key)
+    if _warframe_worldstate_has_data(parsed):
+        payload = {**parsed, "errors": errors[:20]}
+        _cache_set(cache_key, payload)
+        _set_last_good(cache_key, payload)
+        return payload, errors[:20]
+
+    stale_payload, age = _get_last_good(cache_key, max_age_seconds=6 * 3600)
+    if isinstance(stale_payload, dict):
+        fallback_errors = list(errors or []) + [f"fallback:last_good:worldstate:{age}s"]
+        stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+        stale_payload["errors"] = fallback_errors[:20]
+        _cache_set(cache_key, stale_payload)
+        return stale_payload, fallback_errors[:20]
+
+    payload = {**parsed, "errors": errors[:20]}
+    _cache_set(cache_key, payload)
+    return payload, errors[:20]
 
 
 def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
@@ -3073,6 +3168,7 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
             "price_change_pct": market.get("price_change_pct"),
             "snapshot_source": market.get("snapshot_source"),
             "history": market.get("history") or [],
+            "local_history": market.get("local_history") or {},
             **metrics,
         }, market_errors
 
@@ -3116,8 +3212,8 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
             -float(item.get("liquidity_score") or 0.0),
         ),
     )[:12]
-    history_ready_count = sum(1 for item in cards if int(((item.get("local_history") or {}).get("samples") or 0)) >= 2)
 
+    history_ready_count = sum(1 for item in cards if int(((item.get("local_history") or {}).get("samples") or 0)) >= 2)
     payload = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "platform": platform_key,
@@ -3129,6 +3225,19 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
         "history_ready_count": history_ready_count,
         "errors": errors[:24],
     }
+    if cards:
+        _cache_set(cache_key, payload)
+        _set_last_good(cache_key, payload)
+        return payload, list(payload.get("errors") or [])
+
+    stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
+    if isinstance(stale_payload, dict):
+        fallback_errors = list(errors or []) + [f"fallback:last_good:market_pulse:{age}s"]
+        stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+        stale_payload["errors"] = fallback_errors[:24]
+        _cache_set(cache_key, stale_payload)
+        return stale_payload, fallback_errors[:24]
+
     _cache_set(cache_key, payload)
     return payload, list(payload.get("errors") or [])
 
@@ -3330,6 +3439,8 @@ def _prewarm_provider_caches() -> None:
         ("markets", lambda: markets_overview()),
         ("f1", lambda: f1_overview("current")),
         ("warframe", lambda: warframe_overview("arcane energize", "pc")),
+        ("warframe_pulse", lambda: _build_warframe_market_pulse("pc")[0]),
+        ("warframe_hot", lambda: {"items": _fetch_warframe_hot_items("pc")[0]}),
     ]:
         t0 = time.time()
         try:

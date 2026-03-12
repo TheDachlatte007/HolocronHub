@@ -5,6 +5,7 @@ import math
 import os
 import re
 import shutil
+import socket
 import requests
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -664,6 +665,7 @@ def _warframe_payload_has_data(payload: dict[str, Any]) -> bool:
     return False
 
 
+
 def _warframe_worldstate_has_data(payload: dict[str, Any]) -> bool:
     if not isinstance(payload, dict):
         return False
@@ -1182,30 +1184,41 @@ def _fetch_openf1_session_detail(session_key: str) -> tuple[dict[str, Any], list
     if not isinstance(session, dict) or not session:
         return {}, ["sessions:not_found"]
 
+    session_summary = _summarize_openf1_session(session)
+    session_status = session_summary.get("status")
+
     drivers, err = _openf1_get("drivers", params={"session_key": session_key}, timeout=15)
     if err:
         errors.append(err)
-    result_rows, err = _openf1_get("session_result", params={"session_key": session_key}, timeout=15)
-    if err:
-        errors.append(err)
-    position_rows, err = _openf1_get("position", params={"session_key": session_key}, timeout=15)
-    if err:
-        errors.append(err)
-    interval_rows, err = _openf1_get("intervals", params={"session_key": session_key}, timeout=15)
-    if err:
-        errors.append(err)
-    stint_rows, err = _openf1_get("stints", params={"session_key": session_key}, timeout=15)
-    if err:
-        errors.append(err)
-    race_control_rows, err = _openf1_get("race_control", params={"session_key": session_key}, timeout=15)
-    if err:
-        errors.append(err)
-    weather_rows, err = _openf1_get("weather", params={"session_key": session_key}, timeout=15)
-    if err:
-        errors.append(err)
 
-    session_summary = _summarize_openf1_session(session)
-    session_status = session_summary.get("status")
+    result_rows: list[dict[str, Any]] = []
+    position_rows: list[dict[str, Any]] = []
+    interval_rows: list[dict[str, Any]] = []
+    stint_rows: list[dict[str, Any]] = []
+    race_control_rows: list[dict[str, Any]] = []
+    weather_rows: list[dict[str, Any]] = []
+
+    # Upcoming sessions usually do not expose timing/result feeds yet.
+    # Skip the expensive 404-heavy probes so the hub renders instantly.
+    if session_status not in {"upcoming"}:
+        result_rows, err = _openf1_get("session_result", params={"session_key": session_key}, timeout=15)
+        if err:
+            errors.append(err)
+        position_rows, err = _openf1_get("position", params={"session_key": session_key}, timeout=15)
+        if err:
+            errors.append(err)
+        interval_rows, err = _openf1_get("intervals", params={"session_key": session_key}, timeout=15)
+        if err:
+            errors.append(err)
+        stint_rows, err = _openf1_get("stints", params={"session_key": session_key}, timeout=15)
+        if err:
+            errors.append(err)
+        race_control_rows, err = _openf1_get("race_control", params={"session_key": session_key}, timeout=15)
+        if err:
+            errors.append(err)
+        weather_rows, err = _openf1_get("weather", params={"session_key": session_key}, timeout=15)
+        if err:
+            errors.append(err)
     driver_map = {
         driver.get("driver_number"): {
             "driver_number": driver.get("driver_number"),
@@ -4232,6 +4245,142 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
     return {**payload, "cached": False}
 
 
+_SERVICE_SURFACE_LABELS = {
+    "ai_chat": "Chat surface",
+    "local_ai_ui": "Local AI UI",
+    "local_llm": "Local model runtime",
+    "dns": "DNS and ad blocking",
+    "smarthome": "Devices and automations",
+    "vm_host": "Virtual machines and containers",
+    "storage": "Pools and shares",
+    "container_admin": "Stacks and containers",
+    "monitoring": "Dashboards and alerts",
+    "media": "Library and streaming",
+}
+
+
+def _is_home_tool_record(tool: dict[str, Any]) -> bool:
+    category = str(tool.get("category") or "").lower()
+    return any(token in category for token in ("home", "network", "nas", "infra"))
+
+
+def _tool_probe_target(tool: dict[str, Any]) -> tuple[str, Optional[int]]:
+    host = str(tool.get("host") or "").strip()
+    port = tool.get("port")
+    link = str(tool.get("link") or "").strip()
+    try:
+        parsed = urlparse(link)
+    except Exception:
+        parsed = None
+    if not host and parsed:
+        host = parsed.hostname or ""
+    if port in (None, "") and parsed:
+        port = parsed.port
+        if port is None and parsed.scheme in {"http", "https"}:
+            port = 443 if parsed.scheme == "https" else 80
+    try:
+        port = int(port) if port is not None else None
+    except Exception:
+        port = None
+    return host, port
+
+
+def _home_tool_surface_label(tool: dict[str, Any]) -> str:
+    service_kind = str(tool.get("service_kind") or "").strip().lower()
+    if service_kind in _SERVICE_SURFACE_LABELS:
+        return _SERVICE_SURFACE_LABELS[service_kind]
+    group = str(tool.get("group") or "").strip()
+    if group:
+        return f"{group} service"
+    category = str(tool.get("category") or "").strip()
+    return category or "Home service"
+
+
+def _probe_home_tool(tool: dict[str, Any]) -> dict[str, Any]:
+    host, port = _tool_probe_target(tool)
+    checked_at = datetime.now().isoformat(timespec="seconds")
+    payload = {
+        "id": tool.get("id"),
+        "status": "unknown",
+        "status_checked_at": checked_at,
+        "latency_ms": None,
+        "probe_host": host,
+        "probe_port": port,
+        "surface": _home_tool_surface_label(tool),
+        "link_count": len(tool.get("links") or []),
+    }
+    if not host or port is None:
+        return payload
+    started = time.perf_counter()
+    try:
+        with socket.create_connection((host, port), timeout=0.6):
+            latency_ms = max(1, int((time.perf_counter() - started) * 1000))
+            payload["status"] = "online"
+            payload["latency_ms"] = latency_ms
+    except Exception as exc:
+        payload["status"] = "offline"
+        payload["error"] = str(exc)[:120]
+    return payload
+
+
+@app.get("/api/tools/home-lab/overview")
+def home_lab_overview():
+    tools = [tool for tool in _load_tools() if _is_home_tool_record(tool)]
+    generated_at = datetime.now().isoformat(timespec="seconds")
+    if not tools:
+        return {
+            "generated_at": generated_at,
+            "summary": {"total": 0, "online": 0, "offline": 0, "unknown": 0, "deep_links": 0},
+            "groups": [],
+            "service_kinds": [],
+            "services": [],
+        }
+
+    results: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=min(8, len(tools))) as executor:
+        future_map = {executor.submit(_probe_home_tool, tool): tool for tool in tools}
+        for future in as_completed(future_map):
+            tool = future_map[future]
+            probe = future.result()
+            results.append({**tool, **probe})
+
+    results.sort(key=lambda item: (str(item.get("group") or ""), str(item.get("name") or "")))
+    summary = {
+        "total": len(results),
+        "online": sum(1 for item in results if item.get("status") == "online"),
+        "offline": sum(1 for item in results if item.get("status") == "offline"),
+        "unknown": sum(1 for item in results if item.get("status") == "unknown"),
+        "deep_links": sum(int(item.get("link_count") or 0) for item in results),
+    }
+    group_counts = sorted(
+        [
+            {"name": name, "count": count}
+            for name, count in {
+                str(item.get("group") or "General"): sum(1 for row in results if str(row.get("group") or "General") == str(item.get("group") or "General"))
+                for item in results
+            }.items()
+        ],
+        key=lambda item: (-int(item.get("count") or 0), str(item.get("name") or "")),
+    )
+    kind_counts = sorted(
+        [
+            {"name": name, "count": count}
+            for name, count in {
+                str(item.get("service_kind") or "service"): sum(1 for row in results if str(row.get("service_kind") or "service") == str(item.get("service_kind") or "service"))
+                for item in results
+            }.items()
+        ],
+        key=lambda item: (-int(item.get("count") or 0), str(item.get("name") or "")),
+    )
+    return {
+        "generated_at": generated_at,
+        "summary": summary,
+        "groups": group_counts,
+        "service_kinds": kind_counts,
+        "services": results,
+    }
+
+
 @app.get("/api/debug/providers")
 def debug_providers():
     cache_counts = {
@@ -4340,6 +4489,9 @@ def status():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8787, reload=True)
+
+
+
 
 
 

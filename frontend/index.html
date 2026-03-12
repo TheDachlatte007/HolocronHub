@@ -81,6 +81,23 @@
     .pill.status-online{background:#14532d;color:#86efac}
     .pill.status-offline{background:#7f1d1d;color:#fecaca}
     .pill.status-unknown{background:#1f2937;color:#cbd5e1}
+    .home-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}
+    .home-overview-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+    .home-overview-card strong{font-size:14px;color:#f8fafc}
+    .home-overview-metrics{display:flex;gap:6px;flex-wrap:wrap}
+    .tool-latency{font-size:11px;color:#93c5fd}
+    .ai-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}
+    .ai-overview-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+    .ai-overview-card strong{font-size:14px;color:#f8fafc}
+    .ai-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.85fr);gap:12px;align-items:start}
+    .ai-rail{display:flex;flex-direction:column;gap:12px}
+    .ai-rail-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+    .ai-rail-card h4{margin:0;font-size:13px;color:#f8fafc}
+    .ai-mini-list{display:flex;flex-direction:column;gap:8px}
+    .ai-mini-item{background:#0f172a;border:1px solid #1f2937;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px}
+    .ai-mini-item a{font-size:13px;font-weight:600;color:#bfdbfe}
+    .ai-mini-item p{margin:0;font-size:12px;color:#94a3b8;line-height:1.45}
+    .ai-mini-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:11px;color:#64748b}
 
     /* star rating */
     .stars{display:flex;gap:2px;cursor:pointer}
@@ -169,9 +186,27 @@
     .sparkline{width:100%;height:56px;display:block}
     .sparkline-line{fill:none;stroke:#60a5fa;stroke-width:2}
     .sparkline-fill{fill:rgba(59,130,246,.15)}
+    .sparkline-point{fill:#f8fafc;stroke:#1d4ed8;stroke-width:1.5;opacity:0;transition:opacity .18s ease,transform .18s ease}
+    .sparkline:hover .sparkline-point{opacity:.9}
+    .sparkline-point:hover{opacity:1;transform:scale(1.15)}
     .sparkline-muted .sparkline-line{stroke:#94a3b8}
     .sparkline-muted .sparkline-fill{fill:rgba(148,163,184,.15)}
     .sparkline-label{font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;margin-top:4px}
+    .market-hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:10px}
+    .market-hero-card{background:linear-gradient(145deg,#0b1220,#101827);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:7px}
+    .market-hero-card strong{font-size:18px;color:#f8fafc}
+    .market-mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:10px}
+    .market-chip-row{display:flex;gap:6px;flex-wrap:wrap}
+    .market-chip{font-size:11px;padding:3px 8px;border-radius:999px;background:#0f172a;border:1px solid #334155;color:#cbd5e1}
+    .market-chip.up{border-color:#16a34a;color:#86efac}
+    .market-chip.down{border-color:#ef4444;color:#fca5a5}
+    .market-chip.flat{border-color:#475569;color:#cbd5e1}
+    .market-card .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+    .market-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    .market-stat-grid .small-row{padding:6px 8px;border-radius:8px;background:#101827;border:1px solid #1f2937}
+    .wf-farm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px}
+    .wf-reco-card{background:linear-gradient(145deg,#0b1220,#101827);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .wf-reco-score{font-size:11px;padding:3px 8px;border-radius:999px;background:#16351f;color:#86efac;border:1px solid #16a34a;width:max-content}
     .f1-driver-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
     .f1-driver-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:11px;display:flex;flex-direction:column;gap:6px}
     .f1-driver-card .actions{display:flex;gap:6px;flex-wrap:wrap}
@@ -275,7 +310,7 @@
       .nav{overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;padding-bottom:6px;gap:6px}
       .nav-tab{flex:0 0 auto;border:1px solid #334155;border-radius:8px;margin-bottom:0}
       .nav-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
-      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-focus-strip,.tool-group-grid{grid-template-columns:1fr}
+      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-focus-strip,.tool-group-grid,.ai-overview-grid,.ai-layout{grid-template-columns:1fr}
       .row>input,.row>select,.row>button{flex:1 1 100%;min-width:0 !important;width:100%}
       input,select,textarea,button{font-size:14px}
     }
@@ -339,10 +374,26 @@
         <div class="tool-section-head">
           <div>
             <div class="tool-section-title">AI Tools</div>
-            <div class="tool-section-sub">Cloud and local AI services, coding tools, media generation, research, and orchestration.</div>
+            <div class="tool-section-sub">Curated into work lanes so chat, builders, creative tools, research, automation, and discovery read like one coherent workspace.</div>
           </div>
         </div>
-        <div id="tools-ai" class="grid"><div class="empty">No AI tools.</div></div>
+        <div id="ai-overview-grid" class="ai-overview-grid"><div class="ai-overview-card"><strong>AI workspace</strong><span class="muted">Curated counts and live signal will appear here after the tool list loads.</span></div></div>
+        <div id="ai-lane-tabs" class="tool-group-tabs"><button class="tool-group-tab active" onclick="setAiLane('all',this)">All lanes</button></div>
+        <div class="ai-layout">
+          <div>
+            <div id="tools-ai" class="grid"><div class="empty">No AI tools.</div></div>
+          </div>
+          <div class="ai-rail">
+            <div class="ai-rail-card">
+              <h4>AI Radar</h4>
+              <div id="ai-news-list" class="ai-mini-list"><div class="muted">AI signal will appear here after the launcher loads.</div></div>
+            </div>
+            <div class="ai-rail-card">
+              <h4>Discovery</h4>
+              <div id="ai-discovery-list" class="ai-mini-list"><div class="muted">Curated indexes and research hubs will appear here after the tool list loads.</div></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div id="home-tools-section" class="tool-section">
@@ -352,6 +403,7 @@
             <div class="tool-section-sub">Canonical launcher for local services with groups, host context, status, and optional deep links.</div>
           </div>
         </div>
+        <div id="home-lab-overview" class="home-overview-grid"><div class="home-overview-card"><strong>Home Lab checks</strong><span class="muted">Reachability snapshots will appear here after the launcher loads.</span></div></div>
         <div id="home-group-tabs" class="tool-group-tabs"><button class="tool-group-tab active" onclick="setHomeGroup('',this)">All services</button></div>
         <div id="tools-home" class="home-groups"><div class="empty">No Home Lab services.</div></div>
       </div>
@@ -460,6 +512,8 @@
       </div>
       <div id="market-meta" class="muted" style="margin-bottom:4px"></div>
       <div id="market-errors" class="warn-strip"></div>
+      <div id="market-hero" class="market-hero-grid"><div class="market-hero-card"><strong>Market radar</strong><span class="muted">Hot movers, stress points and high-volatility instruments will appear here after the feed loads.</span></div></div>
+      <div id="market-spotlight" class="market-mini-grid"></div>
       <div id="market-grid" class="grid"><div class="empty">Loading...</div></div>
     </div>
   </div>
@@ -586,7 +640,10 @@
       <div class="stat-card">
         <div class="diag-head">
           <h2 style="margin:0">Top Sells Right Now</h2>
-          <span class="tool-minor">48h volume across a popular trading watchlist</span>
+          <div class="row" style="margin:0">
+            <span id="wf-hot-meta" class="tool-minor">48h volume across a popular trading watchlist</span>
+            <button id="wf-hot-toggle" class="sm" onclick="toggleWarframeHot()" hidden>See more</button>
+          </div>
         </div>
         <div id="wf-hot" class="wf-top-grid"></div>
       </div>
@@ -594,6 +651,10 @@
         <div class="diag-head">
           <h2 style="margin:0">Market Pulse</h2>
           <span id="wf-pulse-meta" class="tool-minor"></span>
+        </div>
+        <div>
+          <h3 class="wf-section-title">Farm Right Now</h3>
+          <div id="wf-farm-now" class="wf-farm-grid"><div class="muted">Recommendations will appear after the market pulse scan finishes.</div></div>
         </div>
         <div class="wf-grid-3">
           <div>
@@ -1003,15 +1064,30 @@ async function loadCategories() {
 // ══ tools ════════════════════════════════════════════════════
 
 let activeCategory = '';
+let activeAiLane = 'all';
 let activeHomeGroup = '';
 let _toolCache = [];
+let _aiFeedCache = [];
+let _homeLabOverviewRequest = 0;
+let _aiRadarRequest = 0;
 
 function setCategory(cat, btn) {
   activeCategory = cat;
+  activeAiLane = 'all';
   activeHomeGroup = '';
   document.querySelectorAll('#cat-tabs button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#ai-lane-tabs .tool-group-tab').forEach(b=>b.classList.remove('active'));
+  const allAiBtn = document.querySelector('#ai-lane-tabs .tool-group-tab');
+  if (allAiBtn) allAiBtn.classList.add('active');
   if (btn) btn.classList.add('active');
   loadTools();
+}
+
+function setAiLane(lane, btn) {
+  activeAiLane = lane;
+  document.querySelectorAll('#ai-lane-tabs .tool-group-tab').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderToolSections(_toolCache);
 }
 
 function setHomeGroup(group, btn) {
@@ -1029,6 +1105,35 @@ function isHomeTool(tool) {
 function isAiTool(tool) {
   const cat = String(tool?.category || '').toLowerCase();
   return ['ai','code','image','video','voice','audio','research','orchestration','automation'].some(k => cat.includes(k));
+}
+
+function getAiLane(tool) {
+  const category = String(tool?.category || '').toLowerCase();
+  const name = String(tool?.name || '').toLowerCase();
+  const tags = new Set((tool?.tags || []).map(tag => String(tag).toLowerCase()));
+  const serviceKind = String(tool?.service_kind || '').toLowerCase();
+  if (tool?.local_or_cloud === 'local' && (category.includes('ai services') || serviceKind.includes('local') || tags.has('local'))) return 'local';
+  if (category.includes('code')) return 'code';
+  if (category.includes('image') || category.includes('video') || category.includes('voice')) return 'create';
+  if (category.includes('research')) return 'research';
+  if (category.includes('indexes')) return 'discover';
+  if (category.includes('orchestration') || tags.has('automation') || tags.has('workflows')) return 'automate';
+  if (tags.has('api') || tags.has('dev') || name.includes('platform') || name.includes('console') || name.includes('studio') || name.includes('openrouter')) return 'builders';
+  return 'assist';
+}
+
+function aiLaneLabel(lane) {
+  return {
+    all: 'All lanes',
+    assist: 'Assistants',
+    builders: 'Builders',
+    code: 'Code',
+    create: 'Create',
+    research: 'Research',
+    automate: 'Automate',
+    discover: 'Discover',
+    local: 'Local',
+  }[lane] || lane;
 }
 
 function normalizeToolGroup(group) {
@@ -1127,6 +1232,184 @@ function renderToolGrid(target, tools, variant, emptyText) {
   tools.forEach(tool => target.appendChild(buildToolCard(tool, variant)));
 }
 
+function renderAiLaneTabs(tools) {
+  const tabs = document.getElementById('ai-lane-tabs');
+  if (!tabs) return;
+  const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
+  const laneCounts = {};
+  aiTools.forEach(tool => {
+    const lane = getAiLane(tool);
+    laneCounts[lane] = (laneCounts[lane] || 0) + 1;
+  });
+  const lanes = ['all','assist','builders','code','create','research','automate','discover','local'].filter(lane => lane === 'all' || laneCounts[lane]);
+  tabs.innerHTML = '';
+  lanes.forEach(lane => {
+    const btn = document.createElement('button');
+    btn.className = 'tool-group-tab' + ((lane === activeAiLane || (lane === 'all' && !activeAiLane)) ? ' active' : '');
+    btn.textContent = lane === 'all' ? aiLaneLabel(lane) : `${aiLaneLabel(lane)} ${laneCounts[lane] || 0}`;
+    btn.onclick = function(){ setAiLane(lane, this); };
+    tabs.appendChild(btn);
+  });
+}
+
+function renderAiOverview(tools) {
+  const el = document.getElementById('ai-overview-grid');
+  if (!el) return;
+  const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
+  if (!aiTools.length) {
+    el.innerHTML = '<div class="ai-overview-card"><strong>No AI tools in this view</strong><span class="muted">Clear search or category filters to see the curated AI workspace again.</span></div>';
+    return;
+  }
+  const dailyDrivers = aiTools.filter(t => ['assist','code','local'].includes(getAiLane(t)) && (t.favorite || t.pinned));
+  const createCount = aiTools.filter(t => getAiLane(t) === 'create').length;
+  const researchCount = aiTools.filter(t => ['research','discover'].includes(getAiLane(t))).length;
+  const automateCount = aiTools.filter(t => ['automate','builders'].includes(getAiLane(t))).length;
+  const newsHigh = _aiFeedCache.filter(item => feedPriority(item) === 'high').length;
+  const newsWatch = _aiFeedCache.filter(item => feedPriority(item) === 'watch').length;
+  el.innerHTML = `
+    <div class="ai-overview-card">
+      <strong>Daily Drivers</strong>
+      <span>${esc(String(dailyDrivers.length))} pinned or favorite tools across assistants, code, and local model surfaces.</span>
+      <span class="muted">${dailyDrivers.slice(0,4).map(tool => tool.name).join(' | ') || 'Mark favorites to make this lane more personal.'}</span>
+    </div>
+    <div class="ai-overview-card">
+      <strong>Build + Automate</strong>
+      <span>${esc(String(automateCount))} tools for APIs, orchestration, and workflows.</span>
+      <span class="muted">Best when you want model access, chaining, or repeatable systems instead of one-off prompts.</span>
+    </div>
+    <div class="ai-overview-card">
+      <strong>Create + Research</strong>
+      <span>${esc(String(createCount + researchCount))} tools across creative generation, papers, and discovery.</span>
+      <span class="muted">Creative stack ${esc(String(createCount))} | Research/discovery ${esc(String(researchCount))}</span>
+    </div>
+    <div class="ai-overview-card">
+      <strong>AI Radar</strong>
+      <span>${esc(String(_aiFeedCache.length))} AI feed items loaded for this workspace.</span>
+      <span class="muted">High signal ${esc(String(newsHigh))} | Watchlist ${esc(String(newsWatch))}</span>
+    </div>`;
+}
+
+function renderAiRail(tools) {
+  const newsEl = document.getElementById('ai-news-list');
+  const discoveryEl = document.getElementById('ai-discovery-list');
+  if (newsEl) {
+    if (!_aiFeedCache.length) {
+      newsEl.innerHTML = '<div class="muted">No AI feed items available yet. Run ingest or add more AI sources if this stays empty.</div>';
+    } else {
+      const items = [..._aiFeedCache].sort((a,b) => feedPriorityRank(b) - feedPriorityRank(a)).slice(0, 4);
+      newsEl.innerHTML = '';
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'ai-mini-item';
+        row.innerHTML = `
+          <a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.title)}</a>
+          ${item.summary ? `<p>${esc(item.summary)}</p>` : ''}
+          <div class="ai-mini-meta">
+            <span class="pill prio-${feedPriority(item)}">${feedPriorityLabel(feedPriority(item))}</span>
+            <span>${esc(item.source_name || item.category || 'AI')}</span>
+            <span>${esc(relTime(item.published_at))}</span>
+          </div>`;
+        newsEl.appendChild(row);
+      });
+    }
+  }
+  if (discoveryEl) {
+    const picks = tools
+      .filter(t => isAiTool(t) && !isHomeTool(t) && ['discover','research','builders'].includes(getAiLane(t)))
+      .sort((a,b) => (Number(b.favorite) - Number(a.favorite)) || ((b.usage_count||0) - (a.usage_count||0)) || String(a.name||'').localeCompare(String(b.name||'')))
+      .slice(0, 5);
+    discoveryEl.innerHTML = '';
+    if (!picks.length) {
+      discoveryEl.innerHTML = '<div class="muted">No discovery or research picks available in this view.</div>';
+    } else {
+      picks.forEach(tool => {
+        const row = document.createElement('div');
+        row.className = 'ai-mini-item';
+        row.innerHTML = `
+          <a href="${esc(tool.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')">${esc(tool.name)}</a>
+          <p>${esc((tool.notes || `${normalizeToolCategory(tool.category)} resource`).trim())}</p>
+          <div class="ai-mini-meta">
+            <span>${esc(aiLaneLabel(getAiLane(tool)))}</span>
+            <span>${esc(tool.provider || '')}</span>
+            <span>${esc(String(tool.usage_count || 0))} opens</span>
+          </div>`;
+        discoveryEl.appendChild(row);
+      });
+    }
+  }
+}
+
+async function loadAiRadar() {
+  const requestId = ++_aiRadarRequest;
+  const newsEl = document.getElementById('ai-news-list');
+  if (newsEl) newsEl.innerHTML = '<div class="muted">Loading AI feed signal...</div>';
+  try {
+    const data = await fetch(`${API}/feed?category=AI&limit=12`).then(r=>r.json());
+    if (requestId !== _aiRadarRequest) return;
+    _aiFeedCache = Array.isArray(data?.items) ? data.items : [];
+  } catch {
+    if (requestId !== _aiRadarRequest) return;
+    _aiFeedCache = [];
+  }
+  renderAiOverview(_toolCache);
+  renderAiRail(_toolCache);
+}
+
+function renderHomeLabOverview(data, errMsg='') {
+  const el = document.getElementById('home-lab-overview');
+  if (!el) return;
+  if (errMsg) {
+    el.innerHTML = `<div class="home-overview-card"><strong>Home Lab checks unavailable</strong><span class="err-msg">${esc(errMsg)}</span></div>`;
+    return;
+  }
+  const services = Array.isArray(data?.services) ? data.services : [];
+  if (!services.length) {
+    el.innerHTML = '<div class="home-overview-card"><strong>No Home Lab services</strong><span class="muted">Add local services with host and port metadata to enable live checks.</span></div>';
+    return;
+  }
+  const summary = data.summary || {};
+  const fastest = [...services].filter(item => item.status === 'online' && item.latency_ms !== null && item.latency_ms !== undefined).sort((a,b) => (a.latency_ms||999999) - (b.latency_ms||999999))[0];
+  const topGroups = (Array.isArray(data.groups) ? data.groups : []).slice(0, 3).map(item => `${item.name} ${item.count}`).join(' | ');
+  const topKinds = (Array.isArray(data.service_kinds) ? data.service_kinds : []).slice(0, 3).map(item => `${item.name} ${item.count}`).join(' | ');
+  el.innerHTML = `
+    <div class="home-overview-card">
+      <strong>Reachability</strong>
+      <div class="home-overview-metrics">
+        <span class="pill status-online">online ${esc(String(summary.online || 0))}</span>
+        <span class="pill status-offline">offline ${esc(String(summary.offline || 0))}</span>
+        <span class="pill status-unknown">unknown ${esc(String(summary.unknown || 0))}</span>
+      </div>
+      <span class="muted">${esc(String(summary.total || services.length))} services checked, ${esc(String(summary.deep_links || 0))} deep links available.</span>
+    </div>
+    <div class="home-overview-card">
+      <strong>Fastest response</strong>
+      <span>${fastest ? `${esc(fastest.name)} in ${esc(String(fastest.latency_ms))}ms` : 'No live endpoint responded yet.'}</span>
+      <span class="muted">Updated ${data.generated_at ? esc(relTime(data.generated_at)) : 'just now'}.</span>
+    </div>
+    <div class="home-overview-card">
+      <strong>Coverage</strong>
+      <span>${topGroups || 'No group metadata yet.'}</span>
+      <span class="muted">${topKinds || 'Service kinds will appear as you tag more tools.'}</span>
+    </div>`;
+}
+
+async function loadHomeLabOverview() {
+  const requestId = ++_homeLabOverviewRequest;
+  const el = document.getElementById('home-lab-overview');
+  if (el) el.innerHTML = '<div class="home-overview-card"><strong>Checking Home Lab</strong><span class="muted">Running lightweight reachability probes for local services.</span></div>';
+  try {
+    const data = await fetch(`${API}/tools/home-lab/overview`).then(r=>r.json());
+    if (requestId !== _homeLabOverviewRequest) return;
+    const overrides = new Map((data.services || []).map(item => [item.id, item]));
+    _toolCache = _toolCache.map(tool => overrides.has(tool.id) ? { ...tool, ...overrides.get(tool.id) } : tool);
+    renderHomeLabOverview(data);
+    renderToolSections(_toolCache);
+  } catch (e) {
+    if (requestId !== _homeLabOverviewRequest) return;
+    renderHomeLabOverview(null, e.message || 'Unknown error');
+  }
+}
+
 function renderToolSections(tools) {
   const elQuick = document.getElementById('tools-quick');
   const secQuick = document.getElementById('quick-tools-section');
@@ -1136,6 +1419,9 @@ function renderToolSections(tools) {
   const secOther = document.getElementById('other-tools-section');
 
   buildFocusCards(tools);
+  renderAiLaneTabs(tools);
+  renderAiOverview(tools);
+  renderAiRail(tools);
   renderHomeGroupTabs(tools);
 
   const favorites = tools
@@ -1145,7 +1431,8 @@ function renderToolSections(tools) {
   if (favorites.length) renderToolGrid(elQuick, favorites, 'quick', 'No favorites yet.');
 
   const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
-  renderToolGrid(elAi, aiTools, 'default', 'No AI tools found.');
+  const laneFilteredAiTools = activeAiLane && activeAiLane !== 'all' ? aiTools.filter(t => getAiLane(t) === activeAiLane) : aiTools;
+  renderToolGrid(elAi, laneFilteredAiTools, 'default', activeAiLane && activeAiLane !== 'all' ? `No AI tools found in ${aiLaneLabel(activeAiLane)}.` : 'No AI tools found.');
 
   const homeTools = tools.filter(isHomeTool);
   const filteredHome = activeHomeGroup ? homeTools.filter(t => normalizeToolGroup(t.group) === activeHomeGroup) : homeTools;
@@ -1196,6 +1483,10 @@ async function loadTools() {
   try {
     _toolCache = await fetch(`${API}/tools?${params}`).then(r=>r.json());
     renderToolSections(_toolCache);
+    if (_toolCache.some(t => isAiTool(t) && !isHomeTool(t))) loadAiRadar();
+    else { _aiFeedCache = []; renderAiOverview(_toolCache); renderAiRail(_toolCache); }
+    if (_toolCache.some(isHomeTool)) loadHomeLabOverview();
+    else renderHomeLabOverview({ services: [] });
   } catch(e) {
     document.getElementById('tools-ai').innerHTML = `<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
     document.getElementById('tools-home').innerHTML = '';
@@ -1259,6 +1550,7 @@ function buildToolCard(t, variant='default') {
       ${usage > 0 ? `<span class="pill">used ${esc(usage)}x</span>` : ''}
     </div>
     ${hostPort ? `<div class="tool-card-note">${esc(hostPort)}</div>` : ''}
+    ${(variant === 'home' && t.latency_ms !== null && t.latency_ms !== undefined) ? `<div class="tool-latency">Reachable in ${esc(String(t.latency_ms))}ms</div>` : ''}
     ${t.last_used ? `<div class="muted" style="font-size:11px">Last used: ${relTime(t.last_used)}</div>` : ''}
     ${t.status_checked_at ? `<div class="muted" style="font-size:11px">Status checked: ${relTime(t.status_checked_at)}</div>` : ''}
     <div class="tool-open-row">
@@ -1646,8 +1938,13 @@ function buildSparklineSvg(points, cls = '') {
 
   const line = coords.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
   const fill = `0,${h} ${line} ${w},${h}`;
+  const dots = coords.map(([x, y], idx) => {
+    const value = vals[idx];
+    const label = `Point ${idx + 1}: ${Number(value).toLocaleString(undefined, {maximumFractionDigits: 2})}`;
+    return `<circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.8"><title>${esc(label)}</title></circle>`;
+  }).join('');
 
-  return `<svg class="sparkline ${esc(cls)}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polygon class="sparkline-fill" points="${fill}" /><polyline class="sparkline-line" points="${line}" /></svg>`;
+  return `<svg class="sparkline ${esc(cls)}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polygon class="sparkline-fill" points="${fill}" /><polyline class="sparkline-line" points="${line}" />${dots}</svg>`;
 }
 
 function pctChangeFromSeries(points) {
@@ -1666,12 +1963,16 @@ async function loadMarkets() {
   const metaEl = document.getElementById('market-meta');
   const errEl = document.getElementById('market-errors');
   const gridEl = document.getElementById('market-grid');
-  if (!symbolsInput || !metaEl || !gridEl) return;
+  const heroEl = document.getElementById('market-hero');
+  const spotlightEl = document.getElementById('market-spotlight');
+  if (!symbolsInput || !metaEl || !gridEl || !heroEl || !spotlightEl) return;
   if (errEl) errEl.innerHTML = '';
 
   if (!symbolsInput.value.trim()) symbolsInput.value = DEFAULT_MARKET_SYMBOLS;
   const symbols = symbolsInput.value.trim();
 
+  heroEl.innerHTML = '<div class="market-hero-card"><strong>Scanning market tape</strong><span class="muted">Building movers, volatility and spotlight summaries.</span></div>';
+  spotlightEl.innerHTML = '';
   gridEl.innerHTML = '<div class="empty">Loading...</div>';
   try {
     const params = new URLSearchParams();
@@ -1695,25 +1996,87 @@ async function loadMarkets() {
     const history = data.history || {};
     gridEl.innerHTML = '';
     if (!quotes.length) {
+      heroEl.innerHTML = '';
       gridEl.innerHTML = '<div class="empty">No market data.</div>';
       return;
     }
 
-    quotes.forEach(q => {
-      const ch = Number(q.change || 0);
-      const pct = Number(q.change_pct || 0);
-      const cls = ch > 0 ? 'up' : (ch < 0 ? 'down' : 'flat');
+    const decorated = quotes.map(q => {
       const series = (history[q.symbol] || []).map(p => Number(p.close)).filter(v => Number.isFinite(v));
+      const pct = Number(q.change_pct || 0);
+      const ch = Number(q.change || 0);
+      const max = series.length ? Math.max(...series) : null;
+      const min = series.length ? Math.min(...series) : null;
+      const volPct = (min && max && min > 0) ? ((max - min) / min) * 100 : null;
+      const trendPct = pctChangeFromSeries(series);
+      return { q, series, pct, ch, max, min, volPct, trendPct };
+    });
+
+    const topUp = [...decorated].sort((a, b) => b.pct - a.pct)[0];
+    const topDown = [...decorated].sort((a, b) => a.pct - b.pct)[0];
+    const hottest = [...decorated].sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))[0];
+    const mostVolatile = [...decorated].sort((a, b) => (b.volPct || -Infinity) - (a.volPct || -Infinity))[0];
+
+    const renderHeroCard = (label, entry, detailLabel, value, cls='flat') => entry ? `
+      <div class="market-hero-card">
+        <div class="tool-minor">${esc(label)}</div>
+        <strong>${esc(entry.q.name || entry.q.symbol)}</strong>
+        <div class="muted">${esc(entry.q.symbol)}</div>
+        <div class="market-change ${cls}">${value}</div>
+        <div class="tool-minor">${esc(detailLabel)}</div>
+      </div>
+    ` : '';
+
+    heroEl.innerHTML = [
+      renderHeroCard('Hot Right Now', hottest, 'largest absolute daily move', hottest ? `${hottest.pct >= 0 ? '+' : ''}${fmtMarketNum(hottest.pct, 2)}%` : 'n/a', hottest?.pct > 0 ? 'up' : hottest?.pct < 0 ? 'down' : 'flat'),
+      renderHeroCard('Risk-On Leader', topUp, 'strongest daily gain', topUp ? `${fmtMarketNum(topUp.pct, 2)}%` : 'n/a', 'up'),
+      renderHeroCard('Risk-Off Leader', topDown, 'largest daily drop', topDown ? `${fmtMarketNum(topDown.pct, 2)}%` : 'n/a', 'down'),
+      renderHeroCard('Volatility Leader', mostVolatile, 'widest 30d range', mostVolatile?.volPct != null ? `${fmtMarketNum(mostVolatile.volPct, 1)}% range` : 'n/a', mostVolatile?.trendPct > 0 ? 'up' : mostVolatile?.trendPct < 0 ? 'down' : 'flat'),
+    ].join('');
+
+    const spotlight = [...decorated]
+      .sort((a, b) => ((Math.abs(b.pct) * 1.6) + (b.volPct || 0)) - ((Math.abs(a.pct) * 1.6) + (a.volPct || 0)))
+      .slice(0, 4);
+
+    spotlightEl.innerHTML = spotlight.map(({ q, series, pct, volPct, trendPct, min, max }) => {
+      const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+      const trendCls = trendPct == null ? 'flat' : (trendPct > 0 ? 'up' : (trendPct < 0 ? 'down' : 'flat'));
+      return `
+        <div class="market-card">
+          <div class="diag-head">
+            <strong>${esc(q.name || q.symbol)}</strong>
+            <span class="market-chip ${cls}">${pct >= 0 ? '+' : ''}${fmtMarketNum(pct, 2)}%</span>
+          </div>
+          <div class="muted">${esc(q.symbol)}${q.currency ? ` | ${esc(q.currency)}` : ''}</div>
+          ${buildSparklineSvg(series, 'sparkline-muted')}
+          <div class="market-chip-row">
+            <span class="market-chip ${trendCls}">30d ${trendPct == null ? 'n/a' : `${trendPct >= 0 ? '+' : ''}${fmtMarketNum(trendPct, 2)}%`}</span>
+            <span class="market-chip">${volPct == null ? 'range n/a' : `${fmtMarketNum(volPct, 1)}% range`}</span>
+            <span class="market-chip">${min == null || max == null ? 'band n/a' : `${fmtMarketNum(min, 2)} -> ${fmtMarketNum(max, 2)}`}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    decorated.forEach(({ q, ch, pct, series, min, max, volPct }) => {
+      const cls = ch > 0 ? 'up' : (ch < 0 ? 'down' : 'flat');
       const trendPct = pctChangeFromSeries(series);
       const trendCls = trendPct == null ? 'flat' : (trendPct > 0 ? 'up' : (trendPct < 0 ? 'down' : 'flat'));
 
       const card = document.createElement('div');
       card.className = 'market-card';
       card.innerHTML = `
-        <strong>${esc(q.name || q.symbol)}</strong>
-        <div class="muted">${esc(q.symbol)}${q.currency ? ` | ${esc(q.currency)}` : ''}</div>
+        <div class="diag-head">
+          <strong>${esc(q.name || q.symbol)}</strong>
+          <span class="market-chip ${cls}">${pct>=0?'+':''}${fmtMarketNum(pct,2)}%</span>
+        </div>
+        <div class="muted">${esc(q.symbol)}${q.currency ? ` | ${esc(q.currency)}` : ''}${q.market_state ? ` | ${esc(q.market_state)}` : ''}</div>
         <div class="market-price">${fmtMarketNum(q.price, 4)}</div>
         <div class="market-change ${cls}">${ch>=0?'+':''}${fmtMarketNum(ch,4)} (${pct>=0?'+':''}${fmtMarketNum(pct,2)}%)</div>
+        <div class="market-stat-grid">
+          <div class="small-row"><span>30d Range</span><strong>${min == null || max == null ? 'n/a' : `${fmtMarketNum(min,2)} -> ${fmtMarketNum(max,2)}`}</strong></div>
+          <div class="small-row"><span>Volatility</span><strong>${volPct == null ? 'n/a' : `${fmtMarketNum(volPct,1)}%`}</strong></div>
+        </div>
         <div class="chart-wrap sparkline-muted">
           ${buildSparklineSvg(series)}
           <div class="sparkline-label">
@@ -1721,10 +2084,15 @@ async function loadMarkets() {
             <span class="market-change ${trendCls}">${trendPct == null ? 'n/a' : `${trendPct >= 0 ? '+' : ''}${fmtMarketNum(trendPct,2)}%`}</span>
           </div>
         </div>
+        <div class="actions">
+          <span class="tool-minor">${series.length ? `${series.length} datapoints` : 'no history'}</span>
+        </div>
       `;
       gridEl.appendChild(card);
     });
   } catch (e) {
+    heroEl.innerHTML = '';
+    spotlightEl.innerHTML = '';
     gridEl.innerHTML = `<div class="empty err-msg">Market API failed: ${esc(e.message)}</div>`;
   }
 }
@@ -1738,6 +2106,8 @@ let _f1SelectedSessionKey = '';
 let _f1Weekend = null;
 let _f1SessionTimer = null;
 let _f1ClockTicker = null;
+let _warframeHotItems = [];
+let _warframeHotExpanded = false;
 
 function clearF1SessionPolling() {
   if (_f1SessionTimer) {
@@ -2439,6 +2809,61 @@ async function loadF1() {
   }
 }
 
+function renderWarframeHotItems() {
+  const hotEl = document.getElementById('wf-hot');
+  const toggleBtn = document.getElementById('wf-hot-toggle');
+  const metaEl = document.getElementById('wf-hot-meta');
+  if (!hotEl || !toggleBtn || !metaEl) return;
+
+  const hotItems = Array.isArray(_warframeHotItems) ? _warframeHotItems : [];
+  if (!hotItems.length) {
+    hotEl.innerHTML = '<div class="muted">No high-volume items available right now.</div>';
+    toggleBtn.hidden = true;
+    metaEl.textContent = '48h volume across a popular trading watchlist';
+    return;
+  }
+
+  const visible = _warframeHotExpanded ? hotItems : hotItems.slice(0, 6);
+  metaEl.textContent = `${hotItems.length} hot items across the current watchlist`;
+  toggleBtn.hidden = hotItems.length <= 6;
+  toggleBtn.textContent = _warframeHotExpanded ? 'Show less' : `See more (${hotItems.length - visible.length})`;
+
+  hotEl.innerHTML = '';
+  visible.forEach((entry, idx) => {
+    const localHistory = entry.local_history || {};
+    const apiHist = (entry.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
+    const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
+    const hist = apiHist.length ? apiHist : localHist;
+    const move = Number(entry.price_change_pct);
+    const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+    const localChange = Number(localHistory.change_pct_24h);
+    const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
+    const card = document.createElement('div');
+    card.className = 'market-card';
+    card.innerHTML = `
+      <div class="diag-head">
+        <strong>#${idx + 1} ${esc(entry.name || 'Unknown Item')}</strong>
+        <span class="rank-pill">${fmtMarketNum(entry.volume_48h || 0,0)} trades</span>
+      </div>
+      <div class="small-row"><span>Avg Price</span><strong>${entry.last_avg_price != null ? fmtMarketNum(entry.last_avg_price,0) + 'p' : '-'}</strong></div>
+      <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
+      <div class="small-row"><span>Local 24h</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
+      <div class="small-row"><span>Rank</span><span class="muted">${entry.selected_rank != null ? `R${esc(entry.selected_rank)}` : esc(entry.rarity || 'base')}</span></div>
+      ${buildSparklineSvg(hist, 'sparkline-muted')}
+      <div class="sparkline-label">
+        <span>${esc((entry.history_period || '48hours').replace('_', ' '))}</span>
+        <a href="https://warframe.market/items/${esc(entry.slug || '')}" target="_blank" rel="noopener">Open</a>
+      </div>
+    `;
+    hotEl.appendChild(card);
+  });
+}
+
+function toggleWarframeHot() {
+  _warframeHotExpanded = !_warframeHotExpanded;
+  renderWarframeHotItems();
+}
+
 async function loadWarframe() {
   const itemInput = document.getElementById('wf-item');
   const platformSel = document.getElementById('wf-platform');
@@ -2530,40 +2955,8 @@ async function loadWarframe() {
       `;
     }
 
-    const hotItems = Array.isArray(data.top_sells) ? data.top_sells : [];
-    hotEl.innerHTML = '';
-    if (!hotItems.length) {
-      hotEl.innerHTML = '<div class="muted">No high-volume items available right now.</div>';
-    } else {
-      hotItems.forEach((entry, idx) => {
-        const localHistory = entry.local_history || {};
-        const apiHist = (entry.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
-        const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
-        const hist = apiHist.length ? apiHist : localHist;
-        const move = Number(entry.price_change_pct);
-        const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
-        const localChange = Number(localHistory.change_pct_24h);
-        const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
-        const card = document.createElement('div');
-        card.className = 'market-card';
-        card.innerHTML = `
-          <div class="diag-head">
-            <strong>#${idx + 1} ${esc(entry.name || 'Unknown Item')}</strong>
-            <span class="rank-pill">${fmtMarketNum(entry.volume_48h || 0,0)} trades</span>
-          </div>
-          <div class="small-row"><span>Avg Price</span><strong>${entry.last_avg_price != null ? fmtMarketNum(entry.last_avg_price,0) + 'p' : '-'}</strong></div>
-          <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
-          <div class="small-row"><span>Local 24h</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
-          <div class="small-row"><span>Rank</span><span class="muted">${entry.selected_rank != null ? `R${esc(entry.selected_rank)}` : esc(entry.rarity || 'base')}</span></div>
-          ${buildSparklineSvg(hist, 'sparkline-muted')}
-          <div class="sparkline-label">
-            <span>${esc((entry.history_period || '48hours').replace('_', ' '))}</span>
-            <a href="https://warframe.market/items/${esc(entry.slug || '')}" target="_blank" rel="noopener">Open</a>
-          </div>
-        `;
-        hotEl.appendChild(card);
-      });
-    }
+    _warframeHotItems = Array.isArray(data.top_sells) ? data.top_sells : [];
+    renderWarframeHotItems();
 
     const alerts = data.worldstate?.alerts || [];
     alertsEl.innerHTML = '';
@@ -2661,10 +3054,12 @@ async function loadWarframePulse() {
   const demandEl = document.getElementById('wf-demand');
   const liquidityEl = document.getElementById('wf-liquidity');
   const signalsEl = document.getElementById('wf-signals');
-  if (!demandEl || !liquidityEl || !signalsEl) return;
+  const farmEl = document.getElementById('wf-farm-now');
+  if (!demandEl || !liquidityEl || !signalsEl || !farmEl) return;
   demandEl.innerHTML = '<div class="muted">Scanning demand leaders...</div>';
   liquidityEl.innerHTML = '<div class="muted">Scanning liquid markets...</div>';
   signalsEl.innerHTML = '<div class="muted">Building trader signals...</div>';
+  farmEl.innerHTML = '<div class="muted">Scoring the best farm targets right now...</div>';
   if (metaEl) metaEl.textContent = `scanning ${String(platformEl?.value || 'pc').toUpperCase()} market pulse`;
 
   const renderCard = (item, mode = 'demand') => {
@@ -2737,10 +3132,63 @@ async function loadWarframePulse() {
     const liquidity = Array.isArray(data.liquidity_leaders) ? data.liquidity_leaders : [];
     const signals = Array.isArray(data.watch_signals) ? data.watch_signals : [];
     if (metaEl) metaEl.textContent = `${data.coverage_count || 0} items scanned | ${data.tracked_count || 0} tracked signals | ${data.history_ready_count || 0} history-ready`;
+
+    const recoMap = new Map();
+    [...demand, ...liquidity].forEach(item => {
+      const key = String(item.name || '').trim();
+      if (!key) return;
+      const existing = recoMap.get(key) || {};
+      recoMap.set(key, {
+        ...existing,
+        ...item,
+        demand_score: Math.max(Number(existing.demand_score || 0), Number(item.demand_score || 0)),
+        liquidity_score: Math.max(Number(existing.liquidity_score || 0), Number(item.liquidity_score || 0)),
+        volume_total: Math.max(Number(existing.volume_total || 0), Number(item.volume_total || 0)),
+      });
+    });
+    const recos = [...recoMap.values()]
+      .map(item => {
+        const demandScore = Number(item.demand_score || 0);
+        const liqScore = Number(item.liquidity_score || 0);
+        const move = Number(item.price_change_pct || 0);
+        const score = (demandScore * 1.35) + (liqScore * 1.05) + Math.max(move, -8) + Math.min(Number(item.volume_total || 0) / 12, 40);
+        return { ...item, farm_score: score };
+      })
+      .filter(item => String(item.signal || 'watch') !== 'dump')
+      .sort((a, b) => Number(b.farm_score || 0) - Number(a.farm_score || 0))
+      .slice(0, 4);
+
+    farmEl.innerHTML = recos.length ? recos.map(item => {
+      const move = Number(item.price_change_pct);
+      const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+      return `
+        <div class="wf-reco-card">
+          <div class="diag-head">
+            <strong>${esc(item.name || 'Target')}</strong>
+            <span class="wf-reco-score">Farm score ${fmtMarketNum(item.farm_score || 0, 0)}</span>
+          </div>
+          <div class="market-chip-row">
+            ${warframeSignalChip(item.signal)}
+            <span class="market-chip ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}% trend` : 'trend n/a'}</span>
+            <span class="market-chip">Demand ${fmtMarketNum(item.demand_score || 0,0)}</span>
+            <span class="market-chip">Liq ${fmtMarketNum(item.liquidity_score || 0,0)}</span>
+          </div>
+          <div class="small-row"><span>48h volume</span><strong>${fmtMarketNum(item.volume_total || 0,0)}</strong></div>
+          <div class="small-row"><span>Current price</span><strong>${item.price != null ? fmtMarketNum(item.price,0) + 'p' : '-'}</strong></div>
+          <div class="actions">
+            <button class="sm" onclick='loadWarframePlanner(${JSON.stringify(item.name || '')})'>Plan farm</button>
+            <button class="sm" onclick='trackWarframeNamedItem(${JSON.stringify(item.name || '')}, "item")'>Track</button>
+            ${item.slug ? `<a class="pill" href="https://warframe.market/items/${esc(item.slug)}" target="_blank" rel="noopener">Open</a>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('') : '<div class="muted">No clear farm recommendation yet. More history will make this sharper.</div>';
+
     demandEl.innerHTML = demand.length ? demand.map(item => renderCard(item, 'demand')).join('') : '<div class="muted">No demand leaders available right now.</div>';
     liquidityEl.innerHTML = liquidity.length ? liquidity.map(item => renderCard(item, 'liquidity')).join('') : '<div class="muted">No liquid markets available right now.</div>';
     signalsEl.innerHTML = signals.length ? signals.map(renderSignalCard).join('') : '<div class="muted">Track items to see personalized trader signals.</div>';
   } catch (e) {
+    farmEl.innerHTML = '';
     demandEl.innerHTML = `<div class="err-msg">Market pulse failed: ${esc(e.message)}</div>`;
     liquidityEl.innerHTML = '';
     signalsEl.innerHTML = '';

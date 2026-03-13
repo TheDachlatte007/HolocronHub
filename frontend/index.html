@@ -182,13 +182,14 @@
 
     .tool-minor{font-size:12px;color:#94a3b8}
     .tool-summary{font-size:13px;line-height:1.45;color:#cbd5e1;min-height:36px}
-    .chart-wrap{margin-top:6px;padding-top:6px;border-top:1px solid #1f2937}
+    .chart-wrap{margin-top:6px;padding-top:6px;border-top:1px solid #1f2937;overflow:visible}
     .sparkline{width:100%;height:56px;display:block}
     .sparkline-line{fill:none;stroke:#60a5fa;stroke-width:2}
     .sparkline-fill{fill:rgba(59,130,246,.15)}
     .sparkline-point{fill:#f8fafc;stroke:#1d4ed8;stroke-width:1.5;opacity:0;transition:opacity .18s ease,transform .18s ease}
     .sparkline:hover .sparkline-point{opacity:.9}
     .sparkline-point:hover{opacity:1;transform:scale(1.15)}
+    .sparkline-hit{fill:transparent;cursor:crosshair}
     .sparkline-muted .sparkline-line{stroke:#94a3b8}
     .sparkline-muted .sparkline-fill{fill:rgba(148,163,184,.15)}
     .sparkline-label{font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;margin-top:4px}
@@ -219,8 +220,8 @@
     .market-preset-btn .tool-minor{color:inherit;opacity:.88}
     .market-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:0 0 8px}
     .market-section-head h3{margin:0}
-    .sparkline-tooltip{position:fixed;z-index:9999;pointer-events:none;padding:6px 8px;border-radius:8px;background:rgba(15,23,42,.96);border:1px solid #475569;color:#e2e8f0;font-size:12px;box-shadow:0 14px 30px rgba(2,6,23,.32);opacity:0;transform:translate(-50%,-120%);transition:opacity .12s ease}
-    .sparkline-tooltip.visible{opacity:1}
+    .sparkline-tooltip{position:fixed;z-index:9999;pointer-events:none;padding:6px 8px;border-radius:8px;background:rgba(15,23,42,.96);border:1px solid #475569;color:#e2e8f0;font-size:12px;line-height:1.35;white-space:nowrap;max-width:min(260px,calc(100vw - 24px));box-shadow:0 14px 30px rgba(2,6,23,.32);opacity:0;transform:translateY(-4px);transition:opacity .12s ease,transform .12s ease}
+    .sparkline-tooltip.visible{opacity:1;transform:translateY(0)}
     .wf-farm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px}
     .wf-reco-card{background:linear-gradient(145deg,#0b1220,#101827);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
     .wf-reco-score{font-size:11px;padding:3px 8px;border-radius:999px;background:#16351f;color:#86efac;border:1px solid #16a34a;width:max-content}
@@ -630,7 +631,7 @@
           <option value="xb1">Xbox</option>
           <option value="swi">Switch</option>
         </select>
-        <button class="primary" onclick="loadWarframe()">Refresh</button>
+        <button class="primary" onclick="loadWarframe({ force: true })">Refresh</button>
         <button onclick="addCurrentWarframeItem()">Track Item</button>
       </div>
       <div class="row" style="margin-bottom:8px">
@@ -672,7 +673,7 @@
           <div id="wf-world" class="small-list"></div>
         </div>
         <div class="stat-card">
-          <h2 style="margin:0 0 6px">Warframe News</h2>
+          <h2 style="margin:0 0 6px">Warframe News & Highlights</h2>
           <div id="wf-news" class="small-list"></div>
         </div>
       </div>
@@ -1020,6 +1021,25 @@ function relTime(iso) {
   return `${Math.floor(h/24)}d ago`;
 }
 
+function normalizeTextKey(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function safeLocalGet(key, fallback = null) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function safeLocalSet(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
 function isPrivateHost(host) {
   const h = String(host || '').toLowerCase();
   if (!h) return true;
@@ -1071,8 +1091,16 @@ function showTab(name, btn) {
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
   if (name !== 'f1') { clearF1SessionPolling(); clearF1ClockTicker(); }
+  if (name !== 'warframe') clearWarframeAutoRefresh();
   document.getElementById(`tab-${name}`).style.display='';
   if (btn) btn.classList.add('active');
+  if (name === 'warframe') {
+    applyWarframeAutoRefresh();
+    if (tabLoaded[name]) {
+      loadWarframe({ background: true });
+      return;
+    }
+  }
   if (tabLoaded[name]) return;
   if (!tabLoaded[name]) {
     tabLoaded[name] = true;
@@ -2007,9 +2035,16 @@ function getSparklineTooltip() {
 function showSparklineTooltip(event, label) {
   const tip = getSparklineTooltip();
   tip.textContent = label || '';
-  tip.style.left = `${event.clientX}px`;
-  tip.style.top = `${event.clientY - 10}px`;
   tip.classList.add('visible');
+  const pad = 12;
+  const width = tip.offsetWidth || 140;
+  const height = tip.offsetHeight || 32;
+  let left = event.clientX + 18;
+  let top = event.clientY - height - 16;
+  if (left + width > window.innerWidth - pad) left = window.innerWidth - width - pad;
+  if (top < pad) top = event.clientY + 18;
+  tip.style.left = `${Math.max(pad, left)}px`;
+  tip.style.top = `${Math.max(pad, top)}px`;
 }
 
 function hideSparklineTooltip() {
@@ -2017,8 +2052,32 @@ function hideSparklineTooltip() {
   if (tip) tip.classList.remove('visible');
 }
 
+function normalizeSparklinePoints(points) {
+  return (points || []).map((point, idx) => {
+    if (point && typeof point === 'object' && !Array.isArray(point)) {
+      const value = Number(
+        point.price ?? point.avg_price ?? point.closed_price ?? point.points ?? point.value
+      );
+      if (!Number.isFinite(value)) return null;
+      const stamp = point.captured_at || point.date || point.datetime || point.updated_at || point.label || point.day;
+      const stampText = stamp ? relTime(stamp) || String(stamp) : `Point ${idx + 1}`;
+      const label = point.tooltip
+        || point.label
+        || `${stampText}: ${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      return { value, label };
+    }
+    const value = Number(point);
+    if (!Number.isFinite(value)) return null;
+    return {
+      value,
+      label: `Point ${idx + 1}: ${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    };
+  }).filter(Boolean);
+}
+
 function buildSparklineSvg(points, cls = '') {
-  const vals = (points || []).map(v => Number(v)).filter(v => Number.isFinite(v));
+  const normalized = normalizeSparklinePoints(points);
+  const vals = normalized.map(point => point.value);
   if (vals.length < 2) return '<div class="muted">No chart data.</div>';
 
   const w = 260;
@@ -2036,9 +2095,13 @@ function buildSparklineSvg(points, cls = '') {
   const line = coords.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
   const fill = `0,${h} ${line} ${w},${h}`;
   const dots = coords.map(([x, y], idx) => {
-    const value = vals[idx];
-    const label = `Point ${idx + 1}: ${Number(value).toLocaleString(undefined, {maximumFractionDigits: 2})}`;
-    return `<circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.8" onmousemove='showSparklineTooltip(event, ${JSON.stringify(label)})' onmouseleave="hideSparklineTooltip()"><title>${esc(label)}</title></circle>`;
+    const label = normalized[idx]?.label || `Point ${idx + 1}`;
+    return `
+      <g>
+        <circle class="sparkline-hit" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="9" onmouseenter='showSparklineTooltip(event, ${JSON.stringify(label)})' onmousemove='showSparklineTooltip(event, ${JSON.stringify(label)})' onmouseleave="hideSparklineTooltip()"></circle>
+        <circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.8"><title>${esc(label)}</title></circle>
+      </g>
+    `;
   }).join('');
 
   return `<svg class="sparkline ${esc(cls)}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polygon class="sparkline-fill" points="${fill}" /><polyline class="sparkline-line" points="${line}" />${dots}</svg>`;
@@ -2299,6 +2362,12 @@ let _warframeDemandItems = [];
 let _warframeLiquidityItems = [];
 let _warframeSignalItems = [];
 let _warframePulseExpanded = { demand: false, liquidity: false, signals: false };
+const WARFRAME_OVERVIEW_CACHE_KEY = 'holocronhub.warframe.overview.v1';
+const WARFRAME_OVERVIEW_FRESH_MS = 2 * 60 * 1000;
+const WARFRAME_OVERVIEW_STALE_MS = 10 * 60 * 1000;
+const WARFRAME_AUTO_REFRESH_MS = 10 * 60 * 1000;
+let _warframeOverviewCache = { key: '', ts: 0, data: null };
+let _warframeAutoRefreshTimer = null;
 
 function clearF1SessionPolling() {
   if (_f1SessionTimer) {
@@ -2312,6 +2381,24 @@ function clearF1ClockTicker() {
     clearInterval(_f1ClockTicker);
     _f1ClockTicker = null;
   }
+}
+
+function clearWarframeAutoRefresh() {
+  if (_warframeAutoRefreshTimer) {
+    clearInterval(_warframeAutoRefreshTimer);
+    _warframeAutoRefreshTimer = null;
+  }
+}
+
+function applyWarframeAutoRefresh() {
+  clearWarframeAutoRefresh();
+  _warframeAutoRefreshTimer = setInterval(() => {
+    const tab = document.getElementById('tab-warframe');
+    if (!tab || tab.style.display === 'none') return;
+    loadWarframe({ background: true });
+    loadWarframePulse();
+    loadWarframeRadar();
+  }, WARFRAME_AUTO_REFRESH_MS);
 }
 
 function startF1ClockTicker() {
@@ -3022,8 +3109,8 @@ function renderWarframeHotItems() {
   hotEl.innerHTML = '';
   visible.forEach((entry, idx) => {
     const localHistory = entry.local_history || {};
-    const apiHist = (entry.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
-    const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
+    const apiHist = Array.isArray(entry.history) ? entry.history : [];
+    const localHist = Array.isArray(localHistory.series) ? localHistory.series : [];
     const hist = apiHist.length ? apiHist : localHist;
     const move = Number(entry.price_change_pct);
     const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
@@ -3061,8 +3148,8 @@ function warframePulseCard(item, mode = 'demand') {
   const score = mode === 'liquidity' ? item.liquidity_score : item.demand_score;
   const scoreLabel = mode === 'liquidity' ? 'Liq' : 'Demand';
   const localHistory = item.local_history || {};
-  const apiHist = Array.isArray(item.history) ? item.history.map(x => Number(x.avg_price)).filter(v => Number.isFinite(v)) : [];
-  const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
+  const apiHist = Array.isArray(item.history) ? item.history : [];
+  const localHist = Array.isArray(localHistory.series) ? localHistory.series : [];
   const hist = apiHist.length ? apiHist : localHist;
   const localChange = Number(localHistory.change_pct_24h);
   const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
@@ -3169,7 +3256,192 @@ function toggleWarframePulseLane(kind) {
   renderWarframePulseLane(kind);
 }
 
-async function loadWarframe() {
+function makeWarframeOverviewCacheKey(item, platform) {
+  return `${String(platform || 'pc').toLowerCase()}::${normalizeTextKey(item || 'arcane energize')}`;
+}
+
+function readWarframeOverviewCache(cacheKey) {
+  if (_warframeOverviewCache.key === cacheKey && _warframeOverviewCache.data) {
+    return _warframeOverviewCache;
+  }
+  const store = safeLocalGet(WARFRAME_OVERVIEW_CACHE_KEY, {});
+  const entry = store?.[cacheKey];
+  if (!entry || !entry.data) return null;
+  _warframeOverviewCache = { key: cacheKey, ts: Number(entry.ts || 0), data: entry.data };
+  return _warframeOverviewCache;
+}
+
+function writeWarframeOverviewCache(cacheKey, data) {
+  const store = safeLocalGet(WARFRAME_OVERVIEW_CACHE_KEY, {});
+  store[cacheKey] = { ts: Date.now(), data };
+  const keys = Object.keys(store).sort((a, b) => Number(store[b]?.ts || 0) - Number(store[a]?.ts || 0)).slice(0, 6);
+  const trimmed = {};
+  keys.forEach(key => { trimmed[key] = store[key]; });
+  safeLocalSet(WARFRAME_OVERVIEW_CACHE_KEY, trimmed);
+  _warframeOverviewCache = { key: cacheKey, ts: Number(trimmed[cacheKey]?.ts || Date.now()), data };
+}
+
+function renderWarframeOverview(data, item, platform, options = {}) {
+  const metaEl = document.getElementById('wf-meta');
+  const errEl = document.getElementById('wf-errors');
+  const marketEl = document.getElementById('wf-market');
+  const marketChartEl = document.getElementById('wf-market-chart');
+  const alertsEl = document.getElementById('wf-alerts');
+  const newsEl = document.getElementById('wf-news');
+  const fissuresEl = document.getElementById('wf-fissures');
+  const invasionsEl = document.getElementById('wf-invasions');
+  const worldEl = document.getElementById('wf-world');
+  const hotEl = document.getElementById('wf-hot');
+  if (!metaEl || !marketEl || !alertsEl || !newsEl || !fissuresEl || !invasionsEl || !worldEl || !hotEl) return;
+
+  const errInfo = data.errors?.length ? ` | ${data.errors.length} warning(s)` : '';
+  const cacheTag = data.cached ? ' | cache' : '';
+  const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
+  const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
+  const clientCacheTag = options.fromClientCache ? ' | local cache' : '';
+  metaEl.textContent = `${String(data.platform || platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${cacheTag}${clientCacheTag}${staleTag}${asOfTag}${errInfo}`;
+  if (errEl) {
+    const errs = [...new Set((data.errors || []).map(e => String(e || '').trim()).filter(Boolean))].slice(0, 6);
+    errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
+  }
+
+  const m = data.market || {};
+  const sourceMode = String(m.snapshot_source || 'unavailable');
+  const sellLabel = sourceMode === 'statistics_fallback' ? 'Floor Est.' : 'Best Sell';
+  const buyLabel = sourceMode === 'statistics_fallback' ? 'Best Buy' : 'Best Buy';
+  const trendValue = Number(m.price_change_pct);
+  const trendClass = !Number.isFinite(trendValue) ? 'flat' : (trendValue >= 0 ? 'up' : 'down');
+  const sourceLabel = sourceMode === 'orders_live' ? 'live orders' : (sourceMode === 'statistics_fallback' ? '48h trade stats' : 'unavailable');
+  const selectedRank = m.selected_rank != null ? `R${esc(m.selected_rank)}` : 'base';
+  const localHistory = m.local_history || {};
+  const localSamples = Number(localHistory.samples || 0);
+  const localChange = Number(localHistory.change_pct_24h);
+  const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
+  marketEl.innerHTML = `
+    <div class="small-row"><span>Item</span><strong>${esc(m.canonical_name || m.item || item)}</strong></div>
+    <div class="small-row"><span>${sellLabel}</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
+    <div class="small-row"><span>${buyLabel}</span><strong>${m.best_buy != null ? fmtMarketNum(m.best_buy,0) + 'p' : '-'}</strong></div>
+    <div class="small-row"><span>Last Avg</span><strong>${m.last_avg_price != null ? fmtMarketNum(m.last_avg_price,0) + 'p' : '-'}</strong></div>
+    <div class="small-row"><span>48h Volume</span><strong>${fmtMarketNum(m.volume_total || 0,0)}</strong></div>
+    <div class="small-row"><span>Trend</span><span class="market-change ${trendClass}">${Number.isFinite(trendValue) ? `${trendValue >= 0 ? '+' : ''}${fmtMarketNum(trendValue,1)}%` : 'n/a'}</span></div>
+    <div class="small-row"><span>Rank</span><strong>${selectedRank}</strong></div>
+    <div class="small-row"><span>Source</span><strong>${sourceLabel}</strong></div>
+    <div class="small-row"><span>Local Hist</span><strong>${localSamples ? `${localSamples} snaps` : 'warming up'}</strong></div>
+    <div class="small-row"><span>24h Local</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
+    <div class="small-row"><span>Orders (Live/All)</span><strong>${esc(m.sell_count_live ?? 0)}/${esc(m.buy_count_live ?? 0)} | ${esc(m.sell_count_total ?? 0)}/${esc(m.buy_count_total ?? 0)}</strong></div>
+    <a href="https://warframe.market/items/${esc(m.slug || '')}" target="_blank" rel="noopener">Open on warframe.market</a>
+  `;
+
+  if (marketChartEl) {
+    const apiHist = Array.isArray(m.history) ? m.history : [];
+    const localHist = Array.isArray(localHistory.series) ? localHistory.series : [];
+    const hist = apiHist.length ? apiHist : localHist;
+    const firstValue = hist.length ? Number(hist[0]?.avg_price ?? hist[0]?.price ?? hist[0]) : null;
+    const lastValue = hist.length ? Number(hist[hist.length - 1]?.avg_price ?? hist[hist.length - 1]?.price ?? hist[hist.length - 1]) : null;
+    marketChartEl.innerHTML = `
+      ${buildSparklineSvg(hist)}
+      <div class="sparkline-label">
+        <span>${esc((m.history_period || 'history').replace('_', ' '))}</span>
+        <span>${Number.isFinite(firstValue) && Number.isFinite(lastValue) ? `${fmtMarketNum(firstValue,0)}p -> ${fmtMarketNum(lastValue,0)}p` : 'n/a'}</span>
+      </div>
+    `;
+  }
+
+  _warframeHotItems = Array.isArray(data.top_sells) ? data.top_sells : [];
+  _warframeStaticCache = {
+    platform,
+    worldstate: data.worldstate || null,
+    top_sells: _warframeHotItems,
+  };
+  renderWarframeHotItems();
+
+  const alerts = data.worldstate?.alerts || [];
+  alertsEl.innerHTML = '';
+  if (!alerts.length) {
+    alertsEl.innerHTML = '<div class="muted">No active alerts.</div>';
+  } else {
+    alerts.slice(0, 8).forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'small-row';
+      row.innerHTML = `<span>${esc(a.type || a.node || 'Alert')}</span><span class="muted">${esc(a.reward || a.eta || '')}</span>`;
+      alertsEl.appendChild(row);
+    });
+  }
+
+  const fissures = data.worldstate?.fissures || [];
+  fissuresEl.innerHTML = '';
+  if (!fissures.length) {
+    fissuresEl.innerHTML = '<div class="muted">No active fissures.</div>';
+  } else {
+    fissures.slice(0, 8).forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'small-row';
+      row.innerHTML = `<span>${esc(f.tier || 'Fissure')} | ${esc(f.mission_type || '-')}</span><span class="muted">${esc(f.eta || '')}</span>`;
+      fissuresEl.appendChild(row);
+    });
+  }
+
+  const invasions = data.worldstate?.invasions || [];
+  const events = data.worldstate?.events || [];
+  invasionsEl.innerHTML = '';
+  if (!invasions.length && !events.length) {
+    invasionsEl.innerHTML = '<div class="muted">No invasions/events right now.</div>';
+  } else {
+    invasions.slice(0, 5).forEach(i => {
+      const row = document.createElement('div');
+      row.className = 'small-row';
+      row.innerHTML = `<span>${esc(i.node || 'Node')} (${esc(i.attacker || '?')} vs ${esc(i.defender || '?')})</span><span class="muted">${esc(i.eta || '')}</span>`;
+      invasionsEl.appendChild(row);
+    });
+    events.slice(0, 3).forEach(ev => {
+      const row = document.createElement('div');
+      row.className = 'small-row';
+      row.innerHTML = `<span>${esc(ev.description || 'Event')}</span><span class="muted">${esc(ev.eta || '')}</span>`;
+      invasionsEl.appendChild(row);
+    });
+  }
+
+  const cycles = data.worldstate?.world_cycles || {};
+  worldEl.innerHTML = `
+    <div class="small-row"><span>Cetus</span><span class="muted">${esc(cycles.cetus?.state || '-')} ${esc(cycles.cetus?.eta || '')}</span></div>
+    <div class="small-row"><span>Vallis</span><span class="muted">${esc(cycles.vallis?.state || '-')} ${esc(cycles.vallis?.eta || '')}</span></div>
+    <div class="small-row"><span>Cambion</span><span class="muted">${esc(cycles.cambion?.state || '-')} ${esc(cycles.cambion?.eta || '')}</span></div>
+    <div class="small-row"><span>Sortie</span><span class="muted">${esc(data.worldstate?.sortie?.eta || '-')}</span></div>
+    <div class="small-row"><span>Nightwave</span><span class="muted">${esc(data.worldstate?.nightwave?.active ? 'Active' : 'Inactive')}</span></div>
+  `;
+
+  const news = Array.isArray(data.worldstate?.news) ? data.worldstate.news : [];
+  const highlightFeed = [];
+  alerts.slice(0, 2).forEach(a => {
+    const parts = [a.reward, a.type, a.node].map(v => String(v || '').trim()).filter(Boolean);
+    if (parts.length) highlightFeed.push({ title: `Live alert: ${parts.join(' | ')}`, published_at: a.eta, is_live: true });
+  });
+  events.slice(0, 2).forEach(ev => {
+    const title = String(ev.description || '').trim();
+    if (title) highlightFeed.push({ title: `Live event: ${title}`, published_at: ev.eta, is_live: true });
+  });
+  const newsFeed = [...highlightFeed, ...news].slice(0, 8);
+  newsEl.innerHTML = '';
+  if (!newsFeed.length) {
+    newsEl.innerHTML = '<div class="muted">No news or live highlights right now.</div>';
+  } else {
+    newsFeed.forEach(n => {
+      const row = document.createElement('div');
+      row.className = 'small-row';
+      const title = esc(n.title || 'News');
+      const stamp = n.is_live ? 'live now' : relTime(n.published_at);
+      row.innerHTML = n.url
+        ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${title}</a><span class="muted">${stamp}</span>`
+        : `<span>${title}</span><span class="muted">${stamp}</span>`;
+      newsEl.appendChild(row);
+    });
+  }
+}
+
+async function loadWarframe(options = {}) {
+  const cfg = options && typeof options === 'object' ? options : {};
+  const force = !!cfg.force;
+  const background = !!cfg.background;
   const itemInput = document.getElementById('wf-item');
   const platformSel = document.getElementById('wf-platform');
   const metaEl = document.getElementById('wf-meta');
@@ -3190,162 +3462,55 @@ async function loadWarframe() {
   if (!itemInput.value.trim()) itemInput.value = 'arcane energize';
   const item = itemInput.value.trim();
   const platform = platformSel.value || 'pc';
+  const cacheKey = makeWarframeOverviewCacheKey(item, platform);
+  const cachedOverview = force ? null : readWarframeOverviewCache(cacheKey);
+  const cachedAge = cachedOverview?.data ? Date.now() - Number(cachedOverview.ts || 0) : Number.POSITIVE_INFINITY;
+  const canUseClientCache = !!(cachedOverview?.data && cachedAge <= WARFRAME_OVERVIEW_STALE_MS);
   const samePlatformContext = _warframeStaticCache.platform === platform && (_warframeStaticCache.worldstate || (_warframeStaticCache.top_sells || []).length);
   const hasWatchlistContent = !!document.getElementById('wf-watchlist')?.children.length;
   const hasPulseContent = !!document.getElementById('wf-demand')?.children.length;
   const hasRadarContent = !!document.getElementById('wf-profit')?.children.length;
 
-  marketEl.innerHTML = '<div class="muted">Loading market...</div>';
   renderWarframeTools();
   if (arsenalEl) arsenalEl.innerHTML = '<div class="muted">Search a frame to inspect stats and abilities.</div>';
   if (arsenalMetaEl) arsenalMetaEl.textContent = 'search on demand';
+  if (canUseClientCache) {
+    renderWarframeOverview(cachedOverview.data, item, platform, { fromClientCache: true });
+    if (cachedAge <= WARFRAME_OVERVIEW_FRESH_MS && !force) {
+      if (!hasWatchlistContent) void loadWarframeWatchlist();
+      void loadWarframePlanner(item);
+      if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
+      if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
+      return;
+    }
+    if (!background && metaEl) metaEl.textContent += ' | refreshing';
+  } else if (!background) {
+    marketEl.innerHTML = '<div class="muted">Loading market...</div>';
+    if (marketChartEl) marketChartEl.innerHTML = '';
+    if (!samePlatformContext) hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
+    if (!samePlatformContext) {
+      alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
+      newsEl.innerHTML = '<div class="muted">Loading news...</div>';
+      fissuresEl.innerHTML = '<div class="muted">Loading fissures...</div>';
+      invasionsEl.innerHTML = '<div class="muted">Loading invasions...</div>';
+      worldEl.innerHTML = '<div class="muted">Loading world state...</div>';
+    }
+  }
+
   if (!hasWatchlistContent) void loadWarframeWatchlist();
   void loadWarframePlanner(item);
   if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
   if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
-  if (!samePlatformContext) hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
-  if (marketChartEl) marketChartEl.innerHTML = '';
-  if (!samePlatformContext) {
-    alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
-    newsEl.innerHTML = '<div class="muted">Loading news...</div>';
-    fissuresEl.innerHTML = '<div class="muted">Loading fissures...</div>';
-    invasionsEl.innerHTML = '<div class="muted">Loading invasions...</div>';
-    worldEl.innerHTML = '<div class="muted">Loading world state...</div>';
-  }
 
   try {
     const params = new URLSearchParams({ item, platform });
     const data = await fetchJson(`${API}/warframe/overview?${params}`);
-    const errInfo = data.errors?.length ? ` | ${data.errors.length} warning(s)` : '';
-    const cacheTag = data.cached ? ' | cache' : '';
-    const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
-    const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
-    metaEl.textContent = `${String(data.platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${cacheTag}${staleTag}${asOfTag}${errInfo}`;
-    if (errEl) {
-      const errs = [...new Set((data.errors || []).map(e => String(e || '').trim()).filter(Boolean))].slice(0, 6);
-      errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
-    }
-
-    const m = data.market || {};
-    const sourceMode = String(m.snapshot_source || 'unavailable');
-    const sellLabel = sourceMode === 'statistics_fallback' ? 'Floor Est.' : 'Best Sell';
-    const buyLabel = sourceMode === 'statistics_fallback' ? 'Best Buy' : 'Best Buy';
-    const trendValue = Number(m.price_change_pct);
-    const trendClass = !Number.isFinite(trendValue) ? 'flat' : (trendValue >= 0 ? 'up' : 'down');
-    const sourceLabel = sourceMode === 'orders_live' ? 'live orders' : (sourceMode === 'statistics_fallback' ? '48h trade stats' : 'unavailable');
-    const selectedRank = m.selected_rank != null ? `R${esc(m.selected_rank)}` : 'base';
-    const localHistory = m.local_history || {};
-    const localSamples = Number(localHistory.samples || 0);
-    const localChange = Number(localHistory.change_pct_24h);
-    const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
-    marketEl.innerHTML = `
-      <div class="small-row"><span>Item</span><strong>${esc(m.canonical_name || m.item || item)}</strong></div>
-      <div class="small-row"><span>${sellLabel}</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
-      <div class="small-row"><span>${buyLabel}</span><strong>${m.best_buy != null ? fmtMarketNum(m.best_buy,0) + 'p' : '-'}</strong></div>
-      <div class="small-row"><span>Last Avg</span><strong>${m.last_avg_price != null ? fmtMarketNum(m.last_avg_price,0) + 'p' : '-'}</strong></div>
-      <div class="small-row"><span>48h Volume</span><strong>${fmtMarketNum(m.volume_total || 0,0)}</strong></div>
-      <div class="small-row"><span>Trend</span><span class="market-change ${trendClass}">${Number.isFinite(trendValue) ? `${trendValue >= 0 ? '+' : ''}${fmtMarketNum(trendValue,1)}%` : 'n/a'}</span></div>
-      <div class="small-row"><span>Rank</span><strong>${selectedRank}</strong></div>
-      <div class="small-row"><span>Source</span><strong>${sourceLabel}</strong></div>
-      <div class="small-row"><span>Local Hist</span><strong>${localSamples ? `${localSamples} snaps` : 'warming up'}</strong></div>
-      <div class="small-row"><span>24h Local</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
-      <div class="small-row"><span>Orders (Live/All)</span><strong>${esc(m.sell_count_live ?? 0)}/${esc(m.buy_count_live ?? 0)} | ${esc(m.sell_count_total ?? 0)}/${esc(m.buy_count_total ?? 0)}</strong></div>
-      <a href="https://warframe.market/items/${esc(m.slug || '')}" target="_blank" rel="noopener">Open on warframe.market</a>
-    `;
-
-    if (marketChartEl) {
-      const apiHist = (m.history || []).map(x => Number(x.avg_price)).filter(v => Number.isFinite(v));
-      const localHist = Array.isArray(localHistory.series) ? localHistory.series.map(x => Number(x.price)).filter(v => Number.isFinite(v)) : [];
-      const hist = apiHist.length ? apiHist : localHist;
-      marketChartEl.innerHTML = `
-        ${buildSparklineSvg(hist)}
-        <div class="sparkline-label">
-          <span>${esc((m.history_period || 'history').replace('_', ' '))}</span>
-          <span>${hist.length ? `${fmtMarketNum(hist[0],0)}p -> ${fmtMarketNum(hist[hist.length-1],0)}p` : 'n/a'}</span>
-        </div>
-      `;
-    }
-
-    _warframeHotItems = Array.isArray(data.top_sells) ? data.top_sells : [];
-    _warframeStaticCache = {
-      platform,
-      worldstate: data.worldstate || null,
-      top_sells: _warframeHotItems,
-    };
-    renderWarframeHotItems();
-
-    const alerts = data.worldstate?.alerts || [];
-    alertsEl.innerHTML = '';
-    if (!alerts.length) {
-      alertsEl.innerHTML = '<div class="muted">No active alerts.</div>';
-    } else {
-      alerts.slice(0, 8).forEach(a => {
-        const row = document.createElement('div');
-        row.className = 'small-row';
-        row.innerHTML = `<span>${esc(a.type || a.node || 'Alert')}</span><span class="muted">${esc(a.reward || a.eta || '')}</span>`;
-        alertsEl.appendChild(row);
-      });
-    }
-
-    const fissures = data.worldstate?.fissures || [];
-    fissuresEl.innerHTML = '';
-    if (!fissures.length) {
-      fissuresEl.innerHTML = '<div class="muted">No active fissures.</div>';
-    } else {
-      fissures.slice(0, 8).forEach(f => {
-        const row = document.createElement('div');
-        row.className = 'small-row';
-        row.innerHTML = `<span>${esc(f.tier || 'Fissure')} | ${esc(f.mission_type || '-')}</span><span class="muted">${esc(f.eta || '')}</span>`;
-        fissuresEl.appendChild(row);
-      });
-    }
-
-    const invasions = data.worldstate?.invasions || [];
-    const events = data.worldstate?.events || [];
-    invasionsEl.innerHTML = '';
-    if (!invasions.length && !events.length) {
-      invasionsEl.innerHTML = '<div class="muted">No invasions/events right now.</div>';
-    } else {
-      invasions.slice(0, 5).forEach(i => {
-        const row = document.createElement('div');
-        row.className = 'small-row';
-        row.innerHTML = `<span>${esc(i.node || 'Node')} (${esc(i.attacker || '?')} vs ${esc(i.defender || '?')})</span><span class="muted">${esc(i.eta || '')}</span>`;
-        invasionsEl.appendChild(row);
-      });
-      events.slice(0, 3).forEach(ev => {
-        const row = document.createElement('div');
-        row.className = 'small-row';
-        row.innerHTML = `<span>${esc(ev.description || 'Event')}</span><span class="muted">${esc(ev.eta || '')}</span>`;
-        invasionsEl.appendChild(row);
-      });
-    }
-
-    const cycles = data.worldstate?.world_cycles || {};
-    worldEl.innerHTML = `
-      <div class="small-row"><span>Cetus</span><span class="muted">${esc(cycles.cetus?.state || '-')} ${esc(cycles.cetus?.eta || '')}</span></div>
-      <div class="small-row"><span>Vallis</span><span class="muted">${esc(cycles.vallis?.state || '-')} ${esc(cycles.vallis?.eta || '')}</span></div>
-      <div class="small-row"><span>Cambion</span><span class="muted">${esc(cycles.cambion?.state || '-')} ${esc(cycles.cambion?.eta || '')}</span></div>
-      <div class="small-row"><span>Sortie</span><span class="muted">${esc(data.worldstate?.sortie?.eta || '-')}</span></div>
-      <div class="small-row"><span>Nightwave</span><span class="muted">${esc(data.worldstate?.nightwave?.active ? 'Active' : 'Inactive')}</span></div>
-    `;
-
-    const news = data.worldstate?.news || [];
-    newsEl.innerHTML = '';
-    if (!news.length) {
-      newsEl.innerHTML = '<div class="muted">No news in worldstate.</div>';
-    } else {
-      news.slice(0, 8).forEach(n => {
-        const row = document.createElement('div');
-        row.className = 'small-row';
-        const target = n.url || '#';
-        row.innerHTML = `<a href="${esc(target)}" target="_blank" rel="noopener">${esc(n.title || 'News')}</a><span class="muted">${relTime(n.published_at)}</span>`;
-        newsEl.appendChild(row);
-      });
-    }
+    writeWarframeOverviewCache(cacheKey, data);
+    renderWarframeOverview(data, item, platform);
   } catch (e) {
-    marketEl.innerHTML = `<div class="err-msg">Warframe API failed: ${esc(e.message)}</div>`;
-    if (marketChartEl) marketChartEl.innerHTML = '';
-    if (!_warframeStaticCache.worldstate) {
+    if (!canUseClientCache) {
+      marketEl.innerHTML = `<div class="err-msg">Warframe API failed: ${esc(e.message)}</div>`;
+      if (marketChartEl) marketChartEl.innerHTML = '';
       hotEl.innerHTML = '';
       alertsEl.innerHTML = '';
       newsEl.innerHTML = '';

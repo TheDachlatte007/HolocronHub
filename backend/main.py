@@ -3659,6 +3659,14 @@ def _run_ingest_bg() -> None:
 
 _scheduler = BackgroundScheduler(daemon=True)
 _schedule_job_id = "auto_ingest"
+_warframe_refresh_job_id = "warframe_refresh"
+_WARFRAME_REFRESH_INTERVAL_MINUTES = 15
+_WARFRAME_REFRESH_STATE: dict[str, Any] = {
+    "running": False,
+    "started_at": None,
+    "last_run": None,
+    "results": {},
+}
 
 
 def _apply_schedule(cfg: dict) -> None:
@@ -3674,6 +3682,91 @@ def _apply_schedule(cfg: dict) -> None:
             id=_schedule_job_id,
             replace_existing=True,
         )
+
+
+def _run_warframe_refresh_cycle(platform: str = "pc") -> None:
+    if _WARFRAME_REFRESH_STATE.get("running"):
+        return
+
+    platform_key = str(platform or "pc").strip().lower() or "pc"
+    _WARFRAME_REFRESH_STATE["running"] = True
+    _WARFRAME_REFRESH_STATE["started_at"] = datetime.now().isoformat(timespec="seconds")
+    results: dict[str, Any] = {}
+
+    def run_step(name: str, fn) -> Any:
+        t0 = time.time()
+        try:
+            payload = fn()
+            results[name] = {
+                "ok": True,
+                "duration_ms": int((time.time() - t0) * 1000),
+            }
+            if isinstance(payload, dict):
+                if payload.get("stale") is not None:
+                    results[name]["stale"] = bool(payload.get("stale"))
+                if payload.get("cached") is not None:
+                    results[name]["cached"] = bool(payload.get("cached"))
+            elif isinstance(payload, list):
+                results[name]["count"] = len(payload)
+            return payload
+        except Exception as exc:
+            results[name] = {
+                "ok": False,
+                "duration_ms": int((time.time() - t0) * 1000),
+                "error": str(exc)[:160],
+            }
+            return None
+
+    try:
+        tracked_names = [
+            str(item.get("name") or "").strip()
+            for item in _load_warframe_watchlist()
+            if str(item.get("name") or "").strip()
+        ]
+        seed_names = list(
+            dict.fromkeys(
+                [
+                    "arcane energize",
+                    *tracked_names[:16],
+                    *_WARFRAME_MARKET_WATCHLIST[:12],
+                ]
+            )
+        )
+
+        run_step("worldstate", lambda: _fetch_warframe_worldstate(platform_key)[0])
+        run_step("overview", lambda: warframe_overview("arcane energize", platform_key))
+        run_step("hot_items", lambda: {"items": _fetch_warframe_hot_items(platform_key)[0]})
+        run_step("market_pulse", lambda: _build_warframe_market_pulse(platform_key)[0])
+        run_step("watchlist", lambda: {"items": _build_warframe_watchlist_payload(platform_key, sort_by="priority")[0]})
+
+        if seed_names:
+            refreshed = 0
+
+            def refresh_item(name: str) -> bool:
+                payload, _errors = _fetch_warframe_market(name, platform_key)
+                return isinstance(payload, dict) and (
+                    payload.get("last_avg_price") is not None or payload.get("best_sell") is not None
+                )
+
+            t0 = time.time()
+            with ThreadPoolExecutor(max_workers=min(6, max(1, len(seed_names)))) as pool:
+                futures = [pool.submit(refresh_item, name) for name in seed_names]
+                for future in as_completed(futures):
+                    try:
+                        if future.result():
+                            refreshed += 1
+                    except Exception:
+                        continue
+            results["market_snapshots"] = {
+                "ok": True,
+                "duration_ms": int((time.time() - t0) * 1000),
+                "count": refreshed,
+            }
+    finally:
+        _WARFRAME_REFRESH_STATE["running"] = False
+        _WARFRAME_REFRESH_STATE["last_run"] = datetime.now().isoformat(timespec="seconds")
+        _WARFRAME_REFRESH_STATE["started_at"] = None
+        _WARFRAME_REFRESH_STATE["results"] = results
 
 
 def _prewarm_provider_caches() -> None:
@@ -3722,10 +3815,18 @@ def _startup() -> None:
     cfg = _load_schedule()
     _apply_schedule(cfg)
     _scheduler.start()
+    _scheduler.add_job(
+        _run_warframe_refresh_cycle,
+        "interval",
+        minutes=_WARFRAME_REFRESH_INTERVAL_MINUTES,
+        id=_warframe_refresh_job_id,
+        replace_existing=True,
+    )
 
     import threading
 
     threading.Thread(target=_prewarm_provider_caches, daemon=True).start()
+    threading.Thread(target=_run_warframe_refresh_cycle, daemon=True).start()
 
     if cfg.get("run_at_startup") and cfg.get("enabled"):
         threading.Thread(target=_run_ingest_bg, daemon=True).start()

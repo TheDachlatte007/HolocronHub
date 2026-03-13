@@ -56,24 +56,46 @@
     .tool-group-block{background:linear-gradient(145deg,#0b1220,#0f172a);border:1px solid #1f2d44;border-radius:14px;padding:14px}
     .tool-group-header{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
     .tool-group-title{font-size:14px;font-weight:700;color:#f8fafc}
-    .tool-group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-    .tool-card{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:100%}
+    .tool-group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+    .tool-card{background:#0b1220;border:1px solid #334155;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:100%}
     .tool-card-home{background:linear-gradient(160deg,#0f172a 0%,#0b1220 100%);border-color:#334b7a;box-shadow:0 10px 20px rgba(2,6,23,.16)}
     .tool-card-quick{background:linear-gradient(145deg,#172554,#0b1220);border-color:#315285}
-    .tool-card .card-actions{display:flex;gap:5px;margin-top:2px;align-items:center;flex-wrap:wrap}
+    .tool-card-ai{background:#0d1525;border-color:#293446;padding:10px 12px;gap:8px}
     .tool-card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-    .tool-head{display:flex;align-items:center;gap:8px;min-width:0}
+    .tool-head{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
     .tool-head strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .tool-icon{width:20px;height:20px;border-radius:4px;object-fit:cover;background:#0f172a;border:1px solid #334155}
     .tool-badge-row{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+    .tool-status-dot{width:9px;height:9px;border-radius:999px;background:#475569;flex:0 0 auto;margin-top:5px;box-shadow:0 0 0 2px rgba(15,23,42,.9)}
+    .tool-status-dot.online{background:#22c55e}
+    .tool-status-dot.offline{background:#ef4444}
+    .tool-status-dot.unknown{background:#64748b}
+    .tool-subline{font-size:12px;color:#94a3b8;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .tool-main-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .tool-main-meta .pill{background:#111827;color:#94a3b8}
     .tool-open-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
     .tool-open{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:#1d4ed8;color:#fff;text-decoration:none;font-size:12px;font-weight:600}
     .tool-open:hover{text-decoration:none;background:#2563eb}
     .tool-link-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid #334155;background:#111827;color:#cbd5e1;font-size:12px;text-decoration:none}
     .tool-link-chip:hover{text-decoration:none;border-color:#475569;background:#172033}
-    .tool-kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#94a3b8;padding-top:4px;border-top:1px solid #1f2937}
-    .tool-kv strong{color:#cbd5e1;font-weight:600}
     .tool-card-note{font-size:12px;color:#64748b}
+    .tool-latency-dot{font-size:11px;color:#93c5fd}
+    .tool-details{border-top:1px solid #1f2937;padding-top:8px}
+    .tool-details summary{cursor:pointer;list-style:none;font-size:12px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center}
+    .tool-details summary::-webkit-details-marker{display:none}
+    .tool-details[open] summary{color:#cbd5e1}
+    .tool-detail-body{display:flex;flex-direction:column;gap:8px;padding-top:8px}
+    .tool-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    .tool-detail-grid .small-row{padding:6px 8px;border-radius:8px;background:#101827;border:1px solid #1f2937;display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .tool-detail-grid .small-row span{color:#94a3b8}
+    .tool-detail-grid .small-row strong{color:#e2e8f0;text-align:right}
+    .tool-actions-detail{display:flex;gap:6px;flex-wrap:wrap}
+    .tool-ai-pick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}
+    .tool-ai-pick{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .tool-ai-pick strong{font-size:14px;color:#f8fafc}
+    .tool-ai-pick-list{display:flex;flex-direction:column;gap:6px}
+    .tool-ai-pick-item{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:12px;padding:7px 8px;border-radius:8px;background:#0f172a;border:1px solid #1f2937}
+    .tool-ai-pick-item a{font-weight:600}
     .check-inline{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#cbd5e1;padding:0 4px}
     .check-inline input{margin:0}
     .pill.featured{background:#172554;color:#bfdbfe}
@@ -98,14 +120,6 @@
     .ai-mini-item a{font-size:13px;font-weight:600;color:#bfdbfe}
     .ai-mini-item p{margin:0;font-size:12px;color:#94a3b8;line-height:1.45}
     .ai-mini-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:11px;color:#64748b}
-
-    /* star rating */
-    .stars{display:flex;gap:2px;cursor:pointer}
-    .star{font-size:16px;color:#374151;line-height:1;transition:color .1s}
-    .star.on{color:#facc15}
-    .star:hover,.star:hover~.star{color:#374151}
-    .stars:hover .star{color:#facc15}
-    .stars .star:hover~.star{color:#374151}
 
     /* edit form */
     .edit-form{background:#0b1220;border:1px solid #2563eb;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;grid-column:1/-1}
@@ -357,6 +371,7 @@
       .pill{font-size:10px}
       .sparkline{height:48px}
       .tool-summary{min-height:0}
+      .tool-detail-grid{grid-template-columns:1fr}
       .f1-board-row{grid-template-columns:1fr}
     }
 
@@ -389,7 +404,6 @@
           <option value="">Default order</option>
           <option value="favorites">Favorites first</option>
           <option value="popular">Most used</option>
-          <option value="rating">By rating</option>
           <option value="last_used">Recently used</option>
         </select>
         <button class="primary" onclick="loadTools()">Search</button>
@@ -1278,6 +1292,63 @@ function aiLaneLabel(lane) {
   }[lane] || lane;
 }
 
+function getAiTaskBuckets(tools) {
+  const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
+  const byLane = lane => aiTools.filter(tool => getAiLane(tool) === lane);
+  const preferred = items => [...items].sort((a,b) => (Number(b.favorite) - Number(a.favorite)) || (Number(b.pinned) - Number(a.pinned)) || ((b.usage_count||0) - (a.usage_count||0)) || String(a.name||'').localeCompare(String(b.name||''))).slice(0, 4);
+  return [
+    {
+      id: 'summaries',
+      title: 'Summaries',
+      hint: 'Fast briefs, PDFs, article digestion and notes.',
+      tags: ['long context', 'briefs', 'study notes'],
+      tools: preferred(aiTools.filter(tool => ['assist','research','discover'].includes(getAiLane(tool)))),
+    },
+    {
+      id: 'research',
+      title: 'Research',
+      hint: 'Deep dives, sources, comparisons and exploration.',
+      tags: ['sources', 'compare', 'grounding'],
+      tools: preferred(aiTools.filter(tool => ['research','discover','builders'].includes(getAiLane(tool)))),
+    },
+    {
+      id: 'learn',
+      title: 'Learn / Study',
+      hint: 'Understand topics, ask follow-ups and build personal memory.',
+      tags: ['study', 'Q&A', 'explainers'],
+      tools: preferred(aiTools.filter(tool => ['assist','research','local'].includes(getAiLane(tool)))),
+    },
+    {
+      id: 'code',
+      title: 'Code',
+      hint: 'Coding help, agents, debugging and implementation.',
+      tags: ['coding', 'agents', 'debugging'],
+      tools: preferred(aiTools.filter(tool => ['code','builders','local'].includes(getAiLane(tool)))),
+    },
+    {
+      id: 'create',
+      title: 'Images / Video',
+      hint: 'Generate visuals, media and creative outputs.',
+      tags: ['image', 'video', 'creative'],
+      tools: preferred(byLane('create')),
+    },
+    {
+      id: 'agents',
+      title: 'Agents / Automations',
+      hint: 'Chains, routing, workflow builders and orchestration.',
+      tags: ['workflows', 'automation', 'multi-step'],
+      tools: preferred(aiTools.filter(tool => ['automate','builders'].includes(getAiLane(tool)))),
+    },
+    {
+      id: 'local',
+      title: 'Local AI',
+      hint: 'Private, self-hosted and low-latency local stacks.',
+      tags: ['local-first', 'self-hosted', 'offline-ish'],
+      tools: preferred(byLane('local')),
+    },
+  ].filter(bucket => bucket.tools.length);
+}
+
 function normalizeToolGroup(group) {
   const raw = String(group || 'General').replace(/[_-]+/g, ' ').trim();
   if (!raw) return 'General';
@@ -1397,38 +1468,28 @@ function renderAiLaneTabs(tools) {
 function renderAiOverview(tools) {
   const el = document.getElementById('ai-overview-grid');
   if (!el) return;
-  const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
-  if (!aiTools.length) {
+  el.className = 'ai-overview-grid';
+  const taskBuckets = getAiTaskBuckets(tools);
+  if (!taskBuckets.length) {
     el.innerHTML = '<div class="ai-overview-card"><strong>No AI tools in this view</strong><span class="muted">Clear search or category filters to see the curated AI workspace again.</span></div>';
     return;
   }
-  const dailyDrivers = aiTools.filter(t => ['assist','code','local'].includes(getAiLane(t)) && (t.favorite || t.pinned));
-  const createCount = aiTools.filter(t => getAiLane(t) === 'create').length;
-  const researchCount = aiTools.filter(t => ['research','discover'].includes(getAiLane(t))).length;
-  const automateCount = aiTools.filter(t => ['automate','builders'].includes(getAiLane(t))).length;
-  const newsHigh = _aiFeedCache.filter(item => feedPriority(item) === 'high').length;
-  const newsWatch = _aiFeedCache.filter(item => feedPriority(item) === 'watch').length;
-  el.innerHTML = `
-    <div class="ai-overview-card">
-      <strong>Daily Drivers</strong>
-      <span>${esc(String(dailyDrivers.length))} pinned or favorite tools across assistants, code, and local model surfaces.</span>
-      <span class="muted">${dailyDrivers.slice(0,4).map(tool => tool.name).join(' | ') || 'Mark favorites to make this lane more personal.'}</span>
+  el.className = 'ai-overview-grid tool-ai-pick-grid';
+  el.innerHTML = taskBuckets.map(bucket => `
+    <div class="tool-ai-pick">
+      <strong>${esc(bucket.title)}</strong>
+      <span>${esc(bucket.hint)}</span>
+      <div class="meta">${bucket.tags.map(tag => `<span class="pill">${esc(tag)}</span>`).join('')}</div>
+      <div class="tool-ai-pick-list">
+        ${bucket.tools.map(tool => `
+          <div class="tool-ai-pick-item">
+            <a href="${esc(tool.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')">${esc(tool.name)}</a>
+            <span class="tool-minor">${esc(tool.provider || aiLaneLabel(getAiLane(tool)))}</span>
+          </div>
+        `).join('')}
+      </div>
     </div>
-    <div class="ai-overview-card">
-      <strong>Build + Automate</strong>
-      <span>${esc(String(automateCount))} tools for APIs, orchestration, and workflows.</span>
-      <span class="muted">Best when you want model access, chaining, or repeatable systems instead of one-off prompts.</span>
-    </div>
-    <div class="ai-overview-card">
-      <strong>Create + Research</strong>
-      <span>${esc(String(createCount + researchCount))} tools across creative generation, papers, and discovery.</span>
-      <span class="muted">Creative stack ${esc(String(createCount))} | Research/discovery ${esc(String(researchCount))}</span>
-    </div>
-    <div class="ai-overview-card">
-      <strong>AI Radar</strong>
-      <span>${esc(String(_aiFeedCache.length))} AI feed items loaded for this workspace.</span>
-      <span class="muted">High signal ${esc(String(newsHigh))} | Watchlist ${esc(String(newsWatch))}</span>
-    </div>`;
+  `).join('');
 }
 
 function renderAiRail(tools) {
@@ -1574,7 +1635,7 @@ function renderToolSections(tools) {
 
   const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
   const laneFilteredAiTools = activeAiLane && activeAiLane !== 'all' ? aiTools.filter(t => getAiLane(t) === activeAiLane) : aiTools;
-  renderToolGrid(elAi, laneFilteredAiTools, 'default', activeAiLane && activeAiLane !== 'all' ? `No AI tools found in ${aiLaneLabel(activeAiLane)}.` : 'No AI tools found.');
+  renderToolGrid(elAi, laneFilteredAiTools, 'ai', activeAiLane && activeAiLane !== 'all' ? `No AI tools found in ${aiLaneLabel(activeAiLane)}.` : 'No AI tools found.');
 
   const homeTools = tools.filter(isHomeTool);
   const filteredHome = activeHomeGroup ? homeTools.filter(t => normalizeToolGroup(t.group) === activeHomeGroup) : homeTools;
@@ -1636,28 +1697,6 @@ async function loadTools() {
   }
 }
 
-function buildStars(toolId, currentRating) {
-  const wrap = document.createElement('div');
-  wrap.className = 'stars';
-  wrap.title = 'Your rating';
-  for (let i=1; i<=5; i++) {
-    const s = document.createElement('span');
-    s.className = 'star' + (i <= (currentRating||0) ? ' on' : '');
-    s.textContent = '*';
-    s.dataset.val = i;
-    s.addEventListener('click', async () => {
-      const newRating = parseInt(s.dataset.val);
-      await fetch(`${API}/tools/${encodeURIComponent(toolId)}`, {
-        method:'PATCH', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({rating: newRating}),
-      });
-      wrap.querySelectorAll('.star').forEach((st,idx) => st.classList.toggle('on', idx < newRating));
-    });
-    wrap.appendChild(s);
-  }
-  return wrap;
-}
-
 function buildToolCard(t, variant='default') {
   const d = document.createElement('div');
   d.className = `tool-card tool-card-${variant}`;
@@ -1666,50 +1705,64 @@ function buildToolCard(t, variant='default') {
   const category = normalizeToolCategory(t.category);
   const group = normalizeToolGroup(t.group);
   const summary = (t.notes || '').trim() || `${category} tool`;
-  const usage = Number(t.usage_count || 0);
   const status = normalizeToolStatus(t.status);
   const hostPort = getToolHostPort(t);
   const links = Array.isArray(t.links) ? t.links.filter(link => link && link.label && link.url) : [];
+  const visibleLinks = links.slice(0, 2);
+  const hiddenLinks = links.slice(2);
   const badges = [];
-  if (t.pinned) badges.push('<span class="pill pinned">pinned</span>');
-  if (t.favorite) badges.push('<span class="pill featured">favorite</span>');
-  if (variant === 'home') badges.push(`<span class="pill status-${esc(status)}">${esc(status)}</span>`);
+  if (t.pinned) badges.push('<span class="pill pinned">pin</span>');
+  if (t.favorite) badges.push('<span class="pill featured">fav</span>');
+  const sublineParts = [t.provider, variant === 'home' ? group : (variant === 'ai' ? aiLaneLabel(getAiLane(t)) : category)].filter(Boolean);
+  const mainMeta = [];
+  if (variant === 'home' && hostPort) mainMeta.push(`<span class="pill">${esc(hostPort)}</span>`);
+  if (variant === 'home' && t.latency_ms !== null && t.latency_ms !== undefined) mainMeta.push(`<span class="pill">live ${esc(String(t.latency_ms))}ms</span>`);
+  if (variant === 'quick' && hostPort) mainMeta.push(`<span class="pill">${esc(hostPort)}</span>`);
+  if (variant === 'ai' && t.local_or_cloud) mainMeta.push(`<span class="pill">${esc(t.local_or_cloud)}</span>`);
+  if (variant === 'ai' && t.service_kind) mainMeta.push(`<span class="pill">${esc(t.service_kind)}</span>`);
+  if (!mainMeta.length && variant === 'default' && t.local_or_cloud) mainMeta.push(`<span class="pill">${esc(t.local_or_cloud)}</span>`);
+  const detailTags = (t.tags || []).slice(0, 8).map(tag => `<span class="pill">${esc(tag)}</span>`).join('');
   d.innerHTML = `
     <div class="tool-card-top">
       <div class="tool-head">
+        <span class="tool-status-dot ${esc(status)}" title="${esc(status)}"></span>
         ${icon ? `<img class="tool-icon" src="${esc(icon)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ''}
         <strong>${esc(t.name)}</strong>
       </div>
       <div class="tool-badge-row">${badges.join('')}</div>
     </div>
-    <div class="tool-minor">${esc(t.provider)} | ${esc(category)}${variant === 'home' ? ` | ${esc(group)}` : ''}</div>
+    <div class="tool-subline">${sublineParts.map(part => `<span>${esc(part)}</span>`).join('<span>•</span>')}</div>
     <div class="tool-summary">${esc(summary)}</div>
-    <div class="meta">
-      <span class="pill">${esc(t.local_or_cloud || 'unknown')}</span>
-      <span class="pill">${esc(t.cost_hint || 'unknown')}</span>
-      ${t.environment ? `<span class="pill">${esc(t.environment)}</span>` : ''}
-      ${t.service_kind ? `<span class="pill">${esc(t.service_kind)}</span>` : ''}
-      ${usage > 0 ? `<span class="pill">used ${esc(usage)}x</span>` : ''}
-    </div>
-    ${hostPort ? `<div class="tool-card-note">${esc(hostPort)}</div>` : ''}
-    ${(variant === 'home' && t.latency_ms !== null && t.latency_ms !== undefined) ? `<div class="tool-latency">Reachable in ${esc(String(t.latency_ms))}ms</div>` : ''}
-    ${t.last_used ? `<div class="muted" style="font-size:11px">Last used: ${relTime(t.last_used)}</div>` : ''}
-    ${t.status_checked_at ? `<div class="muted" style="font-size:11px">Status checked: ${relTime(t.status_checked_at)}</div>` : ''}
+    ${mainMeta.length ? `<div class="tool-main-meta">${mainMeta.join('')}</div>` : ''}
     <div class="tool-open-row">
       <a class="tool-open" href="${esc(t.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">Open</a>
-      ${links.map(link => `<a class="tool-link-chip" href="${esc(link.url)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">${esc(link.label)}</a>`).join('')}
+      ${visibleLinks.map(link => `<a class="tool-link-chip" href="${esc(link.url)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">${esc(link.label)}</a>`).join('')}
     </div>
-    <div class="tool-kv">
-      <span><strong>Auth:</strong> ${esc(t.auth_type || 'n/a')}</span>
-      <span><strong>Rating:</strong> ${esc(String(t.rating || 0))}/5</span>
-    </div>
-    <div class="card-actions">
-      <button class="sm ${t.favorite ? 'active' : ''}" onclick="toggleToolFlag('${esc(t.id)}','favorite',${t.favorite ? 'false' : 'true'},this)">${t.favorite ? 'Unfav' : 'Fav'}</button>
-      <button class="sm ${t.pinned ? 'active' : ''}" onclick="toggleToolFlag('${esc(t.id)}','pinned',${t.pinned ? 'false' : 'true'},this)">${t.pinned ? 'Unpin' : 'Pin'}</button>
-      <button class="sm" onclick="showEditForm('${esc(t.id)}')">Edit</button>
-      <button class="sm danger" onclick="deleteTool('${esc(t.id)}',this)">Delete</button>
-    </div>`;
-  d.querySelector('.card-actions').prepend(buildStars(t.id, t.rating));
+    <details class="tool-details">
+      <summary><span>Details</span><span>${hiddenLinks.length ? `+${hiddenLinks.length} links` : 'more info'}</span></summary>
+      <div class="tool-detail-body">
+        <div class="tool-detail-grid">
+          <div class="small-row"><span>Status</span><strong>${esc(status)}</strong></div>
+          <div class="small-row"><span>Host</span><strong>${esc(hostPort || 'n/a')}</strong></div>
+          <div class="small-row"><span>Surface</span><strong>${esc(t.local_or_cloud || 'unknown')}</strong></div>
+          <div class="small-row"><span>Auth</span><strong>${esc(t.auth_type || 'n/a')}</strong></div>
+          <div class="small-row"><span>Cost</span><strong>${esc(t.cost_hint || 'n/a')}</strong></div>
+          <div class="small-row"><span>Usage</span><strong>${esc(String(t.usage_count || 0))} opens</strong></div>
+          ${t.environment ? `<div class="small-row"><span>Environment</span><strong>${esc(t.environment)}</strong></div>` : ''}
+          ${t.service_kind ? `<div class="small-row"><span>Kind</span><strong>${esc(t.service_kind)}</strong></div>` : ''}
+          ${t.last_used ? `<div class="small-row"><span>Last used</span><strong>${esc(relTime(t.last_used))}</strong></div>` : ''}
+          ${t.status_checked_at ? `<div class="small-row"><span>Status checked</span><strong>${esc(relTime(t.status_checked_at))}</strong></div>` : ''}
+        </div>
+        ${detailTags ? `<div class="tool-main-meta">${detailTags}</div>` : ''}
+        ${hiddenLinks.length ? `<div class="tool-open-row">${hiddenLinks.map(link => `<a class="tool-link-chip" href="${esc(link.url)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">${esc(link.label)}</a>`).join('')}</div>` : ''}
+        <div class="tool-actions-detail">
+          <button class="sm ${t.favorite ? 'active' : ''}" onclick="toggleToolFlag('${esc(t.id)}','favorite',${t.favorite ? 'false' : 'true'},this)">${t.favorite ? 'Unfav' : 'Fav'}</button>
+          <button class="sm ${t.pinned ? 'active' : ''}" onclick="toggleToolFlag('${esc(t.id)}','pinned',${t.pinned ? 'false' : 'true'},this)">${t.pinned ? 'Unpin' : 'Pin'}</button>
+          <button class="sm" onclick="showEditForm('${esc(t.id)}')">Edit</button>
+          <button class="sm danger" onclick="deleteTool('${esc(t.id)}',this)">Delete</button>
+        </div>
+      </div>
+    </details>`;
   return d;
 }
 

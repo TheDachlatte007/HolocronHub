@@ -3955,6 +3955,193 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
     return payload, list(payload.get("errors") or [])
 
 
+def _build_warframe_personal_opportunities(platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
+    platform_key = str(platform or "pc").strip().lower()
+    if platform_key not in {"pc", "ps4", "xb1", "swi"}:
+        platform_key = "pc"
+    cache_key = f"warframe:opportunities:{platform_key}"
+    cached = _cache_get(cache_key, ttl_seconds=15 * 60)
+    if isinstance(cached, dict):
+        return cached, list(cached.get("errors") or [])
+
+    aleca_payload, aleca_errors = _build_alecaframe_payload()
+    errors = list(aleca_errors)
+    if not isinstance(aleca_payload, dict) or not aleca_payload.get("configured"):
+        payload = {
+            "configured": False,
+            "platform": platform_key,
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "market_items": [],
+            "relic_items": [],
+            "summary": {"market_count": 0, "relic_count": 0},
+            "errors": errors[:24],
+        }
+        _cache_set(cache_key, payload)
+        return payload, errors[:24]
+
+    trade_insights = aleca_payload.get("trade_insights") if isinstance(aleca_payload.get("trade_insights"), dict) else {}
+    sent_rows = [row for row in (trade_insights.get("top_sent_items") or []) if isinstance(row, dict)]
+    received_rows = [row for row in (trade_insights.get("top_received_items") or []) if isinstance(row, dict)]
+    sent_map = {str(row.get("name") or "").casefold(): row for row in sent_rows if str(row.get("name") or "").strip()}
+    received_map = {str(row.get("name") or "").casefold(): row for row in received_rows if str(row.get("name") or "").strip()}
+    candidate_names = list(
+        dict.fromkeys(
+            [str(row.get("name") or "").strip() for row in [*sent_rows[:8], *received_rows[:8]] if str(row.get("name") or "").strip()]
+        )
+    )
+
+    market_cards: list[dict[str, Any]] = []
+
+    def load_market_candidate(name: str) -> tuple[Optional[dict[str, Any]], list[str]]:
+        market, market_errors = _fetch_warframe_market(name, platform_key)
+        if not isinstance(market, dict):
+            return None, market_errors
+        if market.get("best_sell") is None and market.get("last_avg_price") is None and not market.get("volume_total"):
+            return None, market_errors
+        signal = _build_warframe_market_signal(market, tracked=True)
+        sent = sent_map.get(name.casefold()) or {}
+        received = received_map.get(name.casefold()) or {}
+        sent_count = int(sent.get("count") or 0)
+        recv_count = int(received.get("count") or 0)
+        sent_plat = int(sent.get("plat_total") or 0)
+        recv_plat = int(received.get("plat_total") or 0)
+        trend = float(market.get("price_change_pct") or 0.0)
+        demand = float(signal.get("demand_score") or 0.0)
+        liquidity = float(signal.get("liquidity_score") or 0.0)
+        volume = float(market.get("volume_total") or 0.0)
+
+        action = "watch"
+        note = "Monitor this lane."
+        if sent_count > 0 and demand >= 62 and liquidity >= 50:
+            action = "restock"
+            note = "You already move this item and demand is strong."
+        elif sent_count > 0 and signal.get("signal") == "sell":
+            action = "sell"
+            note = "You have recent sales and the market is still cooperative."
+        elif recv_count > sent_count and trend >= 4 and demand >= 56:
+            action = "flip"
+            note = "Recent buys line up with positive price momentum."
+        elif recv_count > 0 and trend <= -6:
+            action = "wait"
+            note = "You bought into weakness; better to wait for recovery."
+        elif volume >= 180 and liquidity >= 58:
+            action = "liquid"
+            note = "This lane looks liquid even without a huge move."
+
+        score = round(
+            demand * 0.75
+            + liquidity * 0.55
+            + min(volume / 10.0, 24.0)
+            + min(sent_count * 4.0, 16.0)
+            + min(recv_count * 3.0, 12.0)
+            + (8.0 if action in {"restock", "sell", "flip"} else 0.0),
+            1,
+        )
+        return {
+            "name": market.get("canonical_name") or name,
+            "slug": market.get("slug"),
+            "price": market.get("last_avg_price") if market.get("last_avg_price") is not None else market.get("best_sell"),
+            "best_sell": market.get("best_sell"),
+            "best_buy": market.get("best_buy"),
+            "volume_total": market.get("volume_total"),
+            "price_change_pct": market.get("price_change_pct"),
+            "local_history": market.get("local_history") or {},
+            "history": market.get("history") or [],
+            "snapshot_source": market.get("snapshot_source"),
+            "sent_count": sent_count,
+            "received_count": recv_count,
+            "sent_plat_total": sent_plat,
+            "received_plat_total": recv_plat,
+            "action": action,
+            "note": note,
+            "score": score,
+            **signal,
+        }, market_errors
+
+    if candidate_names:
+        with ThreadPoolExecutor(max_workers=min(6, max(1, len(candidate_names)))) as pool:
+            futures = [pool.submit(load_market_candidate, name) for name in candidate_names]
+            for future in as_completed(futures):
+                try:
+                    payload, item_errors = future.result()
+                except Exception as exc:
+                    errors.append(f"opportunities:market:{exc}")
+                    continue
+                errors.extend((item_errors or [])[:2])
+                if payload:
+                    market_cards.append(payload)
+
+    market_cards.sort(
+        key=lambda row: (
+            float(row.get("score") or 0.0),
+            float(row.get("demand_score") or 0.0),
+            float(row.get("liquidity_score") or 0.0),
+            str(row.get("name") or ""),
+        ),
+        reverse=True,
+    )
+
+    relic_summary = aleca_payload.get("relic_inventory") if isinstance(aleca_payload.get("relic_inventory"), dict) else {}
+    relic_source = [row for row in (relic_summary.get("top_entries") or []) if isinstance(row, dict)]
+    relic_bulk = {str(row.get("name") or "").casefold(): row for row in (relic_summary.get("top_by_copies") or []) if isinstance(row, dict)}
+    relic_cards: list[dict[str, Any]] = []
+    for entry in relic_source[:8]:
+        name = str(entry.get("name") or "").strip()
+        if not name:
+            continue
+        bulk = relic_bulk.get(name.casefold()) or entry
+        count = int(bulk.get("count") or entry.get("count") or 0)
+        plat_value = entry.get("plat_value")
+        try:
+            plat_value_num = float(plat_value) if plat_value is not None else None
+        except Exception:
+            plat_value_num = None
+        stash_value = round((plat_value_num or 0.0) * max(count, 1), 1) if plat_value_num is not None else None
+        if plat_value_num is not None and count >= 4 and stash_value >= 45:
+            action = "sell stack"
+            note = "You have enough copies for a meaningful relic stash sale."
+        elif plat_value_num is not None and stash_value >= 80:
+            action = "protect"
+            note = "High-value relic stash worth holding for strong windows."
+        elif count >= 6:
+            action = "crack"
+            note = "Large stack; consider opening in focused runs or radshares."
+        else:
+            action = "watch"
+            note = "Useful inventory lane, but not urgent yet."
+        score = round((stash_value or 0.0) + min(count * 3.0, 24.0), 1)
+        relic_cards.append(
+            {
+                "name": name,
+                "count": count,
+                "plat_value": plat_value_num,
+                "stash_value": stash_value,
+                "action": action,
+                "note": note,
+                "score": score,
+            }
+        )
+    relic_cards.sort(key=lambda row: (float(row.get("score") or 0.0), str(row.get("name") or "")), reverse=True)
+
+    payload = {
+        "configured": True,
+        "platform": platform_key,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "market_items": market_cards[:8],
+        "relic_items": relic_cards[:8],
+        "summary": {
+            "market_count": len(market_cards),
+            "relic_count": len(relic_cards),
+            "net_plat_7d": trade_insights.get("net_plat_7d"),
+            "trade_count_7d": trade_insights.get("trade_count_7d"),
+        },
+        "errors": errors[:24],
+    }
+    _cache_set(cache_key, payload)
+    _set_last_good(cache_key, payload)
+    return payload, errors[:24]
+
+
 def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
     cfg = deepcopy(_DEFAULT_SETTINGS)
     if not isinstance(raw, dict):
@@ -4920,6 +5107,12 @@ def get_warframe_watchlist(platform: str = "pc", sort_by: str = "priority"):
 @app.get("/api/warframe/aleca")
 def warframe_aleca():
     payload, errors = _build_alecaframe_payload()
+    return {**payload, "errors": errors}
+
+
+@app.get("/api/warframe/opportunities")
+def warframe_opportunities(platform: str = "pc"):
+    payload, errors = _build_warframe_personal_opportunities(platform)
     return {**payload, "errors": errors}
 
 

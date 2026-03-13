@@ -775,6 +775,16 @@
       </div>
       <div class="stat-card">
         <div class="diag-head">
+          <h2 style="margin:0">Personal Opportunities</h2>
+          <div class="row" style="margin:0">
+            <span id="wf-opps-meta" class="tool-minor">Combines your AlecaFrame history with live market pressure.</span>
+            <button class="sm" onclick="loadWarframeOpportunities(true)">Refresh</button>
+          </div>
+        </div>
+        <div id="wf-opps" class="wf-plan-grid"><div class="muted">Opportunities will show up once AlecaFrame and market data are both available.</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
           <h2 style="margin:0">Arsenal Explorer</h2>
           <span id="wf-arsenal-meta" class="tool-minor"></span>
         </div>
@@ -2421,6 +2431,7 @@ function applyWarframeAutoRefresh() {
     loadWarframePulse();
     loadWarframeRadar();
     loadWarframeAleca();
+    loadWarframeOpportunities();
   }, WARFRAME_AUTO_REFRESH_MS);
 }
 
@@ -3494,6 +3505,7 @@ async function loadWarframe(options = {}) {
   const hasPulseContent = !!document.getElementById('wf-demand')?.children.length;
   const hasRadarContent = !!document.getElementById('wf-profit')?.children.length;
   const hasAlecaContent = !!document.getElementById('wf-aleca')?.children.length;
+  const hasOppsContent = !!document.getElementById('wf-opps')?.children.length;
 
   renderWarframeTools();
   if (arsenalEl) arsenalEl.innerHTML = '<div class="muted">Search a frame to inspect stats and abilities.</div>';
@@ -3506,6 +3518,7 @@ async function loadWarframe(options = {}) {
       if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
       if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
       if (!hasAlecaContent) void loadWarframeAleca();
+      if (!hasOppsContent) void loadWarframeOpportunities();
       return;
     }
     if (!background && metaEl) metaEl.textContent += ' | refreshing';
@@ -3527,6 +3540,7 @@ async function loadWarframe(options = {}) {
   if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
   if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
   if (!hasAlecaContent || force) void loadWarframeAleca(force);
+  if (!hasOppsContent || force) void loadWarframeOpportunities(force);
 
   try {
     const params = new URLSearchParams({ item, platform });
@@ -3996,6 +4010,79 @@ async function loadWarframeAleca(force = false) {
   } catch (e) {
     gridEl.innerHTML = `<div class="err-msg">AlecaFrame sync failed: ${esc(e.message)}</div>`;
     metaEl.textContent = 'AlecaFrame unavailable';
+  }
+}
+
+async function loadWarframeOpportunities(force = false) {
+  const platformEl = document.getElementById('wf-platform');
+  const metaEl = document.getElementById('wf-opps-meta');
+  const gridEl = document.getElementById('wf-opps');
+  if (!gridEl || !metaEl) return;
+  if (!force) gridEl.innerHTML = '<div class="muted">Scanning personal opportunities...</div>';
+  metaEl.textContent = 'combining AlecaFrame history with market pulse';
+  try {
+    const params = new URLSearchParams({ platform: platformEl?.value || 'pc' });
+    const data = await fetchJson(`${API}/warframe/opportunities?${params}`);
+    if (!data.configured) {
+      gridEl.innerHTML = '<div class="muted">Configure AlecaFrame first to unlock personal opportunities.</div>';
+      metaEl.textContent = 'waiting for AlecaFrame';
+      return;
+    }
+    const marketItems = Array.isArray(data.market_items) ? data.market_items : [];
+    const relicItems = Array.isArray(data.relic_items) ? data.relic_items : [];
+    const summary = data.summary || {};
+    metaEl.textContent = `${marketItems.length} market lanes | ${relicItems.length} relic lanes | 7d net ${summary.net_plat_7d != null ? `${fmtMarketNum(summary.net_plat_7d,0)}p` : 'n/a'}`;
+
+    const marketCards = marketItems.map(item => {
+      const move = Number(item.price_change_pct);
+      const moveClass = !Number.isFinite(move) ? 'flat' : (move >= 0 ? 'up' : 'down');
+      const action = String(item.action || 'watch');
+      const hist = Array.isArray(item.history) && item.history.length ? item.history : (Array.isArray(item.local_history?.series) ? item.local_history.series : []);
+      return `
+        <div class="market-card">
+          <div class="diag-head">
+            <strong>${esc(item.name || 'Opportunity')}</strong>
+            <span class="rank-pill">${esc(action)}</span>
+          </div>
+          <div class="market-chip-row">
+            ${warframeSignalChip(item.signal)}
+            <span class="market-chip ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'trend n/a'}</span>
+            <span class="market-chip">Demand ${fmtMarketNum(item.demand_score || 0,0)}</span>
+            <span class="market-chip">Liq ${fmtMarketNum(item.liquidity_score || 0,0)}</span>
+          </div>
+          <div class="tool-summary">${esc(item.note || 'Opportunity lane')}</div>
+          <div class="small-row"><span>Price</span><span class="muted">${item.price != null ? `${fmtMarketNum(item.price,0)}p` : '-'}</span></div>
+          <div class="small-row"><span>You sold / bought</span><span class="muted">${fmtMarketNum(item.sent_count || 0,0)} / ${fmtMarketNum(item.received_count || 0,0)}</span></div>
+          <div class="small-row"><span>48h volume</span><span class="muted">${fmtMarketNum(item.volume_total || 0,0)}</span></div>
+          ${buildSparklineSvg(hist, 'sparkline-muted')}
+          <div class="sparkline-label">
+            <button class="sm" onclick='trackWarframeNamedItem(${JSON.stringify(item.name || '')}, "item")'>Track</button>
+            ${item.slug ? `<a href="https://warframe.market/items/${esc(item.slug)}" target="_blank" rel="noopener">Open</a>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const relicCards = relicItems.map(item => `
+      <div class="market-card">
+        <div class="diag-head">
+          <strong>${esc(item.name || 'Relic')}</strong>
+          <span class="rank-pill">${esc(item.action || 'watch')}</span>
+        </div>
+        <div class="tool-summary">${esc(item.note || 'Inventory lane')}</div>
+        <div class="small-row"><span>Copies</span><span class="muted">${fmtMarketNum(item.count || 0,0)}</span></div>
+        <div class="small-row"><span>Unit value</span><span class="muted">${item.plat_value != null ? `${fmtMarketNum(item.plat_value,1)}p` : 'n/a'}</span></div>
+        <div class="small-row"><span>Stack value</span><span class="muted">${item.stash_value != null ? `${fmtMarketNum(item.stash_value,1)}p` : 'n/a'}</span></div>
+      </div>
+    `).join('');
+
+    gridEl.innerHTML = `
+      ${marketCards || '<div class="muted">No personal market opportunities yet. More AlecaFrame history will make this sharper.</div>'}
+      ${relicCards || '<div class="muted">No relic inventory opportunities yet.</div>'}
+    `;
+  } catch (e) {
+    gridEl.innerHTML = `<div class="err-msg">Personal opportunities failed: ${esc(e.message)}</div>`;
+    metaEl.textContent = 'opportunities unavailable';
   }
 }
 

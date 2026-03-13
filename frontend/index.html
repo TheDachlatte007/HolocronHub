@@ -765,6 +765,16 @@
       </div>
       <div class="stat-card">
         <div class="diag-head">
+          <h2 style="margin:0">AlecaFrame Sync</h2>
+          <div class="row" style="margin:0">
+            <span id="wf-aleca-meta" class="tool-minor">Personal stats, trades and relic inventory from AlecaFrame.</span>
+            <button class="sm" onclick="loadWarframeAleca(true)">Refresh</button>
+          </div>
+        </div>
+        <div id="wf-aleca" class="wf-plan-grid"><div class="muted">Configure AlecaFrame tokens in Settings to unlock personal Warframe stats.</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
           <h2 style="margin:0">Arsenal Explorer</h2>
           <span id="wf-arsenal-meta" class="tool-minor"></span>
         </div>
@@ -961,6 +971,18 @@
             <label>Twelve Data API Key</label>
             <input id="set-api-twelvedata" type="password" placeholder="..." />
           </div>
+          <div class="settings-field">
+            <label>AlecaFrame User Hash</label>
+            <input id="set-api-aleca-userhash" type="password" placeholder="for /api/stats/{userHash}" />
+          </div>
+          <div class="settings-field">
+            <label>AlecaFrame Secret Token</label>
+            <input id="set-api-aleca-secret" type="password" placeholder="optional private stats token" />
+          </div>
+          <div class="settings-field">
+            <label>AlecaFrame Public Token</label>
+            <input id="set-api-aleca-public" type="password" placeholder="public stats / relic inventory token" />
+          </div>
         </div>
         <div class="settings-actions">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -969,7 +991,7 @@
           <button class="primary" onclick="saveSettingsApi()">Save API & Model</button>
           <span id="settings-status-api" class="muted"></span>
         </div>
-        <div class="settings-hint">Keys are stored in local project settings for this self-hosted instance.</div>
+        <div class="settings-hint">Keys are stored in local project settings for this self-hosted instance. AlecaFrame supports either `userHash + optional secretToken` or a public token for shared stats/relic inventory.</div>
       </div>
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155">
         <h2>Provider Diagnostics</h2>
@@ -2398,6 +2420,7 @@ function applyWarframeAutoRefresh() {
     loadWarframe({ background: true });
     loadWarframePulse();
     loadWarframeRadar();
+    loadWarframeAleca();
   }, WARFRAME_AUTO_REFRESH_MS);
 }
 
@@ -3470,6 +3493,7 @@ async function loadWarframe(options = {}) {
   const hasWatchlistContent = !!document.getElementById('wf-watchlist')?.children.length;
   const hasPulseContent = !!document.getElementById('wf-demand')?.children.length;
   const hasRadarContent = !!document.getElementById('wf-profit')?.children.length;
+  const hasAlecaContent = !!document.getElementById('wf-aleca')?.children.length;
 
   renderWarframeTools();
   if (arsenalEl) arsenalEl.innerHTML = '<div class="muted">Search a frame to inspect stats and abilities.</div>';
@@ -3481,6 +3505,7 @@ async function loadWarframe(options = {}) {
       void loadWarframePlanner(item);
       if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
       if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
+      if (!hasAlecaContent) void loadWarframeAleca();
       return;
     }
     if (!background && metaEl) metaEl.textContent += ' | refreshing';
@@ -3501,6 +3526,7 @@ async function loadWarframe(options = {}) {
   void loadWarframePlanner(item);
   if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
   if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
+  if (!hasAlecaContent || force) void loadWarframeAleca(force);
 
   try {
     const params = new URLSearchParams({ item, platform });
@@ -3793,6 +3819,98 @@ async function loadWarframeWatchlist() {
   } catch (e) {
     gridEl.innerHTML = `<div class="err-msg">Watchlist failed: ${esc(e.message)}</div>`;
     if (metaEl) metaEl.textContent = 'watchlist unavailable';
+  }
+}
+
+async function loadWarframeAleca(force = false) {
+  const metaEl = document.getElementById('wf-aleca-meta');
+  const gridEl = document.getElementById('wf-aleca');
+  if (!gridEl || !metaEl) return;
+  if (!force) gridEl.innerHTML = '<div class="muted">Loading AlecaFrame sync...</div>';
+  metaEl.textContent = 'syncing AlecaFrame stats';
+  try {
+    const data = await fetchJson(`${API}/warframe/aleca`);
+    if (!data.configured) {
+      gridEl.innerHTML = '<div class="muted">Add AlecaFrame tokens in Settings to show personal stats, trades and relic inventory here.</div>';
+      metaEl.textContent = 'not configured';
+      return;
+    }
+    const resources = Array.isArray(data.resources) ? data.resources : [];
+    const trades = Array.isArray(data.recent_trades) ? data.recent_trades : [];
+    const tradeSummary = data.trade_summary || {};
+    const relics = data.relic_inventory || {};
+    metaEl.textContent = `${String(data.mode || 'public').toUpperCase()} | updated ${relTime(data.last_update || data.generated_at)} | ${resources.length} tracked metrics`;
+
+    const resourceCards = resources.filter(item => item.value != null).slice(0, 8).map(item => {
+      const delta = Number(item.delta);
+      const deltaClass = !Number.isFinite(delta) ? 'flat' : (delta >= 0 ? 'up' : 'down');
+      const suffix = item.suffix || '';
+      return `
+        <div class="market-card">
+          <div class="diag-head">
+            <strong>${esc(item.label || 'Metric')}</strong>
+            <span class="rank-pill">${item.value != null ? `${fmtMarketNum(item.value, 0)}${esc(suffix)}` : '-'}</span>
+          </div>
+          <div class="small-row"><span>Change</span><span class="market-change ${deltaClass}">${Number.isFinite(delta) ? `${delta >= 0 ? '+' : ''}${fmtMarketNum(delta, 1)}${esc(suffix)}` : 'n/a'}</span></div>
+        </div>
+      `;
+    }).join('');
+
+    const recentTradeRows = trades.slice(0, 6).map(trade => `
+      <div class="market-card">
+        <div class="diag-head">
+          <strong>${esc((trade.type || 'trade').toUpperCase())}</strong>
+          <span class="rank-pill">${trade.total_plat != null ? `${fmtMarketNum(trade.total_plat, 0)}p` : '0p'}</span>
+        </div>
+        <div class="tool-summary">${esc(trade.headline || 'No trade detail')}</div>
+        <div class="small-row"><span>Trader</span><span class="muted">${esc(trade.user || 'Unknown')}</span></div>
+        <div class="small-row"><span>When</span><span class="muted">${relTime(trade.ts)}</span></div>
+      </div>
+    `).join('');
+
+    const visibleParts = Array.isArray(data.visible_parts) && data.visible_parts.length
+      ? `<div class="wf-pill-row">${data.visible_parts.map(part => `<span class="wf-meta-chip">${esc(part)}</span>`).join('')}</div>`
+      : '';
+
+    const relicTop = Array.isArray(relics.top_entries) ? relics.top_entries : [];
+    const relicBlock = relics.available
+      ? `
+        <div class="market-card">
+          <div class="diag-head">
+            <strong>Relic Inventory</strong>
+            <span class="rank-pill">${fmtMarketNum(relics.total_copies || 0, 0)} copies</span>
+          </div>
+          <div class="small-row"><span>Unique relics</span><span class="muted">${fmtMarketNum(relics.unique_relics || 0, 0)}</span></div>
+          <div class="small-row"><span>Indexed entries</span><span class="muted">${fmtMarketNum(relics.entry_count || 0, 0)}</span></div>
+          <div class="small-list">
+            ${relicTop.length ? relicTop.map(entry => `<div class="small-row"><span>${esc(entry.name || 'Relic')}</span><span class="muted">${fmtMarketNum(entry.count || 0, 0)}${entry.plat_value != null ? ` | ${fmtMarketNum(entry.plat_value,1)}p` : ''}</span></div>`).join('') : '<div class="muted">No relic inventory details returned.</div>'}
+          </div>
+        </div>
+      `
+      : `
+        <div class="market-card">
+          <strong>Relic Inventory</strong>
+          <div class="muted">Public token is missing or relic inventory is not exposed for this account yet.</div>
+        </div>
+      `;
+
+    gridEl.innerHTML = `
+      <div class="market-card">
+        <div class="diag-head">
+          <strong>${esc(data.username || 'AlecaFrame Player')}</strong>
+          <span class="rank-pill">${fmtMarketNum(data.data_points_count || 0, 0)} snapshots</span>
+        </div>
+        <div class="small-row"><span>Trade log</span><span class="muted">${fmtMarketNum(tradeSummary.total || 0, 0)} total | ${fmtMarketNum(tradeSummary.sales || 0, 0)} sales</span></div>
+        <div class="small-row"><span>Plat flow</span><span class="muted">+${fmtMarketNum(tradeSummary.plat_in || 0, 0)}p / -${fmtMarketNum(tradeSummary.plat_out || 0, 0)}p</span></div>
+        ${visibleParts || '<div class="muted">No public-part flags reported.</div>'}
+      </div>
+      ${resourceCards || '<div class="muted">No AlecaFrame resource snapshots returned.</div>'}
+      ${relicBlock}
+      ${recentTradeRows || '<div class="muted">No recent trades returned from AlecaFrame.</div>'}
+    `;
+  } catch (e) {
+    gridEl.innerHTML = `<div class="err-msg">AlecaFrame sync failed: ${esc(e.message)}</div>`;
+    metaEl.textContent = 'AlecaFrame unavailable';
   }
 }
 
@@ -4131,6 +4249,9 @@ const DEFAULT_SETTINGS = {
     finnhub_api_key: '',
     alphavantage_api_key: '',
     twelvedata_api_key: '',
+    alecaframe_user_hash: '',
+    alecaframe_secret_token: '',
+    alecaframe_public_token: '',
   },
 };
 
@@ -4260,7 +4381,7 @@ function showSettingsPanel(name, btn) {
 
 function toggleApiKeyVisibility() {
   const show = document.getElementById('set-api-show')?.checked;
-  ['set-api-marketaux','set-api-finnhub','set-api-alphavantage'].forEach(id => {
+  ['set-api-marketaux','set-api-finnhub','set-api-alphavantage','set-api-twelvedata','set-api-aleca-userhash','set-api-aleca-secret','set-api-aleca-public'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.type = show ? 'text' : 'password';
   });
@@ -4279,6 +4400,9 @@ function populateSettingsForm(cfg) {
   document.getElementById('set-api-finnhub').value = cfg.api_keys.finnhub_api_key || '';
   document.getElementById('set-api-alphavantage').value = cfg.api_keys.alphavantage_api_key || '';
   document.getElementById('set-api-twelvedata').value = cfg.api_keys.twelvedata_api_key || '';
+  document.getElementById('set-api-aleca-userhash').value = cfg.api_keys.alecaframe_user_hash || '';
+  document.getElementById('set-api-aleca-secret').value = cfg.api_keys.alecaframe_secret_token || '';
+  document.getElementById('set-api-aleca-public').value = cfg.api_keys.alecaframe_public_token || '';
   const showToggle = document.getElementById('set-api-show');
   if (showToggle) showToggle.checked = false;
   toggleApiKeyVisibility();
@@ -4390,6 +4514,9 @@ async function saveSettingsApi() {
         finnhub_api_key: document.getElementById('set-api-finnhub').value.trim(),
         alphavantage_api_key: document.getElementById('set-api-alphavantage').value.trim(),
         twelvedata_api_key: document.getElementById('set-api-twelvedata').value.trim(),
+        alecaframe_user_hash: document.getElementById('set-api-aleca-userhash').value.trim(),
+        alecaframe_secret_token: document.getElementById('set-api-aleca-secret').value.trim(),
+        alecaframe_public_token: document.getElementById('set-api-aleca-public').value.trim(),
       },
     });
     setSettingsStatus('api', 'Saved.');

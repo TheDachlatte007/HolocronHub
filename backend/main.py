@@ -507,6 +507,9 @@ _DEFAULT_SETTINGS = {
         "finnhub_api_key": "",
         "alphavantage_api_key": "",
         "twelvedata_api_key": "",
+        "alecaframe_user_hash": "",
+        "alecaframe_secret_token": "",
+        "alecaframe_public_token": "",
     },
 }
 
@@ -514,7 +517,15 @@ _ALLOWED_SETTINGS_PATCH = {
     "ux": {"language", "default_category", "show_disabled_sources"},
     "feed": {"refresh_interval_minutes", "digest_mode"},
     "models": {"openclaw_model"},
-    "api_keys": {"marketaux_api_key", "finnhub_api_key", "alphavantage_api_key", "twelvedata_api_key"},
+    "api_keys": {
+        "marketaux_api_key",
+        "finnhub_api_key",
+        "alphavantage_api_key",
+        "twelvedata_api_key",
+        "alecaframe_user_hash",
+        "alecaframe_secret_token",
+        "alecaframe_public_token",
+    },
 }
 
 _API_KEY_ENV_MAP = {
@@ -522,6 +533,9 @@ _API_KEY_ENV_MAP = {
     "finnhub_api_key": "FINNHUB_API_KEY",
     "alphavantage_api_key": "ALPHAVANTAGE_API_KEY",
     "twelvedata_api_key": "TWELVEDATA_API_KEY",
+    "alecaframe_user_hash": "ALECAFRAME_USER_HASH",
+    "alecaframe_secret_token": "ALECAFRAME_SECRET_TOKEN",
+    "alecaframe_public_token": "ALECAFRAME_PUBLIC_TOKEN",
 }
 
 _DEFAULT_MARKET_SYMBOLS = [
@@ -782,6 +796,311 @@ def _load_api_key(name: str) -> str:
         return str((_load_settings().get("api_keys", {}) or {}).get(name, "")).strip()
     except Exception:
         return ""
+
+
+_ALECA_PUBLIC_PARTS = {
+    1: "Trades",
+    2: "Platinum",
+    4: "Ducats",
+    8: "Endo",
+    16: "Credits",
+    32: "Account Data",
+    64: "Aya",
+    128: "Relics",
+}
+
+_ALECA_TRADE_TYPES = {
+    0: "sale",
+    1: "purchase",
+    2: "trade",
+}
+
+
+def _aleca_visible_parts(mask: Any) -> list[str]:
+    try:
+        value = int(mask or 0)
+    except Exception:
+        value = 0
+    parts: list[str] = []
+    for bit, label in _ALECA_PUBLIC_PARTS.items():
+        if value & bit:
+            parts.append(label)
+    return parts
+
+
+def _aleca_trade_items(raw: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for item in raw or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("displayName") or item.get("name") or "Item").strip()
+        try:
+            count = int(item.get("cnt") or 0)
+        except Exception:
+            count = 0
+        try:
+            rank = int(item.get("rank")) if item.get("rank") is not None else None
+        except Exception:
+            rank = None
+        label = f"{count}x {name}" if count not in (0, 1) else name
+        if rank is not None and rank >= 0:
+            label = f"{label} (R{rank})"
+        out.append(
+            {
+                "name": name,
+                "count": count,
+                "rank": rank,
+                "label": label,
+            }
+        )
+    return out
+
+
+def _extract_aleca_relic_entries(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [row for row in payload if isinstance(row, dict)]
+    if not isinstance(payload, dict):
+        return []
+    for key in ["items", "relics", "inventory", "data", "results"]:
+        value = payload.get(key)
+        if isinstance(value, list):
+            return [row for row in value if isinstance(row, dict)]
+        if isinstance(value, dict):
+            for nested_key in ["items", "relics", "inventory", "data", "results"]:
+                nested = value.get(nested_key)
+                if isinstance(nested, list):
+                    return [row for row in nested if isinstance(row, dict)]
+    return []
+
+
+def _summarize_aleca_relic_inventory(payload: Any) -> dict[str, Any]:
+    entries = _extract_aleca_relic_entries(payload)
+    normalized: list[dict[str, Any]] = []
+    for entry in entries:
+        name = (
+            entry.get("displayName")
+            or entry.get("name")
+            or entry.get("relicName")
+            or entry.get("itemName")
+            or entry.get("key")
+        )
+        if not name:
+            continue
+        count = 1
+        for key in ["count", "quantity", "copies", "owned", "amount"]:
+            try:
+                if entry.get(key) is not None:
+                    count = max(1, int(entry.get(key)))
+                    break
+            except Exception:
+                continue
+        plat_value = None
+        for key in ["platValue", "platinum", "estimatedPlat", "valuePlat", "value"]:
+            try:
+                if entry.get(key) is not None:
+                    plat_value = round(float(entry.get(key)), 1)
+                    break
+            except Exception:
+                continue
+        normalized.append(
+            {
+                "name": str(name).strip(),
+                "count": count,
+                "plat_value": plat_value,
+            }
+        )
+    normalized.sort(
+        key=lambda row: (
+            float(row.get("plat_value") or 0.0),
+            int(row.get("count") or 0),
+            str(row.get("name") or ""),
+        ),
+        reverse=True,
+    )
+    return {
+        "available": bool(entries),
+        "entry_count": len(normalized),
+        "unique_relics": len({str(row.get("name") or "") for row in normalized if str(row.get("name") or "")}),
+        "total_copies": sum(int(row.get("count") or 0) for row in normalized),
+        "top_entries": normalized[:8],
+    }
+
+
+def _build_alecaframe_payload() -> tuple[dict[str, Any], list[str]]:
+    cache_key = "warframe:alecaframe:summary"
+    cached = _cache_get(cache_key, ttl_seconds=10 * 60)
+    if isinstance(cached, dict):
+        return cached, list(cached.get("errors") or [])
+
+    user_hash = _load_api_key("alecaframe_user_hash")
+    secret_token = _load_api_key("alecaframe_secret_token")
+    public_token = _load_api_key("alecaframe_public_token")
+    if not user_hash and not public_token:
+        payload = {
+            "configured": False,
+            "mode": "disabled",
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "errors": [],
+        }
+        _cache_set(cache_key, payload)
+        return payload, []
+
+    errors: list[str] = []
+    stats_payload: Any = None
+    mode = "public"
+    headers = {"Accept": "application/json", "User-Agent": "HolocronHub/0.5"}
+    if user_hash:
+        mode = "private" if secret_token else "user_hash"
+        stats_payload, err = _http_get_json(
+            f"https://stats.alecaframe.com/api/stats/{quote(str(user_hash), safe='')}",
+            params={"secretToken": secret_token} if secret_token else None,
+            headers=headers,
+            timeout=18,
+        )
+        if err:
+            errors.append(f"alecaframe:stats:{err}")
+    elif public_token:
+        stats_payload, err = _http_get_json(
+            "https://stats.alecaframe.com/api/stats/public",
+            params={"token": public_token},
+            headers=headers,
+            timeout=18,
+        )
+        if err:
+            errors.append(f"alecaframe:public:{err}")
+
+    if not isinstance(stats_payload, dict):
+        stale_payload, age = _get_last_good(cache_key, max_age_seconds=24 * 3600)
+        if isinstance(stale_payload, dict):
+            fallback_errors = list(errors or []) + [f"fallback:last_good:alecaframe:{age}s"]
+            stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+            stale_payload["errors"] = fallback_errors[:24]
+            _cache_set(cache_key, stale_payload)
+            return stale_payload, fallback_errors[:24]
+        payload = {
+            "configured": True,
+            "mode": mode,
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "errors": errors[:24],
+        }
+        _cache_set(cache_key, payload)
+        return payload, errors[:24]
+
+    data_points = [point for point in (stats_payload.get("generalDataPoints") or []) if isinstance(point, dict)]
+    data_points.sort(key=lambda row: str(row.get("ts") or ""))
+    latest = data_points[-1] if data_points else {}
+    previous = data_points[-2] if len(data_points) >= 2 else {}
+    resources: list[dict[str, Any]] = []
+    for key, label, suffix in [
+        ("plat", "Platinum", "p"),
+        ("ducats", "Ducats", ""),
+        ("aya", "Aya", ""),
+        ("endo", "Endo", ""),
+        ("credits", "Credits", ""),
+        ("relicOpened", "Relics Opened", ""),
+        ("trades", "Trades", ""),
+        ("mr", "Mastery", ""),
+        ("percentageCompletion", "Completion", "%"),
+    ]:
+        try:
+            latest_value = latest.get(key)
+            prev_value = previous.get(key)
+            delta = None
+            if latest_value is not None and prev_value is not None:
+                delta = round(float(latest_value) - float(prev_value), 1)
+            resources.append(
+                {
+                    "key": key,
+                    "label": label,
+                    "value": latest_value,
+                    "suffix": suffix,
+                    "delta": delta,
+                }
+            )
+        except Exception:
+            continue
+
+    trades_raw = [trade for trade in (stats_payload.get("trades") or []) if isinstance(trade, dict)]
+    trades_raw.sort(key=lambda row: str(row.get("ts") or ""), reverse=True)
+    recent_trades: list[dict[str, Any]] = []
+    sale_count = 0
+    purchase_count = 0
+    barter_count = 0
+    plat_in = 0
+    plat_out = 0
+    for trade in trades_raw:
+        trade_type = _ALECA_TRADE_TYPES.get(int(trade.get("type") or 0), "trade")
+        if trade_type == "sale":
+            sale_count += 1
+        elif trade_type == "purchase":
+            purchase_count += 1
+        else:
+            barter_count += 1
+        try:
+            total_plat = int(trade.get("totalPlat") or 0)
+        except Exception:
+            total_plat = 0
+        if trade_type == "sale":
+            plat_in += total_plat
+        elif trade_type == "purchase":
+            plat_out += total_plat
+        tx_items = _aleca_trade_items(trade.get("tx"))
+        rx_items = _aleca_trade_items(trade.get("rx"))
+        recent_trades.append(
+            {
+                "ts": trade.get("ts"),
+                "user": trade.get("user"),
+                "type": trade_type,
+                "total_plat": total_plat,
+                "tx": tx_items,
+                "rx": rx_items,
+                "headline": " -> ".join(
+                    [
+                        ", ".join(item.get("label") or item.get("name") or "Item" for item in tx_items[:2]) or "nothing sent",
+                        ", ".join(item.get("label") or item.get("name") or "Item" for item in rx_items[:2]) or "nothing received",
+                    ]
+                ),
+            }
+        )
+
+    relic_summary = {"available": False, "entry_count": 0, "unique_relics": 0, "total_copies": 0, "top_entries": []}
+    if public_token:
+        relic_payload, relic_err = _http_get_json(
+            "https://stats.alecaframe.com/api/stats/public/getRelicInventory",
+            params={"publicToken": public_token},
+            headers=headers,
+            timeout=18,
+        )
+        if relic_err:
+            errors.append(f"alecaframe:relics:{relic_err}")
+        else:
+            relic_summary = _summarize_aleca_relic_inventory(relic_payload)
+
+    payload = {
+        "configured": True,
+        "mode": mode,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "last_update": stats_payload.get("lastUpdate"),
+        "user_hash": stats_payload.get("userHash"),
+        "username": stats_payload.get("usernameWhenPublic"),
+        "visible_parts": _aleca_visible_parts(stats_payload.get("publicParts")),
+        "data_points_count": len(data_points),
+        "resources": resources,
+        "trade_summary": {
+            "total": len(trades_raw),
+            "sales": sale_count,
+            "purchases": purchase_count,
+            "barters": barter_count,
+            "plat_in": plat_in,
+            "plat_out": plat_out,
+        },
+        "recent_trades": recent_trades[:8],
+        "relic_inventory": relic_summary,
+        "errors": errors[:24],
+    }
+    _cache_set(cache_key, payload)
+    _set_last_good(cache_key, payload)
+    return payload, errors[:24]
 
 
 def _alpha_vantage_series_key(payload: dict[str, Any]) -> Optional[str]:
@@ -4452,6 +4771,12 @@ def warframe_market_pulse(platform: str = "pc"):
 def get_warframe_watchlist(platform: str = "pc", sort_by: str = "priority"):
     items, errors = _build_warframe_watchlist_payload(platform, sort_by=sort_by)
     return {"items": items, "count": len(items), "sort_by": sort_by, "errors": errors}
+
+
+@app.get("/api/warframe/aleca")
+def warframe_aleca():
+    payload, errors = _build_alecaframe_payload()
+    return {**payload, "errors": errors}
 
 
 @app.post("/api/warframe/watchlist")

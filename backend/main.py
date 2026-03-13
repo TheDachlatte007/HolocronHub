@@ -33,6 +33,7 @@ WARFRAME_WATCHLIST_FILE = BASE_DIR / "data" / "warframe_watchlist.json"
 WARFRAME_MARKET_HISTORY_FILE = BASE_DIR / "data" / "warframe_market_history.json"
 SCHEDULE_FILE = BASE_DIR / "data" / "schedule.json"
 SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
+LAST_GOOD_FILE = BASE_DIR / "data" / "last_good_cache.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
 
 
@@ -85,6 +86,7 @@ app = FastAPI(title="Holocron API", version="0.2.0")
 
 _ingest_state: dict = {"running": False, "last_result": None, "started_at": None}
 _warframe_market_history_lock = Lock()
+_last_good_lock = Lock()
 
 app.add_middleware(
     CORSMiddleware,
@@ -611,6 +613,56 @@ def _record_provider_health(
     }
 
 
+def _load_last_good_store() -> dict[str, dict[str, Any]]:
+    if not LAST_GOOD_FILE.exists():
+        return {}
+    try:
+        raw = json.loads(LAST_GOOD_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+
+    loaded: dict[str, dict[str, Any]] = {}
+    for key, entry in raw.items():
+        if not isinstance(entry, dict):
+            continue
+        value = entry.get("value")
+        if not isinstance(value, dict):
+            continue
+        try:
+            ts = float(entry.get("ts") or 0.0)
+        except Exception:
+            ts = 0.0
+        if ts <= 0:
+            continue
+        loaded[str(key)] = {"ts": ts, "value": value}
+    return loaded
+
+
+def _save_last_good_store() -> None:
+    LAST_GOOD_FILE.parent.mkdir(parents=True, exist_ok=True)
+    ordered_items = sorted(_LAST_GOOD.items(), key=lambda item: float((item[1] or {}).get("ts") or 0.0), reverse=True)[:96]
+    payload = {
+        str(key): {
+            "ts": float((entry or {}).get("ts") or 0.0),
+            "value": deepcopy((entry or {}).get("value") or {}),
+        }
+        for key, entry in ordered_items
+        if isinstance(entry, dict) and isinstance(entry.get("value"), dict)
+    }
+    LAST_GOOD_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _boot_last_good_store() -> None:
+    loaded = _load_last_good_store()
+    if not loaded:
+        return
+    with _last_good_lock:
+        _LAST_GOOD.clear()
+        _LAST_GOOD.update(loaded)
+
+
 def _set_last_good(key: str, payload: dict[str, Any]) -> None:
     snap = deepcopy(payload)
     if not isinstance(snap, dict):
@@ -618,11 +670,17 @@ def _set_last_good(key: str, payload: dict[str, Any]) -> None:
     snap["data_as_of"] = snap.get("data_as_of") or snap.get("generated_at")
     snap["stale"] = False
     snap["stale_age_seconds"] = 0
-    _LAST_GOOD[key] = {"ts": time.time(), "value": snap}
+    with _last_good_lock:
+        _LAST_GOOD[key] = {"ts": time.time(), "value": snap}
+        try:
+            _save_last_good_store()
+        except Exception:
+            pass
 
 
 def _get_last_good(key: str, *, max_age_seconds: int = 21600) -> tuple[Optional[dict[str, Any]], int]:
-    ent = _LAST_GOOD.get(key)
+    with _last_good_lock:
+        ent = deepcopy(_LAST_GOOD.get(key))
     if not isinstance(ent, dict):
         return None, 0
 
@@ -666,6 +724,19 @@ def _f1_payload_has_data(payload: dict[str, Any]) -> bool:
     except Exception:
         pass
     return any(payload.get(k) for k in ["next_race", "latest_race", "upcoming_races"])
+
+
+def _f1_session_payload_has_data(payload: dict[str, Any]) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    if isinstance(payload.get("session"), dict) and payload.get("session"):
+        return True
+    if len(payload.get("leaderboard") or []) > 0:
+        return True
+    if len(payload.get("race_control") or []) > 0:
+        return True
+    weather = payload.get("weather") or {}
+    return any(weather.get(key) is not None for key in ["air_temperature", "track_temperature", "humidity", "date"])
 
 
 def _warframe_payload_has_data(payload: dict[str, Any]) -> bool:
@@ -4459,6 +4530,7 @@ def _prewarm_provider_caches() -> None:
 
 @app.on_event("startup")
 def _startup() -> None:
+    _boot_last_good_store()
     settings_cfg = _load_settings()
     _apply_settings_env(settings_cfg)
 
@@ -4969,14 +5041,14 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
 
 
 @app.get("/api/f1/overview")
-def f1_overview(season: Optional[str] = None):
+def f1_overview(season: Optional[str] = None, force: bool = False):
     started = time.perf_counter()
     season_key = str(season or "current").strip().lower()
     if season_key != "current" and (not season_key.isdigit() or len(season_key) != 4):
         raise HTTPException(status_code=422, detail="season must be 'current' or YYYY")
 
     cache_key = f"f1:{season_key}"
-    cached = _cache_get(cache_key, ttl_seconds=300)
+    cached = None if force else _cache_get(cache_key, ttl_seconds=300)
     if isinstance(cached, dict):
         duration_ms = int((time.perf_counter() - started) * 1000)
         _record_provider_health(
@@ -5044,19 +5116,26 @@ def f1_overview(season: Optional[str] = None):
 
 
 @app.get("/api/f1/session")
-def f1_session(session_key: str):
+def f1_session(session_key: str, force: bool = False):
     started = time.perf_counter()
     session_key = str(session_key or "").strip()
     if not session_key:
         raise HTTPException(status_code=422, detail="session_key is required")
 
     cache_key = f"f1:session:{session_key}"
-    cached = _cache_get(cache_key, ttl_seconds=45)
+    cached = None if force else _cache_get(cache_key, ttl_seconds=45)
     if isinstance(cached, dict):
         return {**cached, "cached": True}
 
     detail, errors = _fetch_openf1_session_detail(session_key)
     if not detail:
+        stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
+        if isinstance(stale_payload, dict):
+            fallback_errors = list(errors or []) + [f"fallback:last_good:f1_session:{age}s"]
+            stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+            stale_payload["errors"] = fallback_errors[:24]
+            _cache_set(cache_key, stale_payload)
+            return {**stale_payload, "cached": False}
         raise HTTPException(status_code=404, detail="session not found")
 
     generated_at = datetime.now().isoformat(timespec="seconds")
@@ -5070,6 +5149,16 @@ def f1_session(session_key: str):
         "errors": errors[:24],
         "duration_ms": int((time.perf_counter() - started) * 1000),
     }
+    if _f1_session_payload_has_data(payload):
+        _set_last_good(cache_key, payload)
+    else:
+        stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
+        if isinstance(stale_payload, dict):
+            fallback_errors = list(errors or []) + [f"fallback:last_good:f1_session:{age}s"]
+            stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+            stale_payload["errors"] = fallback_errors[:24]
+            _cache_set(cache_key, stale_payload)
+            return {**stale_payload, "cached": False}
     _cache_set(cache_key, payload)
     return {**payload, "cached": False}
 
@@ -5151,7 +5240,7 @@ def delete_warframe_watchlist_item(item_id: str):
 
 
 @app.get("/api/warframe/overview")
-def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
+def warframe_overview(item: str = "arcane energize", platform: str = "pc", force: bool = False):
     started = time.perf_counter()
     platform_key = str(platform or "pc").strip().lower()
     if platform_key not in {"pc", "ps4", "xb1", "swi"}:
@@ -5159,7 +5248,7 @@ def warframe_overview(item: str = "arcane energize", platform: str = "pc"):
 
     item_key = str(item or "arcane energize").strip().lower()
     cache_key = f"warframe:{platform_key}:{item_key}"
-    cached = _cache_get(cache_key, ttl_seconds=75)
+    cached = None if force else _cache_get(cache_key, ttl_seconds=75)
     if isinstance(cached, dict):
         ws = cached.get("worldstate") or {}
         market = cached.get("market") or {}

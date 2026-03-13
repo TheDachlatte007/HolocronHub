@@ -917,12 +917,154 @@ def _summarize_aleca_relic_inventory(payload: Any) -> dict[str, Any]:
         ),
         reverse=True,
     )
+    stash_value_estimate = 0.0
+    for row in normalized:
+        try:
+            if row.get("plat_value") is not None:
+                stash_value_estimate += float(row.get("plat_value")) * int(row.get("count") or 0)
+        except Exception:
+            continue
+    top_by_copies = sorted(
+        normalized,
+        key=lambda row: (
+            int(row.get("count") or 0),
+            float(row.get("plat_value") or 0.0),
+            str(row.get("name") or ""),
+        ),
+        reverse=True,
+    )[:8]
     return {
         "available": bool(entries),
         "entry_count": len(normalized),
         "unique_relics": len({str(row.get("name") or "") for row in normalized if str(row.get("name") or "")}),
         "total_copies": sum(int(row.get("count") or 0) for row in normalized),
+        "stash_value_estimate": round(stash_value_estimate, 1),
         "top_entries": normalized[:8],
+        "top_by_copies": top_by_copies,
+    }
+
+
+def _build_aleca_trade_insights(trades_raw: list[dict[str, Any]]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    sent_rollup: dict[str, dict[str, Any]] = {}
+    received_rollup: dict[str, dict[str, Any]] = {}
+    recent_daily: dict[str, dict[str, int]] = {}
+    active_days: set[str] = set()
+    plat_values: list[int] = []
+    sale_values: list[int] = []
+    purchase_values: list[int] = []
+    trade_values: list[int] = []
+    trade_count_7d = 0
+    plat_in_7d = 0
+    plat_out_7d = 0
+    last_trade_at = None
+
+    def bump_rollup(target: dict[str, dict[str, Any]], items: list[dict[str, Any]], trade_type: str, total_plat: int, trade_ts: Any) -> None:
+        for item in items:
+            name = str(item.get("name") or "").strip()
+            if not name:
+                continue
+            entry = target.setdefault(
+                name.casefold(),
+                {
+                    "name": name,
+                    "count": 0,
+                    "trades": 0,
+                    "plat_total": 0,
+                    "last_seen_at": None,
+                    "trade_types": set(),
+                },
+            )
+            entry["count"] = int(entry.get("count") or 0) + max(1, int(item.get("count") or 0))
+            entry["trades"] = int(entry.get("trades") or 0) + 1
+            entry["plat_total"] = int(entry.get("plat_total") or 0) + max(0, int(total_plat or 0))
+            entry["last_seen_at"] = trade_ts or entry.get("last_seen_at")
+            trade_types = entry.get("trade_types")
+            if isinstance(trade_types, set):
+                trade_types.add(trade_type)
+
+    for trade in trades_raw:
+        trade_ts = trade.get("ts")
+        trade_dt = _parse_dt(trade_ts)
+        if trade_dt:
+            day_key = trade_dt.astimezone(timezone.utc).strftime("%Y-%m-%d")
+            active_days.add(day_key)
+            lane = recent_daily.setdefault(day_key, {"count": 0, "plat_in": 0, "plat_out": 0})
+            lane["count"] = int(lane.get("count") or 0) + 1
+            if last_trade_at is None or trade_dt > (_parse_dt(last_trade_at) or datetime.min.replace(tzinfo=timezone.utc)):
+                last_trade_at = trade_ts
+        trade_type = _ALECA_TRADE_TYPES.get(int(trade.get("type") or 0), "trade")
+        try:
+            total_plat = int(trade.get("totalPlat") or 0)
+        except Exception:
+            total_plat = 0
+        plat_values.append(total_plat)
+        if trade_type == "sale":
+            sale_values.append(total_plat)
+        elif trade_type == "purchase":
+            purchase_values.append(total_plat)
+        else:
+            trade_values.append(total_plat)
+        if trade_dt and (now - trade_dt).total_seconds() <= 7 * 24 * 3600:
+            trade_count_7d += 1
+            if trade_type == "sale":
+                plat_in_7d += total_plat
+            elif trade_type == "purchase":
+                plat_out_7d += total_plat
+        tx_items = _aleca_trade_items(trade.get("tx"))
+        rx_items = _aleca_trade_items(trade.get("rx"))
+        if trade_type == "sale":
+            bump_rollup(sent_rollup, tx_items, trade_type, total_plat, trade_ts)
+        elif trade_type == "purchase":
+            bump_rollup(received_rollup, rx_items, trade_type, total_plat, trade_ts)
+        else:
+            bump_rollup(sent_rollup, tx_items, trade_type, total_plat, trade_ts)
+            bump_rollup(received_rollup, rx_items, trade_type, total_plat, trade_ts)
+
+    def finalize_rollup(source: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+        rows = []
+        for row in source.values():
+            trade_types = row.get("trade_types")
+            rows.append(
+                {
+                    "name": row.get("name"),
+                    "count": int(row.get("count") or 0),
+                    "trades": int(row.get("trades") or 0),
+                    "plat_total": int(row.get("plat_total") or 0),
+                    "avg_plat_per_trade": round(int(row.get("plat_total") or 0) / max(1, int(row.get("trades") or 0)), 1),
+                    "last_seen_at": row.get("last_seen_at"),
+                    "trade_types": sorted(trade_types) if isinstance(trade_types, set) else [],
+                }
+            )
+        rows.sort(
+            key=lambda row: (
+                int(row.get("plat_total") or 0),
+                int(row.get("count") or 0),
+                int(row.get("trades") or 0),
+                str(row.get("name") or ""),
+            ),
+            reverse=True,
+        )
+        return rows[:8]
+
+    recent_activity = []
+    for day_key in sorted(recent_daily.keys(), reverse=True)[:7]:
+        recent_activity.append({"day": day_key, **recent_daily[day_key]})
+
+    return {
+        "trade_count_7d": trade_count_7d,
+        "plat_in_7d": plat_in_7d,
+        "plat_out_7d": plat_out_7d,
+        "net_plat_7d": plat_in_7d - plat_out_7d,
+        "active_days": len(active_days),
+        "last_trade_at": last_trade_at,
+        "avg_plat_per_trade": round(sum(plat_values) / len(plat_values), 1) if plat_values else None,
+        "avg_sale_plat": round(sum(sale_values) / len(sale_values), 1) if sale_values else None,
+        "avg_purchase_plat": round(sum(purchase_values) / len(purchase_values), 1) if purchase_values else None,
+        "avg_barter_plat": round(sum(trade_values) / len(trade_values), 1) if trade_values else None,
+        "top_sent_items": finalize_rollup(sent_rollup),
+        "top_received_items": finalize_rollup(received_rollup),
+        "recent_activity": recent_activity,
     }
 
 
@@ -1075,6 +1217,7 @@ def _build_alecaframe_payload() -> tuple[dict[str, Any], list[str]]:
             errors.append(f"alecaframe:relics:{relic_err}")
         else:
             relic_summary = _summarize_aleca_relic_inventory(relic_payload)
+    trade_insights = _build_aleca_trade_insights(trades_raw)
 
     payload = {
         "configured": True,
@@ -1094,6 +1237,7 @@ def _build_alecaframe_payload() -> tuple[dict[str, Any], list[str]]:
             "plat_in": plat_in,
             "plat_out": plat_out,
         },
+        "trade_insights": trade_insights,
         "recent_trades": recent_trades[:8],
         "relic_inventory": relic_summary,
         "errors": errors[:24],

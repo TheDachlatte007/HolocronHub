@@ -3838,6 +3838,7 @@ async function loadWarframeAleca(force = false) {
     const resources = Array.isArray(data.resources) ? data.resources : [];
     const trades = Array.isArray(data.recent_trades) ? data.recent_trades : [];
     const tradeSummary = data.trade_summary || {};
+    const tradeInsights = data.trade_insights || {};
     const relics = data.relic_inventory || {};
     metaEl.textContent = `${String(data.mode || 'public').toUpperCase()} | updated ${relTime(data.last_update || data.generated_at)} | ${resources.length} tracked metrics`;
 
@@ -3856,6 +3857,55 @@ async function loadWarframeAleca(force = false) {
       `;
     }).join('');
 
+    const tradeInsightCards = [
+      {
+        label: '7d Net Plat',
+        value: Number(tradeInsights.net_plat_7d),
+        suffix: 'p',
+        trend: true,
+      },
+      {
+        label: '7d Trades',
+        value: Number(tradeInsights.trade_count_7d),
+        suffix: '',
+      },
+      {
+        label: 'Avg Sale',
+        value: Number(tradeInsights.avg_sale_plat),
+        suffix: 'p',
+      },
+      {
+        label: 'Avg Purchase',
+        value: Number(tradeInsights.avg_purchase_plat),
+        suffix: 'p',
+      },
+      {
+        label: 'Active Days',
+        value: Number(tradeInsights.active_days),
+        suffix: '',
+      },
+    ].filter(card => Number.isFinite(card.value)).map(card => {
+      const trendClass = !card.trend ? 'flat' : (card.value >= 0 ? 'up' : 'down');
+      return `
+        <div class="market-card">
+          <div class="diag-head">
+            <strong>${esc(card.label)}</strong>
+            <span class="rank-pill">${card.value >= 0 || !card.trend ? '' : ''}${fmtMarketNum(card.value, 0)}${esc(card.suffix || '')}</span>
+          </div>
+          ${card.trend ? `<div class="market-change ${trendClass}">${card.value >= 0 ? '+' : ''}${fmtMarketNum(card.value, 1)}${esc(card.suffix || '')}</div>` : '<div class="muted">AlecaFrame rolling average</div>'}
+        </div>
+      `;
+    }).join('');
+
+    const activitySeries = Array.isArray(tradeInsights.recent_activity) ? tradeInsights.recent_activity.map(entry => ({
+      value: Number(entry.count || 0),
+      label: `${entry.day || 'Day'}: ${fmtMarketNum(entry.count || 0, 0)} trades | +${fmtMarketNum(entry.plat_in || 0, 0)}p / -${fmtMarketNum(entry.plat_out || 0, 0)}p`,
+    })) : [];
+
+    const sentItems = Array.isArray(tradeInsights.top_sent_items) ? tradeInsights.top_sent_items : [];
+    const receivedItems = Array.isArray(tradeInsights.top_received_items) ? tradeInsights.top_received_items : [];
+    const topCopyRelics = Array.isArray(relics.top_by_copies) ? relics.top_by_copies : [];
+
     const recentTradeRows = trades.slice(0, 6).map(trade => `
       <div class="market-card">
         <div class="diag-head">
@@ -3873,6 +3923,7 @@ async function loadWarframeAleca(force = false) {
       : '';
 
     const relicTop = Array.isArray(relics.top_entries) ? relics.top_entries : [];
+    const stashValue = Number(relics.stash_value_estimate);
     const relicBlock = relics.available
       ? `
         <div class="market-card">
@@ -3882,6 +3933,7 @@ async function loadWarframeAleca(force = false) {
           </div>
           <div class="small-row"><span>Unique relics</span><span class="muted">${fmtMarketNum(relics.unique_relics || 0, 0)}</span></div>
           <div class="small-row"><span>Indexed entries</span><span class="muted">${fmtMarketNum(relics.entry_count || 0, 0)}</span></div>
+          <div class="small-row"><span>Est. stash value</span><span class="muted">${Number.isFinite(stashValue) ? `${fmtMarketNum(stashValue,1)}p` : 'n/a'}</span></div>
           <div class="small-list">
             ${relicTop.length ? relicTop.map(entry => `<div class="small-row"><span>${esc(entry.name || 'Relic')}</span><span class="muted">${fmtMarketNum(entry.count || 0, 0)}${entry.plat_value != null ? ` | ${fmtMarketNum(entry.plat_value,1)}p` : ''}</span></div>`).join('') : '<div class="muted">No relic inventory details returned.</div>'}
           </div>
@@ -3894,6 +3946,36 @@ async function loadWarframeAleca(force = false) {
         </div>
       `;
 
+    const itemFlowBlock = `
+      <div class="market-card">
+        <div class="diag-head">
+          <strong>Top Moved Items</strong>
+          <span class="rank-pill">${fmtMarketNum((sentItems.length + receivedItems.length) || 0, 0)} lanes</span>
+        </div>
+        <div class="small-row"><span>Last trade</span><span class="muted">${relTime(tradeInsights.last_trade_at)}</span></div>
+        <div class="chart-wrap sparkline-muted">
+          ${buildSparklineSvg(activitySeries)}
+          <div class="sparkline-label"><span>Last 7 trade days</span><span>${fmtMarketNum(tradeInsights.trade_count_7d || 0,0)} trades</span></div>
+        </div>
+        <div class="small-list">
+          ${sentItems.length ? sentItems.slice(0, 4).map(item => `<div class="small-row"><span>Sent: ${esc(item.name || 'Item')}</span><span class="muted">${fmtMarketNum(item.count || 0,0)} | ${fmtMarketNum(item.plat_total || 0,0)}p</span></div>`).join('') : '<div class="muted">No outgoing item lanes yet.</div>'}
+          ${receivedItems.length ? receivedItems.slice(0, 4).map(item => `<div class="small-row"><span>Recv: ${esc(item.name || 'Item')}</span><span class="muted">${fmtMarketNum(item.count || 0,0)} | ${fmtMarketNum(item.plat_total || 0,0)}p</span></div>`).join('') : '<div class="muted">No incoming item lanes yet.</div>'}
+        </div>
+      </div>
+    `;
+
+    const relicCopyBlock = relics.available ? `
+      <div class="market-card">
+        <div class="diag-head">
+          <strong>Relic Bulk Stack</strong>
+          <span class="rank-pill">Top copies</span>
+        </div>
+        <div class="small-list">
+          ${topCopyRelics.length ? topCopyRelics.slice(0, 6).map(entry => `<div class="small-row"><span>${esc(entry.name || 'Relic')}</span><span class="muted">${fmtMarketNum(entry.count || 0,0)} copies</span></div>`).join('') : '<div class="muted">No copy-heavy relics reported.</div>'}
+        </div>
+      </div>
+    ` : '';
+
     gridEl.innerHTML = `
       <div class="market-card">
         <div class="diag-head">
@@ -3905,7 +3987,10 @@ async function loadWarframeAleca(force = false) {
         ${visibleParts || '<div class="muted">No public-part flags reported.</div>'}
       </div>
       ${resourceCards || '<div class="muted">No AlecaFrame resource snapshots returned.</div>'}
+      ${tradeInsightCards || '<div class="muted">No AlecaFrame trade insights returned yet.</div>'}
+      ${itemFlowBlock}
       ${relicBlock}
+      ${relicCopyBlock}
       ${recentTradeRows || '<div class="muted">No recent trades returned from AlecaFrame.</div>'}
     `;
   } catch (e) {

@@ -79,7 +79,7 @@ Notes:
 - On Docker Swarm stacks, `build` is typically not supported; use a prebuilt image in that case.
 
 ## Data
-- Tools file: `data/tools.json` (auto-created from `tools.sample.json`)
+- Tools file: `data/tools.json` (auto-created from the bundled seed file, with missing defaults synced on load)
 - Sources file: `data/sources.json`
 - Feed snapshot: `data/feed_items.json`
 

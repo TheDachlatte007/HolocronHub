@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_FILE = BASE_DIR / "data" / "tools.json"
 SAMPLE_FILE = BASE_DIR / "data" / "tools.sample.json"
+SEED_FILE = BASE_DIR / "backend" / "tools.seed.json"
 SOURCES_FILE = BASE_DIR / "data" / "sources.json"
 FEED_FILE = BASE_DIR / "data" / "feed_items.json"
 SAVED_FILE = BASE_DIR / "data" / "saved_items.json"
@@ -127,10 +128,14 @@ app.add_middleware(
 
 # ── data helpers ──────────────────────────────────────────────────────────────
 
+def _tool_seed_file() -> Path:
+    return SEED_FILE if SEED_FILE.exists() else SAMPLE_FILE
+
+
 def _ensure_data_file() -> None:
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not DATA_FILE.exists():
-        src = SAMPLE_FILE if SAMPLE_FILE.exists() else None
+        src = _tool_seed_file() if _tool_seed_file().exists() else None
         DATA_FILE.write_text(src.read_text(encoding="utf-8") if src else "[]", encoding="utf-8")
 
 
@@ -249,11 +254,12 @@ def _normalize_tool_record(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def _sync_seed_tools() -> None:
-    if not SAMPLE_FILE.exists() or not DATA_FILE.exists():
+    seed_file = _tool_seed_file()
+    if not seed_file.exists() or not DATA_FILE.exists():
         return
     try:
         current_raw = json.loads(DATA_FILE.read_text(encoding="utf-8"))
-        sample_raw = json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))
+        sample_raw = json.loads(seed_file.read_text(encoding="utf-8"))
     except Exception:
         return
     if not isinstance(current_raw, list) or not isinstance(sample_raw, list):

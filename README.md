@@ -38,10 +38,32 @@ Optional env vars (for finance API sources):
 - `FINNHUB_API_KEY`
 - `ALPHAVANTAGE_API_KEY`
 - `OPENCLAW_MODEL`
+- `F1_SIGNALR_SESSION_KEY`
+- `F1_SIGNALR_SESSION_NAME`
+- `F1_SIGNALR_INGEST_URL`
 
 You can copy `backend/.env.example` to `backend/.env` for local development.
 
 You can also manage API keys directly in the app under `Settings` -> `API`.
+
+## F1 SignalR Sidecar
+
+There is an experimental secondary F1 live ingest worker at `backend/f1_signalr_ingest.py`.
+It connects to F1 Live Timing over SignalR and posts a lightweight live snapshot into the existing secondary ingest API.
+
+One-shot probe:
+
+```bash
+python backend/f1_signalr_ingest.py --session-key fallback:2026:2:race --session-name Race --probe-only --once
+```
+
+Continuous ingest into the local backend:
+
+```bash
+python backend/f1_signalr_ingest.py --session-key fallback:2026:2:race --session-name Race
+```
+
+The current backend ingest target is `http://127.0.0.1:8787/api/f1/ingest/session`.
 
 ## Portainer (GitHub)
 

@@ -614,7 +614,7 @@
           <div id="f1-meta" class="muted"></div>
         </div>
         <div class="row" style="margin:0">
-          <input id="f1-season" placeholder="Season (current or 2026)" style="width:220px" />
+          <input id="f1-season" placeholder="Season or GP (current, 2026, china 2026)" style="width:280px" />
           <button class="primary" onclick="loadF1({ force: true })">Refresh</button>
         </div>
       </div>
@@ -2606,6 +2606,91 @@ function rememberF1Preferences() {
   safeLocalSet(F1_PREFERENCES_KEY, prefs);
 }
 
+function parseF1SeasonQuery(rawValue) {
+  const raw = String(rawValue || '').trim();
+  const normalized = normalizeTextKey(raw);
+  const yearMatch = normalized.match(/\b(20\d{2})\b/);
+  const season = yearMatch ? yearMatch[1] : (/^(current|\d{4})$/.test(normalized) ? normalized : 'current');
+  const search = normalized && normalized !== season ? normalized : '';
+  return { raw, season, search };
+}
+
+function f1SessionSearchText(session) {
+  if (!session || typeof session !== 'object') return '';
+  return normalizeTextKey([
+    session.session_name,
+    session.session_type,
+    session.meeting_name,
+    session.meeting_official_name,
+    session.circuit_short_name,
+    session.circuit_name,
+    session.location,
+    session.country_name,
+    session.year,
+    session.round,
+    session.session_key,
+  ].filter(Boolean).join(' '));
+}
+
+function findBestF1SessionMatch(query, sessions) {
+  const normalized = normalizeTextKey(query);
+  const tokens = normalized.split(' ').filter(Boolean);
+  if (!tokens.length || !Array.isArray(sessions) || !sessions.length) return '';
+  let bestKey = '';
+  let bestScore = 0;
+  sessions.forEach(session => {
+    const haystack = f1SessionSearchText(session);
+    if (!haystack) return;
+    let score = 0;
+    if (haystack.includes(normalized)) score += 70;
+    tokens.forEach(token => {
+      if (haystack.includes(token)) score += 14;
+      if (token === 'race' && haystack.includes(' race')) score += 12;
+      if (token.startsWith('quali') && haystack.includes('qual')) score += 12;
+      if (token.startsWith('sprint') && haystack.includes('sprint')) score += 12;
+      if (token.startsWith('practice') && haystack.includes('practice')) score += 8;
+    });
+    if (score > bestScore) {
+      bestScore = score;
+      bestKey = String(session.session_key || '');
+    }
+  });
+  return bestScore >= 20 ? bestKey : '';
+}
+
+function makeF1ArchivedSession(result) {
+  if (!result || !result.session_key) return null;
+  return {
+    session_key: String(result.session_key),
+    session_name: String(result.session_name || 'Archived session'),
+    status: result.live ? 'live' : 'finished',
+    session_type: String(result.session_name || ''),
+    circuit_short_name: String(result.circuit || result.meeting_name || 'Archived session'),
+    location: String(result.location || ''),
+    country_name: String(result.country_name || ''),
+    date_start: result.date_start || result.data_as_of || '',
+    date_start_local: result.date_start || result.data_as_of || '',
+    archived: true,
+    year: result.year,
+    round: result.round,
+    source_label: result.source || 'archive',
+    meeting_name: result.meeting_name || '',
+  };
+}
+
+async function resolveF1HistorySession(query) {
+  const normalized = normalizeTextKey(query);
+  if (!normalized) return null;
+  try {
+    const params = new URLSearchParams({ q: normalized, limit: '6' });
+    const payload = await fetchJson(`${API}/f1/history/search?${params}`);
+    const results = Array.isArray(payload?.results) ? payload.results : [];
+    return results.length ? results[0] : null;
+  } catch {
+    return null;
+  }
+}
+
 function f1SessionFamily(session) {
   const label = normalizeTextKey(session?.session_name || session?.session_type || '');
   if (!label) return 'other';
@@ -3276,6 +3361,7 @@ function renderF1SessionSummary(key) {
     <div class="small-row"><span>Type</span><strong>${esc(f1FilterLabel(f1SessionFamily(session)))}</strong></div>
     <div class="small-row"><span>Track</span><strong>${esc(session.circuit_short_name || _f1Weekend?.track?.name || '-')}</strong></div>
     <div class="small-row"><span>Location</span><strong>${esc(session.location || '')}${session.country_name ? ', ' + esc(session.country_name) : ''}</strong></div>
+    ${session.archived ? `<div class="small-row"><span>History source</span><strong>${esc(session.source_label || 'archive')}</strong></div>` : ''}
     <div class="small-row"><span>Countdown</span><strong>${esc(f1CountdownTo(session.date_start || '')) || '-'}</strong></div>
     ${leader.driver ? `<div class="small-row"><span>Cached leader</span><strong>P${esc(leader.position || '?')} ${esc(leader.driver || leader.code || 'Driver')}</strong></div>` : ''}
     ${f1BuildTimeComparison(session.date_start_local || session.date_start, session.date_start, 'Session start at track')}
@@ -3619,6 +3705,7 @@ async function loadF1(options = {}) {
   const cfg = options && typeof options === 'object' ? options : {};
   const force = !!cfg.force;
   const background = !!cfg.background;
+  const preferredSessionKey = String(cfg.preferredSessionKey || '').trim();
   const seasonInput = document.getElementById('f1-season');
   const metaEl = document.getElementById('f1-meta');
   const errEl = document.getElementById('f1-errors');
@@ -3638,13 +3725,13 @@ async function loadF1(options = {}) {
   if (!seasonInput.value.trim() && prefs.season) seasonInput.value = prefs.season;
   _f1SessionFilter = ['all', 'practice', 'sprint', 'qualifying', 'race'].includes(prefs.session_filter) ? prefs.session_filter : 'all';
   _f1BoardMode = String(prefs.board_mode || 'timing');
-  const season = (seasonInput.value || 'current').trim() || 'current';
+  const queryInfo = parseF1SeasonQuery(seasonInput.value || 'current');
+  const season = queryInfo.season || 'current';
   _f1SeasonKey = makeF1OverviewCacheKey(season);
-  seasonInput.value = season;
   rememberF1Preferences();
 
   const cacheKey = makeF1OverviewCacheKey(_f1SeasonKey);
-  const preferredSession = String((prefs.selected_sessions || {})[_f1SeasonKey] || '');
+  const preferredSession = preferredSessionKey || String((prefs.selected_sessions || {})[_f1SeasonKey] || '');
   const cachedOverview = force ? null : readF1OverviewCache(cacheKey);
   const cachedAge = cachedOverview?.data ? Date.now() - Number(cachedOverview.ts || 0) : Number.POSITIVE_INFINITY;
   const canUseClientCache = !!(cachedOverview?.data && cachedAge <= F1_OVERVIEW_STALE_MS);
@@ -3660,7 +3747,7 @@ async function loadF1(options = {}) {
       const errs = [...new Set((data.errors || []).map(e => String(e || '').trim()).filter(Boolean))].slice(0, 6);
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
     }
-    await applyF1OverviewData(data, preferredSession, { background: true });
+    await applyF1OverviewData(data, preferredSession, { background: true, searchQuery: queryInfo.search, rawQuery: queryInfo.raw, preferredSessionKey });
     if (cachedAge <= F1_OVERVIEW_FRESH_MS && !force) return;
   } else {
     _f1Weekend = null;
@@ -3710,7 +3797,7 @@ async function loadF1(options = {}) {
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
     }
 
-    await applyF1OverviewData(data, preferredSession, { force });
+    await applyF1OverviewData(data, preferredSession, { force, searchQuery: queryInfo.search, rawQuery: queryInfo.raw, preferredSessionKey });
   } catch (e) {
     clearF1SessionPolling();
     if (!canUseClientCache) {
@@ -3838,6 +3925,7 @@ async function applyF1OverviewData(data, preferredSession, options = {}) {
   const standingsEl = document.getElementById('f1-standings');
   const lastRaceEl = document.getElementById('f1-last-race');
   const tracksEl = document.getElementById('f1-tracks');
+  const errEl = document.getElementById('f1-errors');
   if (!nextEl || !weatherEl || !standingsEl || !lastRaceEl || !tracksEl) return;
 
   _f1Weekend = data.weekend || null;
@@ -3946,16 +4034,39 @@ async function applyF1OverviewData(data, preferredSession, options = {}) {
     if (!session || !session.session_key) return;
     _f1Sessions[String(session.session_key)] = session;
   });
+  let queryMatchedSession = '';
+  const searchQuery = normalizeTextKey(options.searchQuery || '');
+  if (searchQuery) {
+    queryMatchedSession = findBestF1SessionMatch(searchQuery, Object.values(_f1Sessions));
+    if (!queryMatchedSession) {
+      const historyResult = await resolveF1HistorySession(searchQuery);
+      const archivedSession = makeF1ArchivedSession(historyResult);
+      if (archivedSession) {
+        _f1Sessions[String(archivedSession.session_key)] = archivedSession;
+        queryMatchedSession = String(archivedSession.session_key);
+        if (errEl) {
+          const current = errEl.innerHTML || '';
+          const note = `<span class="warn-item">history:loaded ${esc(archivedSession.session_name || 'session')} from ${esc(archivedSession.meeting_name || archivedSession.circuit_short_name || 'archive')}</span>`;
+          errEl.innerHTML = current.includes('history:loaded') ? current : `${note}${current}`;
+        }
+      }
+    }
+  }
   renderF1SessionFilters();
   renderF1SessionPicker();
   renderF1TrackPanel(_f1Weekend || null);
   renderF1DayPlanner(_f1Weekend);
 
-  const selectedSession = preferredSession && _f1Sessions[preferredSession]
-    ? preferredSession
-    : (_f1SelectedSessionKey && _f1Sessions[_f1SelectedSessionKey]
-      ? _f1SelectedSessionKey
-      : String(_f1Weekend?.focus_session_key || _f1Weekend?.current_session_key || getVisibleF1Sessions()[0]?.session_key || Object.keys(_f1Sessions)[0] || ''));
+  const explicitPreferredSession = String(options.preferredSessionKey || '').trim();
+  const selectedSession = explicitPreferredSession && _f1Sessions[explicitPreferredSession]
+    ? explicitPreferredSession
+    : queryMatchedSession && _f1Sessions[queryMatchedSession]
+      ? queryMatchedSession
+      : (preferredSession && _f1Sessions[preferredSession]
+        ? preferredSession
+        : (_f1SelectedSessionKey && _f1Sessions[_f1SelectedSessionKey]
+          ? _f1SelectedSessionKey
+          : String(_f1Weekend?.focus_session_key || _f1Weekend?.current_session_key || getVisibleF1Sessions()[0]?.session_key || Object.keys(_f1Sessions)[0] || '')));
   if (selectedSession) {
     await selectF1Session(selectedSession, options);
   } else {
@@ -5154,6 +5265,7 @@ async function addSource() {
 // ══ keyboard shortcuts ════════════════════════════════════════
 document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')loadTools();});
 document.getElementById('feed-q').addEventListener('keydown',e=>{if(e.key==='Enter')loadFeed();});
+document.getElementById('f1-season')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1({ force: true });});
 
 // ══ settings page ═════════════════════════════════════════════
 

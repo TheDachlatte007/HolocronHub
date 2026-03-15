@@ -36,6 +36,7 @@ SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
 LAST_GOOD_FILE = BASE_DIR / "data" / "last_good_cache.json"
 F1_SESSION_SNAPSHOTS_FILE = BASE_DIR / "data" / "f1_session_snapshots.json"
 F1_SECONDARY_INGEST_FILE = BASE_DIR / "data" / "f1_secondary_ingest.json"
+F1_SESSION_ARCHIVE_FILE = BASE_DIR / "data" / "f1_session_archive.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
 
 
@@ -102,6 +103,7 @@ _ingest_state: dict = {"running": False, "last_result": None, "started_at": None
 _warframe_market_history_lock = Lock()
 _last_good_lock = Lock()
 _f1_snapshot_lock = Lock()
+_f1_archive_lock = Lock()
 
 _PROVIDER_BREAKERS: dict[str, dict[str, Any]] = {
     "openf1": {"fail_count": 0, "open_until": 0.0, "last_error": None},
@@ -109,6 +111,7 @@ _PROVIDER_BREAKERS: dict[str, dict[str, Any]] = {
 
 _F1_SESSION_SNAPSHOTS: dict[str, list[dict[str, Any]]] = {}
 _F1_SECONDARY_INGEST: dict[str, dict[str, Any]] = {}
+_F1_SESSION_ARCHIVE: dict[str, dict[str, Any]] = {}
 
 app.add_middleware(
     CORSMiddleware,
@@ -735,6 +738,37 @@ def _save_f1_secondary_ingest() -> None:
     F1_SECONDARY_INGEST_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def _load_f1_session_archive() -> dict[str, dict[str, Any]]:
+    if not F1_SESSION_ARCHIVE_FILE.exists():
+        return {}
+    try:
+        raw = json.loads(F1_SESSION_ARCHIVE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for session_key, payload in raw.items():
+        if isinstance(payload, dict):
+            out[str(session_key)] = payload
+    return out
+
+
+def _save_f1_session_archive() -> None:
+    F1_SESSION_ARCHIVE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    ordered_items = sorted(
+        _F1_SESSION_ARCHIVE.items(),
+        key=lambda item: str((item[1] or {}).get("data_as_of") or (item[1] or {}).get("generated_at") or ""),
+        reverse=True,
+    )[:128]
+    payload = {
+        str(session_key): deepcopy(entry)
+        for session_key, entry in ordered_items
+        if isinstance(entry, dict)
+    }
+    F1_SESSION_ARCHIVE_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def _boot_last_good_store() -> None:
     loaded = _load_last_good_store()
     if not loaded:
@@ -759,6 +793,43 @@ def _boot_f1_secondary_ingest() -> None:
         return
     _F1_SECONDARY_INGEST.clear()
     _F1_SECONDARY_INGEST.update(loaded)
+
+
+def _boot_f1_session_archive() -> None:
+    loaded = _load_f1_session_archive()
+    if not loaded:
+        return
+    with _f1_archive_lock:
+        _F1_SESSION_ARCHIVE.clear()
+        _F1_SESSION_ARCHIVE.update(loaded)
+
+
+def _seed_f1_session_archive_from_last_good() -> None:
+    with _last_good_lock:
+        items = list(_LAST_GOOD.items())
+    changed = False
+    for cache_key, entry in items:
+        if not str(cache_key).startswith("f1:session:"):
+            continue
+        value = deepcopy((entry or {}).get("value") or {})
+        if not isinstance(value, dict):
+            continue
+        session_key = str(value.get("session_key") or str(cache_key).split("f1:session:", 1)[-1]).strip()
+        if not session_key:
+            continue
+        archive_entry = _f1_archive_entry(session_key, value)
+        if not isinstance(archive_entry, dict):
+            continue
+        with _f1_archive_lock:
+            if session_key in _F1_SESSION_ARCHIVE:
+                continue
+            _F1_SESSION_ARCHIVE[session_key] = archive_entry
+            changed = True
+    if changed:
+        try:
+            _save_f1_session_archive()
+        except Exception:
+            pass
 
 
 def _record_f1_session_snapshot(session_key: str, payload: dict[str, Any]) -> None:
@@ -818,6 +889,193 @@ def _get_f1_secondary_session(session_key: str, *, max_age_seconds: int = 4 * 36
     if age > max_age_seconds:
         return None, age
     return entry, age
+
+
+def _normalize_search_text(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+
+
+def _f1_archive_year(session_key: str, session: dict[str, Any], payload: dict[str, Any]) -> Optional[int]:
+    raw_year = session.get("year")
+    if isinstance(raw_year, int):
+        return raw_year
+    if isinstance(raw_year, str) and raw_year.isdigit():
+        return int(raw_year)
+    match = re.search(r"(20\d{2})", str(session_key or ""))
+    if match:
+        return int(match.group(1))
+    for candidate in (session.get("date_start"), session.get("date_start_local"), payload.get("data_as_of"), payload.get("generated_at")):
+        dt = _parse_dt(candidate)
+        if dt is not None:
+            return dt.year
+    return None
+
+
+def _f1_archive_round(session_key: str, session: dict[str, Any]) -> Optional[int]:
+    raw_round = session.get("round")
+    if isinstance(raw_round, int):
+        return raw_round
+    if isinstance(raw_round, str) and raw_round.isdigit():
+        return int(raw_round)
+    match = re.match(r"fallback:(20\d{2}):(\d+):", str(session_key or ""))
+    if match:
+        return int(match.group(2))
+    return None
+
+
+def _f1_archive_entry(session_key: str, payload: dict[str, Any]) -> Optional[dict[str, Any]]:
+    if not session_key or not isinstance(payload, dict):
+        return None
+    session = deepcopy(payload.get("session") or {})
+    if not isinstance(session, dict):
+        session = {}
+    leaderboard = [row for row in list(payload.get("leaderboard") or [])[:20] if isinstance(row, dict)]
+    race_control = [row for row in list(payload.get("race_control") or [])[:20] if isinstance(row, dict)]
+    weather = deepcopy(payload.get("weather") or {})
+    year = _f1_archive_year(session_key, session, payload)
+    round_number = _f1_archive_round(session_key, session)
+    meeting_name = str(
+        session.get("meeting_name")
+        or session.get("meeting_official_name")
+        or session.get("country_name")
+        or session.get("location")
+        or ""
+    ).strip()
+    entry = {
+        "session_key": session_key,
+        "generated_at": payload.get("generated_at") or datetime.now().isoformat(timespec="seconds"),
+        "data_as_of": payload.get("data_as_of") or payload.get("generated_at") or datetime.now().isoformat(timespec="seconds"),
+        "source": str(payload.get("source") or "archive").strip() or "archive",
+        "live": bool(payload.get("live")),
+        "drivers_count": int(payload.get("drivers_count") or len(leaderboard)),
+        "year": year,
+        "round": round_number,
+        "meeting_name": meeting_name,
+        "session_name": str(session.get("session_name") or session.get("session_type") or "").strip(),
+        "circuit": str(session.get("circuit_short_name") or session.get("circuit_name") or "").strip(),
+        "location": str(session.get("location") or "").strip(),
+        "country_name": str(session.get("country_name") or "").strip(),
+        "date_start": session.get("date_start"),
+        "date_end": session.get("date_end"),
+        "session": session,
+        "leaderboard": leaderboard,
+        "race_control": race_control,
+        "weather": weather if isinstance(weather, dict) else {},
+    }
+    return entry
+
+
+def _archive_f1_session_payload(session_key: str, payload: dict[str, Any]) -> None:
+    entry = _f1_archive_entry(session_key, payload)
+    if not isinstance(entry, dict):
+        return
+    with _f1_archive_lock:
+        existing = deepcopy(_F1_SESSION_ARCHIVE.get(session_key))
+        if isinstance(existing, dict):
+            if (
+                str(existing.get("data_as_of") or "") == str(entry.get("data_as_of") or "")
+                and int(existing.get("drivers_count") or 0) == int(entry.get("drivers_count") or 0)
+                and len(existing.get("leaderboard") or []) == len(entry.get("leaderboard") or [])
+            ):
+                return
+        _F1_SESSION_ARCHIVE[session_key] = entry
+        try:
+            _save_f1_session_archive()
+        except Exception:
+            pass
+
+
+def _get_f1_archived_session(session_key: str) -> Optional[dict[str, Any]]:
+    with _f1_archive_lock:
+        entry = deepcopy(_F1_SESSION_ARCHIVE.get(session_key))
+    if not isinstance(entry, dict):
+        return None
+    data_as_of = entry.get("data_as_of") or entry.get("generated_at")
+    dt = _parse_dt(data_as_of)
+    stale_age_seconds = 0
+    if dt is not None:
+        stale_age_seconds = max(0, int((datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()))
+    return {
+        "generated_at": entry.get("generated_at") or datetime.now().isoformat(timespec="seconds"),
+        "data_as_of": data_as_of or datetime.now().isoformat(timespec="seconds"),
+        "stale": True,
+        "stale_age_seconds": stale_age_seconds,
+        "session_key": session_key,
+        "source": entry.get("source") or "archive",
+        "session": deepcopy(entry.get("session") or {}),
+        "live": bool(entry.get("live")),
+        "drivers_count": int(entry.get("drivers_count") or len(entry.get("leaderboard") or [])),
+        "leaderboard": deepcopy(entry.get("leaderboard") or []),
+        "race_control": deepcopy(entry.get("race_control") or []),
+        "weather": deepcopy(entry.get("weather") or {}),
+        "snapshots": _get_f1_session_snapshots(session_key, limit=10),
+    }
+
+
+def _search_f1_session_archive(q: str, *, limit: int = 8) -> list[dict[str, Any]]:
+    query = _normalize_search_text(q)
+    tokens = [token for token in query.split(" ") if token]
+    with _f1_archive_lock:
+        entries = [deepcopy(entry) for entry in _F1_SESSION_ARCHIVE.values() if isinstance(entry, dict)]
+
+    ranked: list[tuple[int, str, dict[str, Any]]] = []
+    for entry in entries:
+        session_key = str(entry.get("session_key") or "").strip()
+        session_name = _normalize_search_text(entry.get("session_name"))
+        meeting_name = _normalize_search_text(entry.get("meeting_name"))
+        circuit = _normalize_search_text(entry.get("circuit"))
+        location = _normalize_search_text(entry.get("location"))
+        country_name = _normalize_search_text(entry.get("country_name"))
+        year = str(entry.get("year") or "").strip()
+        round_number = str(entry.get("round") or "").strip()
+        haystack = " ".join(part for part in [meeting_name, session_name, circuit, location, country_name, year, round_number, session_key.lower()] if part).strip()
+        if not haystack:
+            continue
+        score = 0
+        if not query:
+            score = 1
+        else:
+            if query == meeting_name:
+                score += 120
+            if query == circuit or query == location or query == country_name:
+                score += 100
+            if query in haystack:
+                score += 70
+            for token in tokens:
+                if token in haystack:
+                    score += 14
+                if token == "race" and "race" in session_name:
+                    score += 12
+                if token.startswith("quali") and "qual" in session_name:
+                    score += 12
+                if token.startswith("sprint") and "sprint" in session_name:
+                    score += 12
+                if token.startswith("practice") and "practice" in session_name:
+                    score += 8
+        if score <= 0:
+            continue
+        ranked.append((score, str(entry.get("data_as_of") or entry.get("generated_at") or ""), entry))
+
+    ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    trimmed = []
+    for _, _, entry in ranked[: max(1, min(int(limit or 8), 16))]:
+        trimmed.append({
+            "session_key": entry.get("session_key"),
+            "year": entry.get("year"),
+            "round": entry.get("round"),
+            "meeting_name": entry.get("meeting_name"),
+            "session_name": entry.get("session_name"),
+            "circuit": entry.get("circuit"),
+            "location": entry.get("location"),
+            "country_name": entry.get("country_name"),
+            "date_start": entry.get("date_start"),
+            "data_as_of": entry.get("data_as_of"),
+            "source": entry.get("source"),
+            "live": bool(entry.get("live")),
+            "drivers_count": int(entry.get("drivers_count") or 0),
+            "leaderboard": deepcopy((entry.get("leaderboard") or [])[:5]),
+        })
+    return trimmed
 
 
 def _provider_breaker_open(name: str) -> bool:
@@ -5155,6 +5413,8 @@ def _startup() -> None:
     _boot_last_good_store()
     _boot_f1_session_snapshots()
     _boot_f1_secondary_ingest()
+    _boot_f1_session_archive()
+    _seed_f1_session_archive_from_last_good()
     settings_cfg = _load_settings()
     _apply_settings_env(settings_cfg)
 
@@ -5803,6 +6063,7 @@ def f1_session(session_key: str, force: bool = False):
                 "errors": fallback_errors[:24],
                 "duration_ms": int((time.perf_counter() - started) * 1000),
             }
+            _archive_f1_session_payload(session_key, payload)
             _cache_set(cache_key, payload)
             return {**payload, "cached": False}
         stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
@@ -5813,6 +6074,13 @@ def f1_session(session_key: str, force: bool = False):
             stale_payload["errors"] = fallback_errors[:24]
             _cache_set(cache_key, stale_payload)
             return {**stale_payload, "cached": False}
+        archived_payload = _get_f1_archived_session(session_key)
+        if isinstance(archived_payload, dict):
+            archived_errors = list(errors or []) + ["fallback:archive:f1_session"]
+            archived_payload["errors"] = archived_errors[:24]
+            archived_payload["duration_ms"] = int((time.perf_counter() - started) * 1000)
+            _cache_set(cache_key, archived_payload)
+            return {**archived_payload, "cached": False}
         raise HTTPException(status_code=404, detail="session not found")
 
     generated_at = datetime.now().isoformat(timespec="seconds")
@@ -5829,6 +6097,7 @@ def f1_session(session_key: str, force: bool = False):
     if _f1_session_payload_has_data(payload):
         _set_last_good(cache_key, payload)
         _record_f1_session_snapshot(session_key, payload)
+        _archive_f1_session_payload(session_key, payload)
     else:
         stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
         if isinstance(stale_payload, dict):
@@ -5841,6 +6110,18 @@ def f1_session(session_key: str, force: bool = False):
     payload["snapshots"] = _get_f1_session_snapshots(session_key, limit=10)
     _cache_set(cache_key, payload)
     return {**payload, "cached": False}
+
+
+@app.get("/api/f1/history/search")
+def f1_history_search(q: str = "", limit: int = Query(default=8, ge=1, le=16)):
+    results = _search_f1_session_archive(q, limit=limit)
+    return {
+        "q": q,
+        "count": len(results),
+        "results": results,
+        "source": "f1_session_archive",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+    }
 
 
 @app.get("/api/warframe/arsenal")
@@ -6288,6 +6569,18 @@ def ingest_f1_session(payload: F1SecondaryIngestPayload):
             "weather": deepcopy(entry["weather"]),
             "snapshots": _get_f1_session_snapshots(session_key, limit=10),
             "errors": [],
+        })
+        _archive_f1_session_payload(session_key, {
+            "generated_at": entry["generated_at"],
+            "data_as_of": data_as_of,
+            "session_key": session_key,
+            "source": entry["source"],
+            "session": deepcopy(entry["session"]),
+            "live": entry["live"],
+            "drivers_count": entry["drivers_count"],
+            "leaderboard": deepcopy(entry["leaderboard"]),
+            "race_control": deepcopy(entry["race_control"]),
+            "weather": deepcopy(entry["weather"]),
         })
 
     return {

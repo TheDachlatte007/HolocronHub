@@ -248,8 +248,70 @@ def _normalize_tool_record(raw: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def _sync_seed_tools() -> None:
+    if not SAMPLE_FILE.exists() or not DATA_FILE.exists():
+        return
+    try:
+        current_raw = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        sample_raw = json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    if not isinstance(current_raw, list) or not isinstance(sample_raw, list):
+        return
+
+    current_items = [_normalize_tool_record(item) for item in current_raw if isinstance(item, dict)]
+    sample_items = [_normalize_tool_record(item) for item in sample_raw if isinstance(item, dict)]
+    by_id: dict[str, dict[str, Any]] = {item["id"]: dict(item) for item in current_items if item.get("id")}
+    changed = False
+
+    for seed in sample_items:
+        tool_id = str(seed.get("id") or "").strip()
+        if not tool_id:
+            continue
+        existing = by_id.get(tool_id)
+        if not existing:
+            by_id[tool_id] = dict(seed)
+            changed = True
+            continue
+
+        # Backfill only new curation metadata when the user has no value yet.
+        if not existing.get("ai_tasks") and seed.get("ai_tasks"):
+            existing["ai_tasks"] = list(seed["ai_tasks"])
+            changed = True
+        if existing.get("featured_rank") in (None, "") and seed.get("featured_rank") not in (None, ""):
+            existing["featured_rank"] = seed["featured_rank"]
+            changed = True
+        if not str(existing.get("short_hint") or "").strip() and str(seed.get("short_hint") or "").strip():
+            existing["short_hint"] = seed["short_hint"]
+            changed = True
+        if not str(existing.get("service_kind") or "").strip() and str(seed.get("service_kind") or "").strip():
+            existing["service_kind"] = seed["service_kind"]
+            changed = True
+        if not existing.get("links") and seed.get("links"):
+            existing["links"] = list(seed["links"])
+            changed = True
+        by_id[tool_id] = existing
+
+    if not changed:
+        return
+
+    ordered_ids: list[str] = []
+    for item in current_items:
+        tool_id = str(item.get("id") or "").strip()
+        if tool_id and tool_id not in ordered_ids:
+            ordered_ids.append(tool_id)
+    for item in sample_items:
+        tool_id = str(item.get("id") or "").strip()
+        if tool_id and tool_id not in ordered_ids:
+            ordered_ids.append(tool_id)
+
+    merged = [by_id[tool_id] for tool_id in ordered_ids if tool_id in by_id]
+    _save_tools(merged)
+
+
 def _load_tools() -> list[dict]:
     _ensure_data_file()
+    _sync_seed_tools()
     try:
         data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
         return [_normalize_tool_record(item) for item in data if isinstance(item, dict)]

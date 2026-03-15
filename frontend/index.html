@@ -267,6 +267,11 @@
     .f1-track-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}
     .f1-session-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}
     .f1-session-summary-card{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}
+    .f1-live-strip{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+    .f1-live-strip-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+    .f1-live-card{background:linear-gradient(145deg,#111827,#0f172a);border:1px solid #1f2937;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:5px}
+    .f1-live-card strong{font-size:14px;color:#f8fafc}
+    .f1-live-card .muted{font-size:11px}
     .f1-board-controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
     .f1-board-control{padding:6px 10px;border-radius:999px;border:1px solid #334155;background:#020817;color:#94a3b8;font-size:11px;cursor:pointer}
     .f1-board-control.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
@@ -275,15 +280,29 @@
     .f1-meta-badge.live{background:#14532d;border-color:#16a34a;color:#86efac}
     .f1-meta-badge.cache{background:#172554;border-color:#2563eb;color:#bfdbfe}
     .f1-meta-badge.stale{background:#7c2d12;border-color:#ea580c;color:#fdba74}
+    .f1-meta-badge.fallback{background:#312e81;border-color:#6366f1;color:#c7d2fe}
     .f1-meta-badge.fail{background:#3b1f1f;border-color:#ef4444;color:#fecaca}
     .f1-board-row{display:grid;grid-template-columns:52px minmax(0,1.3fr) minmax(0,.85fr) minmax(0,.85fr);gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #1f2937}
     .f1-board-row:last-child{border-bottom:none}
+    .f1-board-row.interactive{cursor:pointer;border-radius:10px;padding:9px 8px;margin:0 -8px;transition:background .14s ease,border-color .14s ease,transform .14s ease}
+    .f1-board-row.interactive:hover{background:#111827}
+    .f1-board-row.active{background:#172554;border-bottom-color:transparent;box-shadow:inset 0 0 0 1px #3b82f6}
     .f1-pos{font-size:12px;font-weight:700;color:#bfdbfe;background:#1e3a5f;border-radius:999px;padding:4px 8px;width:max-content}
     .f1-driver-line{display:flex;align-items:center;gap:8px;min-width:0}
     .f1-team-dot{width:10px;height:10px;border-radius:999px;flex:0 0 auto;background:#64748b}
     .f1-board-main{min-width:0}
     .f1-board-main strong,.f1-board-main span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .f1-stat-stack{display:flex;flex-direction:column;gap:2px;font-size:12px}
+    .f1-live-side{display:flex;flex-direction:column;gap:12px}
+    .f1-live-focus-card{background:linear-gradient(145deg,#111827,#0f172a);border:1px solid #1f2937;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .f1-live-focus-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+    .f1-live-focus-head strong{font-size:18px;color:#f8fafc}
+    .f1-live-focus-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .f1-live-focus-stat{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:4px}
+    .f1-live-focus-stat strong{font-size:14px;color:#f8fafc}
+    .f1-control-flag{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid #334155;background:#111827;color:#e2e8f0;width:max-content}
+    .f1-control-flag.flag{background:#3b1f1f;border-color:#ef4444;color:#fecaca}
+    .f1-control-flag.note{background:#172554;border-color:#2563eb;color:#bfdbfe}
     .f1-status-pill{font-size:10px;padding:2px 7px;border-radius:999px;background:#1f2937;color:#cbd5e1;width:max-content}
     .f1-status-pill.live{background:#14532d;color:#86efac}
     .f1-status-pill.upcoming{background:#1e3a5f;color:#bfdbfe}
@@ -623,19 +642,27 @@
       </div>
       <div class="f1-weekend-grid" style="margin-bottom:10px">
         <div class="stat-card">
-        <div class="diag-head">
-          <h2 style="margin:0">Session Board</h2>
-          <span id="f1-live-meta" class="tool-minor"></span>
+          <div class="diag-head">
+            <h2 style="margin:0">Session Board</h2>
+            <span id="f1-live-meta" class="tool-minor"></span>
+          </div>
+          <div id="f1-live-strip" class="f1-live-strip"></div>
+          <div id="f1-board-controls" class="f1-board-controls"></div>
+          <div id="f1-live-board" class="small-list"></div>
         </div>
-        <div id="f1-board-controls" class="f1-board-controls"></div>
-        <div id="f1-live-board" class="small-list"></div>
-      </div>
         <div class="stat-card">
           <div class="diag-head">
-            <h2 style="margin:0">Race Control</h2>
-            <span class="tool-minor">Flags, notes, incidents</span>
+            <h2 style="margin:0">Live Sidebar</h2>
+            <span class="tool-minor">Pinned driver, control, health</span>
           </div>
-          <div id="f1-race-control" class="small-list"></div>
+          <div id="f1-live-focus" class="f1-live-side"></div>
+          <div>
+            <div class="diag-head" style="margin-bottom:8px">
+              <h2 style="margin:0">Race Control</h2>
+              <span class="tool-minor">Flags, notes, incidents</span>
+            </div>
+            <div id="f1-race-control" class="small-list"></div>
+          </div>
         </div>
       </div>
       <div class="f1-driver-panels" style="margin-bottom:10px">
@@ -2458,6 +2485,7 @@ let _f1SelectedProfileKey = '';
 let _f1Sessions = {};
 let _f1SelectedSessionKey = '';
 let _f1SelectedSessionDetail = null;
+let _f1SelectedLiveDriverKey = '';
 let _f1SessionFilter = 'all';
 let _f1BoardMode = 'timing';
 let _f1SeasonKey = 'current';
@@ -2636,14 +2664,41 @@ function f1PositionDeltaLabel(row) {
   return delta > 0 ? `+${delta} vs grid` : `${delta} vs grid`;
 }
 
+function f1SessionAgeSeconds(detail) {
+  const latestSnapshot = f1LatestSnapshot(detail);
+  const raw = detail?.data_as_of || detail?.generated_at || latestSnapshot?.data_as_of || latestSnapshot?.generated_at || '';
+  if (!raw) return null;
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) return null;
+  return Math.max(0, Math.round((Date.now() - dt.getTime()) / 1000));
+}
+
+function f1SessionSourceState(detail, options = {}) {
+  if (!detail) return 'waiting';
+  const source = String(detail.source || '').toLowerCase();
+  const ageSeconds = f1SessionAgeSeconds(detail);
+  if (options.refreshFailed) return 'fail';
+  if (detail.stale || (ageSeconds != null && ageSeconds > 90)) return 'stale';
+  if (source.includes('fallback')) return 'fallback';
+  if (detail.live || (ageSeconds != null && ageSeconds <= 15)) return 'live';
+  if (detail.cached || options.fromClientCache) return 'cache';
+  return 'fresh';
+}
+
 function f1SessionDataState(detail, options = {}) {
   if (!detail) return 'Waiting for session feed';
   const parts = [];
-  if (detail.live) parts.push('Live');
-  else if (detail.cached) parts.push('Server cache');
+  const ageSeconds = f1SessionAgeSeconds(detail);
+  const sourceState = f1SessionSourceState(detail, options);
+  if (sourceState === 'live') parts.push('Live');
+  else if (sourceState === 'cache') parts.push('Server cache');
+  else if (sourceState === 'fallback') parts.push('Fallback feed');
+  else if (sourceState === 'stale') parts.push('Stale');
+  else if (sourceState === 'fail') parts.push('Refresh failed');
   else parts.push('Fresh');
   if (options.fromClientCache) parts.push('Local cache');
-  if (detail.stale) parts.push(`Stale ${Math.max(0, Math.round((detail.stale_age_seconds || 0) / 60))}m`);
+  if (ageSeconds != null) parts.push(`Data ${ageSeconds}s old`);
+  if (detail.stale) parts.push(`Server stale ${Math.max(0, Math.round((detail.stale_age_seconds || 0) / 60))}m`);
   if (options.refreshFailed) parts.push('Refresh failed');
   return parts.join(' | ');
 }
@@ -2656,6 +2711,135 @@ function f1SourceLabel(source) {
 
 function f1LatestSnapshot(detail) {
   return (detail?.snapshots || [])[0] || null;
+}
+
+function f1DriverFocusKey(row) {
+  return String(row?.driver_number || row?.code || row?.driver || '').trim().toLowerCase();
+}
+
+function f1ResolveLiveRows(detail) {
+  const latestSnapshot = f1LatestSnapshot(detail);
+  return (detail?.leaderboard || []).length ? (detail?.leaderboard || []) : (latestSnapshot?.leaderboard || []);
+}
+
+function f1ResolveLiveDriver(detail) {
+  const rows = f1ResolveLiveRows(detail);
+  if (!rows.length) return null;
+  const wanted = String(_f1SelectedLiveDriverKey || '').trim().toLowerCase();
+  const selected = wanted ? rows.find(row => f1DriverFocusKey(row) === wanted) : null;
+  const row = selected || rows[0] || null;
+  if (row) _f1SelectedLiveDriverKey = f1DriverFocusKey(row);
+  return row;
+}
+
+function f1TrackStatusLabel(session) {
+  const message = String(session?.track_status_message || '').trim();
+  const status = String(session?.track_status || '').trim();
+  if (message) return message;
+  if (status === '1') return 'AllClear';
+  return status || 'No status';
+}
+
+function selectF1LiveDriver(driverKey) {
+  _f1SelectedLiveDriverKey = String(driverKey || '').trim().toLowerCase();
+  renderF1SessionBoard(_f1SelectedSessionDetail || null);
+  renderF1LiveDriverFocus(_f1SelectedSessionDetail || null);
+}
+
+function renderF1LiveStrip(detail) {
+  const stripEl = document.getElementById('f1-live-strip');
+  if (!stripEl) return;
+  if (!detail) {
+    stripEl.innerHTML = '<div class="muted">Live session status will appear here.</div>';
+    return;
+  }
+  const session = detail?.session || _f1Sessions[_f1SelectedSessionKey] || {};
+  const rows = f1ResolveLiveRows(detail);
+  const leader = rows[0] || null;
+  const weather = detail?.weather || {};
+  const ageSeconds = f1SessionAgeSeconds(detail);
+  const state = f1SessionSourceState(detail);
+  const laps = session?.lap_current && session?.lap_total ? `${session.lap_current}/${session.lap_total}` : (session?.lap_total ? `Lap ?/${session.lap_total}` : 'n/a');
+  stripEl.innerHTML = `
+    <div class="f1-live-strip-grid">
+      <div class="f1-live-card">
+        <span class="muted">Feed state</span>
+        <strong>${esc(f1SessionDataState(detail))}</strong>
+        <span class="muted">${esc(f1SourceLabel(detail.source || 'unknown'))}</span>
+      </div>
+      <div class="f1-live-card">
+        <span class="muted">Track status</span>
+        <strong>${esc(f1TrackStatusLabel(session))}</strong>
+        <span class="muted">${esc(f1StatusLabel(session.status || _f1Sessions[_f1SelectedSessionKey]?.status || 'scheduled'))}</span>
+      </div>
+      <div class="f1-live-card">
+        <span class="muted">Lap / data age</span>
+        <strong>${esc(laps)}</strong>
+        <span class="muted">${ageSeconds == null ? 'No feed age yet' : `${ageSeconds}s old`}</span>
+      </div>
+      <div class="f1-live-card">
+        <span class="muted">Session leader</span>
+        <strong>${leader ? `P${leader.position || '?'} ${leader.driver || leader.code || 'Driver'}` : 'Waiting for timing'}</strong>
+        <span class="muted">${leader ? (leader.gap_to_leader || leader.interval || leader.time || leader.current_tyre || '-') : 'No leaderboard yet'}</span>
+      </div>
+      <div class="f1-live-card">
+        <span class="muted">Track weather</span>
+        <strong>${weather.air_temperature != null || weather.track_temperature != null ? `${weather.air_temperature ?? '-'}C / ${weather.track_temperature ?? '-'}C` : 'Pending'}</strong>
+        <span class="muted">${weather.date ? `Updated ${relTime(weather.date)}` : 'No track weather feed'}</span>
+      </div>
+      <div class="f1-live-card">
+        <span class="muted">Today status</span>
+        <strong>${esc(state === 'fallback' ? 'Fallback active' : state === 'stale' ? 'Keep watching with caution' : state === 'live' ? 'Race-day live' : 'Session monitor ready')}</strong>
+        <span class="muted">${esc(session.session_name || _f1Sessions[_f1SelectedSessionKey]?.session_name || 'Session')}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderF1LiveDriverFocus(detail) {
+  const focusEl = document.getElementById('f1-live-focus');
+  if (!focusEl) return;
+  const row = f1ResolveLiveDriver(detail);
+  const session = detail?.session || _f1Sessions[_f1SelectedSessionKey] || {};
+  const ageSeconds = f1SessionAgeSeconds(detail);
+  if (!row) {
+    focusEl.innerHTML = '<div class="muted">Click a driver row to pin a live focus card here.</div>';
+    return;
+  }
+  const teamColor = row.team_color ? `#${String(row.team_color).replace('#', '')}` : '#64748b';
+  focusEl.innerHTML = `
+    <div class="f1-live-focus-card">
+      <div class="f1-live-focus-head">
+        <div>
+          <div class="muted">Pinned driver</div>
+          <strong>${esc(row.driver || row.code || 'Driver')}</strong>
+          <div class="muted">${esc(row.team || 'Unknown team')}</div>
+        </div>
+        <span class="f1-pos" style="background:${esc(teamColor)}20;border:1px solid ${esc(teamColor)};color:#f8fafc">${esc(`P${row.position || '?'}`)}</span>
+      </div>
+      <div class="f1-live-focus-grid">
+        <div class="f1-live-focus-stat">
+          <span class="muted">Gap / interval</span>
+          <strong>${esc(row.gap_to_leader || row.interval || row.time || '-')}</strong>
+        </div>
+        <div class="f1-live-focus-stat">
+          <span class="muted">Tyre / stint</span>
+          <strong>${esc(row.current_tyre ? `${row.current_tyre}${row.stint ? ` | ${row.stint}` : ''}` : 'Pending')}</strong>
+        </div>
+        <div class="f1-live-focus-stat">
+          <span class="muted">Best lap</span>
+          <strong>${esc(row.best_lap_time || '-')}</strong>
+        </div>
+        <div class="f1-live-focus-stat">
+          <span class="muted">Grid delta</span>
+          <strong>${esc(f1PositionDeltaLabel(row))}</strong>
+        </div>
+      </div>
+      <div class="small-row"><span>Driver code</span><strong>${esc(row.code || `#${row.driver_number || '?'}`)}</strong></div>
+      <div class="small-row"><span>Session</span><strong>${esc(session.session_name || _f1Sessions[_f1SelectedSessionKey]?.session_name || 'Session')}</strong></div>
+      <div class="small-row"><span>Feed age</span><strong>${ageSeconds == null ? '-' : `${ageSeconds}s`}</strong></div>
+    </div>
+  `;
 }
 
 function startF1ClockTicker() {
@@ -3128,17 +3312,20 @@ function renderF1LiveMeta(detail, session, options = {}) {
   const liveMetaEl = document.getElementById('f1-live-meta');
   if (!liveMetaEl) return;
   const latestSnapshot = f1LatestSnapshot(detail);
+  const sourceState = f1SessionSourceState(detail, options);
+  const ageSeconds = f1SessionAgeSeconds(detail);
   const badges = [
     { label: `${detail.drivers_count || 0} drivers` },
     { label: detail.generated_at ? `Updated ${relTime(detail.generated_at)}` : 'Update pending' },
     {
-      label: detail.live ? 'Live' : (detail.cached ? 'Server cache' : 'Fresh'),
-      cls: detail.live ? 'live' : (detail.cached ? 'cache' : ''),
+      label: sourceState === 'live' ? 'Live' : (sourceState === 'cache' ? 'Server cache' : (sourceState === 'fallback' ? 'Fallback' : (sourceState === 'stale' ? 'Stale' : 'Fresh'))),
+      cls: sourceState === 'live' ? 'live' : (sourceState === 'cache' ? 'cache' : (sourceState === 'fallback' ? 'fallback' : (sourceState === 'stale' ? 'stale' : ''))),
     },
     { label: f1SourceLabel(detail.source || 'unknown') },
   ];
   if (options.fromClientCache) badges.push({ label: 'Local cache', cls: 'cache' });
   if (detail.stale) badges.push({ label: `Stale ${Math.max(0, Math.round((detail.stale_age_seconds || 0) / 60))}m`, cls: 'stale' });
+  if (ageSeconds != null) badges.push({ label: `Data ${ageSeconds}s`, cls: ageSeconds > 90 ? 'stale' : (ageSeconds <= 15 ? 'live' : '') });
   if (options.refreshing) badges.push({ label: 'Refreshing' });
   if (options.refreshFailed) badges.push({ label: 'Refresh failed', cls: 'fail' });
   if (latestSnapshot?.generated_at) badges.push({ label: `Snapshot ${relTime(latestSnapshot.generated_at)}`, cls: 'cache' });
@@ -3149,15 +3336,18 @@ function renderF1SessionBoard(detail) {
   const boardEl = document.getElementById('f1-live-board');
   if (!boardEl) return;
   const session = detail?.session || _f1Sessions[_f1SelectedSessionKey] || {};
+  renderF1LiveStrip(detail);
   renderF1BoardControls(detail);
   const mode = normalizeF1BoardMode(_f1BoardMode, session);
   const latestSnapshot = f1LatestSnapshot(detail);
   const baseRows = (detail?.leaderboard || []).length ? (detail?.leaderboard || []) : (latestSnapshot?.leaderboard || []);
+  if (!_f1SelectedLiveDriverKey && baseRows.length) _f1SelectedLiveDriverKey = f1DriverFocusKey(baseRows[0]);
   const rows = mode === 'championship'
     ? _f1StandingsRows.slice(0, 12)
     : (mode === 'grid'
       ? [...baseRows].sort((a, b) => f1GridSlot(a) - f1GridSlot(b) || Number(a.position || 999) - Number(b.position || 999))
       : baseRows);
+  renderF1LiveDriverFocus(detail);
   if (!rows.length) {
     boardEl.innerHTML = '<div class="muted">No board data for this session yet.</div>';
     return;
@@ -3206,8 +3396,10 @@ function renderF1SessionBoard(detail) {
               : (row.best_lap_time && row.best_lap_time !== statA
                 ? `Best ${row.best_lap_time}`
                 : (row.current_tyre ? `${row.current_tyre}${row.stint ? ` | stint ${row.stint}` : ''}` : (row.status || row.points != null ? `${row.status || `${row.points} pts`}` : '-'))))));
+      const focusKey = f1DriverFocusKey(row);
+      const isActiveDriver = !!focusKey && focusKey === String(_f1SelectedLiveDriverKey || '').trim().toLowerCase();
       return `
-        <div class="f1-board-row">
+        <div class="f1-board-row interactive${isActiveDriver ? ' active' : ''}"${focusKey ? ` data-driver-key="${esc(focusKey)}"` : ''}>
           <div class="f1-pos">${esc(mode === 'grid' && row.grid_position ? `G${row.grid_position}` : `P${row.position || '?'}`)}</div>
           <div class="f1-driver-line">
             <span class="f1-team-dot" style="background:${esc(teamColor)}"></span>
@@ -3228,6 +3420,11 @@ function renderF1SessionBoard(detail) {
       `;
     }).join('')}
   `;
+  boardEl.querySelectorAll('[data-driver-key]').forEach(node => {
+    node.addEventListener('click', () => {
+      selectF1LiveDriver(node.getAttribute('data-driver-key') || '');
+    });
+  });
 }
 
 function renderF1RaceControl(detail) {
@@ -3239,16 +3436,22 @@ function renderF1RaceControl(detail) {
     feedEl.innerHTML = '<div class="muted">No race control messages for this session.</div>';
     return;
   }
-  feedEl.innerHTML = items.map(item => `
+  feedEl.innerHTML = `
+    <div class="small-row" style="margin-bottom:8px">
+      <span class="muted">${esc(items.length)} updates</span>
+      <span class="muted">${detail?.data_as_of ? `Data ${relTime(detail.data_as_of)}` : 'Feed active'}</span>
+    </div>
+    ${items.map(item => `
     <div class="f1-control-item">
       <div class="diag-head" style="margin-bottom:4px">
-        <strong>${esc(item.flag || item.category || 'Update')}</strong>
+        <span class="f1-control-flag ${/yellow|red|safety|vsc|black|incident|investigation/i.test(`${item.flag || ''} ${item.category || ''} ${item.message || ''}`) ? 'flag' : 'note'}">${esc(item.flag || item.category || 'Update')}</span>
         <span class="muted">${item.date ? relTime(item.date) : ''}</span>
       </div>
       <div style="font-size:13px;line-height:1.45">${esc(item.message || 'No message text')}</div>
       <div class="muted">${item.driver_number ? `Car #${esc(item.driver_number)} | ` : ''}${item.lap_number ? `Lap ${esc(item.lap_number)} | ` : ''}${esc(item.scope || '')}</div>
     </div>
-  `).join('');
+  `).join('')}
+  `;
 }
 
 async function loadF1Session(sessionKey, options={}) {
@@ -3280,7 +3483,11 @@ async function loadF1Session(sessionKey, options={}) {
   } else if (!cfg.silent && !background) {
     const boardEl = document.getElementById('f1-live-board');
     const controlEl = document.getElementById('f1-race-control');
+    const stripEl = document.getElementById('f1-live-strip');
+    const focusEl = document.getElementById('f1-live-focus');
+    if (stripEl) stripEl.innerHTML = '<div class="muted">Building live session strip...</div>';
     if (boardEl) boardEl.innerHTML = '<div class="muted">Loading session board...</div>';
+    if (focusEl) focusEl.innerHTML = '<div class="muted">Preparing pinned driver focus...</div>';
     if (controlEl) controlEl.innerHTML = '<div class="muted">Loading race control...</div>';
   }
 
@@ -3295,7 +3502,7 @@ async function loadF1Session(sessionKey, options={}) {
     renderF1RaceControl(detail);
     renderF1TrackPanel(_f1Weekend || null);
     if (detail.live || ['live','cooldown'].includes(String((detail.session || session).status || '').toLowerCase())) {
-      scheduleF1SessionRefresh(detail.live ? 15000 : 30000);
+      scheduleF1SessionRefresh(detail.live ? 5000 : 15000);
     } else {
       clearF1SessionPolling();
     }
@@ -3305,7 +3512,11 @@ async function loadF1Session(sessionKey, options={}) {
     if (!canUseClientCache) {
       const boardEl = document.getElementById('f1-live-board');
       const controlEl = document.getElementById('f1-race-control');
+      const stripEl = document.getElementById('f1-live-strip');
+      const focusEl = document.getElementById('f1-live-focus');
+      if (stripEl) stripEl.innerHTML = '<div class="muted">Live strip unavailable.</div>';
       if (boardEl) boardEl.innerHTML = `<div class="err-msg">Session board failed: ${esc(e.message)}</div>`;
+      if (focusEl) focusEl.innerHTML = '<div class="muted">Pinned driver focus unavailable.</div>';
       if (controlEl) controlEl.innerHTML = `<div class="err-msg">Race control failed: ${esc(e.message)}</div>`;
       if (liveMetaEl) liveMetaEl.textContent = 'session detail unavailable';
       _f1SelectedSessionDetail = null;
@@ -3323,6 +3534,7 @@ async function loadF1Session(sessionKey, options={}) {
 async function selectF1Session(key, options = {}) {
   _f1SelectedSessionKey = String(key || '');
   _f1SelectedSessionDetail = null;
+  _f1SelectedLiveDriverKey = '';
   rememberF1Preferences();
   renderF1SessionFilters();
   renderF1SessionPicker();
@@ -3337,6 +3549,10 @@ async function selectF1Session(key, options = {}) {
   if (controlsEl) controlsEl.innerHTML = '';
   const liveMetaEl = document.getElementById('f1-live-meta');
   if (liveMetaEl) liveMetaEl.textContent = '';
+  const stripEl = document.getElementById('f1-live-strip');
+  if (stripEl) stripEl.innerHTML = '<div class="muted">Select a session to activate the live strip.</div>';
+  const focusEl = document.getElementById('f1-live-focus');
+  if (focusEl) focusEl.innerHTML = '<div class="muted">Select a session to pin a driver focus.</div>';
 }
 
 async function setF1SessionFilter(filter) {
@@ -3351,10 +3567,13 @@ async function setF1SessionFilter(filter) {
   if (!visible.length) {
     _f1SelectedSessionKey = '';
     _f1SelectedSessionDetail = null;
+    _f1SelectedLiveDriverKey = '';
     rememberF1Preferences();
     renderF1SessionSummary('');
     document.getElementById('f1-board-controls').innerHTML = '';
+    document.getElementById('f1-live-strip').innerHTML = '<div class="muted">No sessions match this filter yet.</div>';
     document.getElementById('f1-live-board').innerHTML = '<div class="muted">No sessions match this filter yet.</div>';
+    document.getElementById('f1-live-focus').innerHTML = '<div class="muted">Driver focus returns when a session matches this filter.</div>';
     document.getElementById('f1-race-control').innerHTML = '<div class="muted">No filtered session selected.</div>';
     document.getElementById('f1-live-meta').textContent = '';
     clearF1SessionPolling();
@@ -3464,8 +3683,10 @@ async function loadF1(options = {}) {
       document.getElementById('f1-session-filters').innerHTML = '';
       document.getElementById('f1-session-detail').innerHTML = '<div class="muted">Waiting for session data...</div>';
       document.getElementById('f1-day-plan').innerHTML = '<div class="muted">Building trackday planner...</div>';
+      document.getElementById('f1-live-strip').innerHTML = '<div class="muted">Preparing live strip...</div>';
       document.getElementById('f1-board-controls').innerHTML = '';
       document.getElementById('f1-live-board').innerHTML = '<div class="muted">Select a session to load timing.</div>';
+      document.getElementById('f1-live-focus').innerHTML = '<div class="muted">Pinned driver focus will appear here.</div>';
       document.getElementById('f1-race-control').innerHTML = '<div class="muted">Session race control will appear here.</div>';
       document.getElementById('f1-live-meta').textContent = '';
       document.getElementById('f1-session-meta').textContent = '';
@@ -3508,8 +3729,10 @@ async function loadF1(options = {}) {
       document.getElementById('f1-session-filters').innerHTML = '';
       document.getElementById('f1-session-detail').innerHTML = '';
       document.getElementById('f1-day-plan').innerHTML = '';
+      document.getElementById('f1-live-strip').innerHTML = '';
       document.getElementById('f1-board-controls').innerHTML = '';
       document.getElementById('f1-live-board').innerHTML = '';
+      document.getElementById('f1-live-focus').innerHTML = '';
       document.getElementById('f1-race-control').innerHTML = '';
     } else {
       metaEl.textContent += ' | refresh failed';
@@ -3736,8 +3959,10 @@ async function applyF1OverviewData(data, preferredSession, options = {}) {
   if (selectedSession) {
     await selectF1Session(selectedSession, options);
   } else {
+    document.getElementById('f1-live-strip').innerHTML = '<div class="muted">Select a session to activate the live strip.</div>';
     document.getElementById('f1-board-controls').innerHTML = '';
     document.getElementById('f1-live-board').innerHTML = '<div class="muted">Select a session to load timing.</div>';
+    document.getElementById('f1-live-focus').innerHTML = '<div class="muted">Select a session to pin a driver focus.</div>';
     document.getElementById('f1-race-control').innerHTML = '<div class="muted">Session race control will appear here.</div>';
     document.getElementById('f1-live-meta').textContent = '';
   }

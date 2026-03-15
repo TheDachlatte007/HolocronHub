@@ -2076,6 +2076,29 @@ def _summarize_openf1_session(session: dict[str, Any], now_utc: Optional[datetim
     }
 
 
+def _f1_rows_data_as_of(*row_groups: Any) -> Optional[str]:
+    latest_dt: Optional[datetime] = None
+    latest_raw: Optional[str] = None
+    for group in row_groups:
+        if not isinstance(group, list):
+            continue
+        for row in group:
+            if not isinstance(row, dict):
+                continue
+            for key in ("date", "Utc", "utc", "Timestamp", "timestamp"):
+                dt = _parse_dt(row.get(key))
+                if dt is None:
+                    continue
+                if latest_dt is None or dt > latest_dt:
+                    latest_dt = dt
+                    latest_raw = row.get(key)
+    if latest_raw not in (None, ""):
+        return str(latest_raw)
+    if latest_dt is not None:
+        return latest_dt.astimezone(timezone.utc).isoformat()
+    return None
+
+
 def _score_openf1_meeting(meeting: dict[str, Any], target: Optional[dict[str, Any]]) -> float:
     if not isinstance(target, dict):
         return 0.0
@@ -2664,8 +2687,17 @@ def _fetch_openf1_session_detail(session_key: str) -> tuple[dict[str, Any], list
             elif weather_err:
                 errors.append(weather_err)
 
+    data_as_of = _f1_rows_data_as_of(
+        position_rows,
+        interval_rows,
+        race_control_rows,
+        weather_rows,
+        result_rows,
+    ) or latest_weather.get("date")
+
     return {
         "source": "openf1",
+        "data_as_of": data_as_of,
         "session": session_summary,
         "live": session_status in {"live", "cooldown"},
         "drivers_count": len(driver_map),
@@ -5724,12 +5756,26 @@ def f1_session(session_key: str, force: bool = False):
     detail, errors = _fetch_openf1_session_detail(session_key)
     secondary_payload, secondary_age = _get_f1_secondary_session(session_key, max_age_seconds=4 * 3600)
     if isinstance(detail, dict) and detail and isinstance(secondary_payload, dict):
+        secondary_session = secondary_payload.get("session") if isinstance(secondary_payload.get("session"), dict) else {}
+        if secondary_session:
+            detail = {
+                **detail,
+                "session": {
+                    **secondary_session,
+                    **(detail.get("session") if isinstance(detail.get("session"), dict) else {}),
+                },
+            }
         detail_has_live_rows = bool((detail.get("leaderboard") or []) or (detail.get("race_control") or []) or _f1_weather_has_data(detail.get("weather")))
         secondary_has_live_rows = _secondary_f1_session_payload_has_data(secondary_payload)
         if secondary_has_live_rows and not detail_has_live_rows:
             detail = {
                 **detail,
                 "source": secondary_payload.get("source") or "secondary_ingest",
+                "data_as_of": secondary_payload.get("data_as_of") or detail.get("data_as_of"),
+                "session": {
+                    **secondary_session,
+                    **(detail.get("session") if isinstance(detail.get("session"), dict) else {}),
+                },
                 "live": bool(secondary_payload.get("live")) or bool(detail.get("live")),
                 "drivers_count": int(secondary_payload.get("drivers_count") or detail.get("drivers_count") or 0),
                 "leaderboard": deepcopy(secondary_payload.get("leaderboard") or []),
@@ -5772,7 +5818,7 @@ def f1_session(session_key: str, force: bool = False):
     generated_at = datetime.now().isoformat(timespec="seconds")
     payload = {
         "generated_at": generated_at,
-        "data_as_of": generated_at,
+        "data_as_of": detail.get("data_as_of") or generated_at,
         "stale": False,
         "stale_age_seconds": 0,
         "session_key": session_key,

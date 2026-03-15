@@ -1322,5 +1322,167 @@
     ],
     "usage_count": 22,
     "rating": 3
+  },
+  {
+    "id": "lovable",
+    "name": "Lovable",
+    "category": "Code",
+    "provider": "Lovable",
+    "link": "https://lovable.dev",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Prompt to polished product and app",
+    "tags": [
+      "build",
+      "app",
+      "prototype"
+    ],
+    "service_kind": "ai_builder",
+    "ai_tasks": [
+      "build_apps"
+    ],
+    "featured_rank": 1,
+    "short_hint": "fast product prototyping"
+  },
+  {
+    "id": "replicate",
+    "name": "Replicate",
+    "category": "AI Services",
+    "provider": "Replicate",
+    "link": "https://replicate.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "api-key",
+    "cost_hint": "pay-as-you-go",
+    "notes": "Hosted open model inference",
+    "tags": [
+      "models",
+      "api",
+      "inference"
+    ],
+    "service_kind": "ai_inference",
+    "ai_tasks": [
+      "build_apps",
+      "images",
+      "video"
+    ],
+    "featured_rank": 4,
+    "short_hint": "run open models"
+  },
+  {
+    "id": "groq",
+    "name": "Groq",
+    "category": "AI Services",
+    "provider": "Groq",
+    "link": "https://groq.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "api-key",
+    "cost_hint": "pay-as-you-go",
+    "notes": "Fast inference platform",
+    "tags": [
+      "api",
+      "inference",
+      "speed"
+    ],
+    "service_kind": "ai_inference",
+    "ai_tasks": [
+      "build_apps",
+      "code",
+      "research"
+    ],
+    "featured_rank": 8,
+    "short_hint": "fast inference API"
+  },
+  {
+    "id": "together-ai",
+    "name": "Together AI",
+    "category": "AI Services",
+    "provider": "Together AI",
+    "link": "https://www.together.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "api-key",
+    "cost_hint": "pay-as-you-go",
+    "notes": "Open model platform and inference",
+    "tags": [
+      "api",
+      "models",
+      "open-models"
+    ],
+    "service_kind": "ai_inference",
+    "ai_tasks": [
+      "build_apps",
+      "research"
+    ],
+    "featured_rank": 7,
+    "short_hint": "open model cloud"
+  },
+  {
+    "id": "fal-ai",
+    "name": "fal",
+    "category": "Image",
+    "provider": "fal",
+    "link": "https://fal.ai",
+    "local_or_cloud": "cloud",
+    "auth_type": "api-key",
+    "cost_hint": "pay-as-you-go",
+    "notes": "Fast media inference and generation",
+    "tags": [
+      "image",
+      "video",
+      "api"
+    ],
+    "service_kind": "media_inference",
+    "ai_tasks": [
+      "images",
+      "video",
+      "build_apps"
+    ],
+    "featured_rank": 4,
+    "short_hint": "fast media inference"
+  },
+  {
+    "id": "heygen",
+    "name": "HeyGen",
+    "category": "Video",
+    "provider": "HeyGen",
+    "link": "https://www.heygen.com",
+    "local_or_cloud": "cloud",
+    "auth_type": "oauth",
+    "cost_hint": "free/pro",
+    "notes": "Avatar video creation and studio workflows",
+    "tags": [
+      "video",
+      "avatar",
+      "voice"
+    ],
+    "service_kind": "ai_video",
+    "ai_tasks": [
+      "video",
+      "voice"
+    ],
+    "featured_rank": 5,
+    "short_hint": "avatar video studio"
+  },
+  {
+    "id": "lm-studio",
+    "name": "LM Studio",
+    "category": "AI Services",
+    "provider": "LM Studio",
+    "link": "https://lmstudio.ai",
+    "local_or_cloud": "local",
+    "auth_type": "local",
+    "cost_hint": "free",
+    "notes": "Desktop local model runtime and chat",
+    "tags": [
+      "local",
+      "desktop",
+      "models"
+    ],
+    "service_kind": "local_models",
+    "ai_tasks": [
+      "local_ai"
+    ],
+    "featured_rank": 2,
+    "short_hint": "desktop local chat"
   }
 ]

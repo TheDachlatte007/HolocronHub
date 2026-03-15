@@ -1,6 +1,6 @@
-# Holocron (MVP v1.1)
+# HolocronHub (MVP v1.1)
 
-Local single-user dashboard for curated AI tools, home network services, and a unified feed.
+HolocronHub is a local single-user dashboard for curated AI tools, home network services, and a unified feed.
 
 ## Features (v1.1)
 - Tool catalog with search + category filter

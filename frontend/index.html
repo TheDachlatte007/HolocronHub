@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Holocron</title>
+  <title>HolocronHub</title>
   <style>
     *{box-sizing:border-box}
     body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0}
@@ -46,9 +46,14 @@
     .tool-section-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #334155}
     .tool-section-title{font-size:1rem;color:#e2e8f0;font-weight:700}
     .tool-section-sub{font-size:12px;color:#64748b;max-width:720px}
-    .tool-focus-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}
-    .tool-focus-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:5px}
-    .tool-focus-card strong{font-size:14px;color:#f8fafc}
+    .tool-hub-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+    .tool-hub-strap{font-size:13px;color:#94a3b8;max-width:780px;line-height:1.45}
+    .toolhub-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .tool-search-panel{background:#0b1220;border:1px solid #334155;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+    .tool-search-panel[hidden],.tool-manage-panel[hidden]{display:none !important}
+    .tool-search-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+    .tool-search-copy{font-size:12px;color:#94a3b8}
+    .tool-manage-panel{margin-top:16px}
     .tool-group-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
     .tool-group-tab{padding:7px 11px;border-radius:999px;border:1px solid #334155;background:#0b1220;color:#94a3b8;font-size:12px;cursor:pointer}
     .tool-group-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
@@ -60,7 +65,6 @@
     .tool-card{background:#0b1220;border:1px solid #334155;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:100%}
     .tool-card-home{background:linear-gradient(160deg,#0f172a 0%,#0b1220 100%);border-color:#334b7a;box-shadow:0 10px 20px rgba(2,6,23,.16)}
     .tool-card-quick{background:linear-gradient(145deg,#172554,#0b1220);border-color:#315285}
-    .tool-card-ai{background:#0d1525;border-color:#293446;padding:10px 12px;gap:8px}
     .tool-card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
     .tool-head{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
     .tool-head strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -90,12 +94,6 @@
     .tool-detail-grid .small-row span{color:#94a3b8}
     .tool-detail-grid .small-row strong{color:#e2e8f0;text-align:right}
     .tool-actions-detail{display:flex;gap:6px;flex-wrap:wrap}
-    .tool-ai-pick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}
-    .tool-ai-pick{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
-    .tool-ai-pick strong{font-size:14px;color:#f8fafc}
-    .tool-ai-pick-list{display:flex;flex-direction:column;gap:6px}
-    .tool-ai-pick-item{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:12px;padding:7px 8px;border-radius:8px;background:#0f172a;border:1px solid #1f2937}
-    .tool-ai-pick-item a{font-weight:600}
     .check-inline{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#cbd5e1;padding:0 4px}
     .check-inline input{margin:0}
     .pill.featured{background:#172554;color:#bfdbfe}
@@ -108,7 +106,6 @@
     .home-overview-card strong{font-size:14px;color:#f8fafc}
     .home-overview-metrics{display:flex;gap:6px;flex-wrap:wrap}
     .tool-latency{font-size:11px;color:#93c5fd}
-    .ai-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}
     .ai-overview-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
     .ai-overview-card strong{font-size:14px;color:#f8fafc}
     .ai-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.85fr);gap:12px;align-items:start}
@@ -120,6 +117,35 @@
     .ai-mini-item a{font-size:13px;font-weight:600;color:#bfdbfe}
     .ai-mini-item p{margin:0;font-size:12px;color:#94a3b8;line-height:1.45}
     .ai-mini-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:11px;color:#64748b}
+    .ai-task-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}
+    .ai-task-bucket{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .ai-task-bucket strong{font-size:14px;color:#f8fafc}
+    .ai-task-list{display:flex;flex-direction:column;gap:6px}
+    .ai-task-item{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #1f2937}
+    .ai-task-item:last-child{border-bottom:none}
+    .ai-task-item a{font-size:13px;font-weight:600;color:#bfdbfe}
+    .ai-task-item small{display:block;font-size:11px;color:#94a3b8;line-height:1.35;margin-top:2px}
+    .ai-task-more{margin-top:2px}
+    .ai-task-more summary{cursor:pointer;list-style:none;font-size:12px;color:#94a3b8}
+    .ai-task-more summary::-webkit-details-marker{display:none}
+    .ai-directory-sections{display:flex;flex-direction:column;gap:14px}
+    .ai-directory-group{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px}
+    .ai-directory-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+    .ai-directory-list{display:flex;flex-direction:column;gap:8px}
+    .ai-directory-row{background:#0f172a;border:1px solid #1f2937;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+    .ai-directory-main{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .ai-directory-title{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .ai-directory-title a{font-size:13px;font-weight:700;color:#bfdbfe}
+    .ai-directory-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .ai-directory-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .ai-directory-actions .tool-open{padding:6px 10px}
+    .ai-explore{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px}
+    .ai-explore summary{cursor:pointer;list-style:none;font-size:13px;font-weight:700;color:#e2e8f0;display:flex;justify-content:space-between;align-items:center}
+    .ai-explore summary::-webkit-details-marker{display:none}
+    .ai-explore-body{display:flex;flex-direction:column;gap:12px;padding-top:10px}
+    .home-overview-compact{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin:0 0 12px}
+    .home-overview-copy{display:flex;flex-direction:column;gap:6px;max-width:620px}
+    .home-overview-copy strong{font-size:14px;color:#f8fafc}
 
     /* edit form */
     .edit-form{background:#0b1220;border:1px solid #2563eb;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;grid-column:1/-1}
@@ -379,7 +405,7 @@
       .nav{overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;padding-bottom:6px;gap:6px}
       .nav-tab{flex:0 0 auto;border:1px solid #334155;border-radius:8px;margin-bottom:0}
       .nav-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
-      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-focus-strip,.tool-group-grid,.ai-overview-grid,.ai-layout,.market-layout{grid-template-columns:1fr}
+      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-group-grid,.ai-layout,.market-layout,.ai-task-grid{grid-template-columns:1fr}
       .row>input,.row>select,.row>button{flex:1 1 100%;min-width:0 !important;width:100%}
       input,select,textarea,button{font-size:14px}
     }
@@ -398,7 +424,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Holocron <span style="font-size:12px;color:#64748b;font-weight:normal;">(AI & Home Network)</span></h1>
+  <h1>HolocronHub <span style="font-size:12px;color:#64748b;font-weight:normal;">(AI & Home Network)</span></h1>
 
   <div class="nav" style="align-items:center">
     <button class="nav-tab active" onclick="showTab('tools',this)">Tool Hub</button>
@@ -415,19 +441,34 @@
   <!-- ═══ TOOLS ═══ -->
   <div id="tab-tools">
     <div class="card">
-      <h2>Tool Hub</h2>
+      <div class="tool-hub-top">
+        <div>
+          <h2>HolocronHub Tool Hub</h2>
+          <div class="tool-hub-strap">Quiet daily launcher for AI services and Home Lab shortcuts. Open what you need fast, keep editing tucked behind manage mode.</div>
+        </div>
+        <div class="toolhub-actions">
+          <button class="sm" id="tool-search-trigger" onclick="toggleToolSearchPanel()">Search</button>
+          <button class="sm" id="manage-tools-toggle" onclick="toggleManageTools()">Manage Tools</button>
+        </div>
+      </div>
       <div class="row" id="cat-tabs"><button class="active" onclick="setCategory('',this)">All</button></div>
-      <div class="row">
-        <input id="q" placeholder="Search name, tags, provider, group, host…" style="flex:1;min-width:180px" />
-        <select id="tool-sort" onchange="loadTools()">
+      <div id="tool-search-panel" class="tool-search-panel" hidden>
+        <div class="tool-search-head">
+          <div class="tool-search-copy">Search by name, tags, provider, group, host, AI task or shortcut hint. Keyboard: <code>Ctrl/Cmd+K</code> or <code>/</code>.</div>
+          <button class="sm" onclick="toggleToolSearchPanel(false)">Close</button>
+        </div>
+        <div class="row">
+          <input id="q" placeholder="Search name, tags, provider, group, host…" style="flex:1;min-width:220px" />
+          <select id="tool-sort">
           <option value="">Default order</option>
           <option value="favorites">Favorites first</option>
           <option value="popular">Most used</option>
           <option value="last_used">Recently used</option>
         </select>
-        <button class="primary" onclick="loadTools()">Search</button>
+          <button class="primary" onclick="applyToolSearch()">Apply</button>
+          <button onclick="clearToolSearch()">Clear</button>
+        </div>
       </div>
-      <div id="tool-focus-strip" class="tool-focus-strip"></div>
 
       <div id="quick-tools-section" class="tool-section" hidden>
         <div class="tool-section-head">
@@ -443,24 +484,28 @@
         <div class="tool-section-head">
           <div>
             <div class="tool-section-title">AI Tools</div>
-            <div class="tool-section-sub">Curated into work lanes so chat, builders, creative tools, research, automation, and discovery read like one coherent workspace.</div>
+            <div class="tool-section-sub">Task-first picks up top, compact grouped directory underneath. Built for fast launch, not a wall of widgets.</div>
           </div>
         </div>
-        <div id="ai-overview-grid" class="ai-overview-grid"><div class="ai-overview-card"><strong>AI workspace</strong><span class="muted">Curated counts and live signal will appear here after the tool list loads.</span></div></div>
-        <div id="ai-lane-tabs" class="tool-group-tabs"><button class="tool-group-tab active" onclick="setAiLane('all',this)">All lanes</button></div>
+        <div id="ai-overview-grid" class="ai-task-grid"><div class="ai-overview-card"><strong>AI workspace</strong><span class="muted">Task-first picks will appear here after the tool list loads.</span></div></div>
         <div class="ai-layout">
           <div>
-            <div id="tools-ai" class="grid"><div class="empty">No AI tools.</div></div>
+            <div id="tools-ai" class="ai-directory-sections"><div class="empty">No AI tools.</div></div>
           </div>
           <div class="ai-rail">
-            <div class="ai-rail-card">
-              <h4>AI Radar</h4>
-              <div id="ai-news-list" class="ai-mini-list"><div class="muted">AI signal will appear here after the launcher loads.</div></div>
-            </div>
-            <div class="ai-rail-card">
-              <h4>Discovery</h4>
-              <div id="ai-discovery-list" class="ai-mini-list"><div class="muted">Curated indexes and research hubs will appear here after the tool list loads.</div></div>
-            </div>
+            <details class="ai-explore">
+              <summary><span>Explore AI</span><span class="muted">Radar + discovery</span></summary>
+              <div class="ai-explore-body">
+                <div class="ai-rail-card">
+                  <h4>AI Radar</h4>
+                  <div id="ai-news-list" class="ai-mini-list"><div class="muted">AI signal will appear here after the launcher loads.</div></div>
+                </div>
+                <div class="ai-rail-card">
+                  <h4>Discovery</h4>
+                  <div id="ai-discovery-list" class="ai-mini-list"><div class="muted">Curated indexes and research hubs will appear here after the tool list loads.</div></div>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
       </div>
@@ -487,8 +532,9 @@
         <div id="tools-other" class="grid"></div>
       </div>
     </div>
-    <div class="card">
-      <h2>Add Tool</h2>
+    <div id="manage-tools-panel" class="card tool-manage-panel" hidden>
+      <h2>Manage Tools</h2>
+      <div class="muted" style="margin-bottom:10px">Add or curate tools without crowding the everyday launcher surface.</div>
       <div class="row">
         <input id="new_name" placeholder="Name" style="flex:1" />
         <input id="new_provider" placeholder="Provider" style="flex:1" />
@@ -509,6 +555,11 @@
         <input id="new_host" placeholder="host / IP" style="flex:1" />
         <input id="new_port" type="number" min="1" max="65535" placeholder="port" style="width:90px" />
         <select id="new_status"><option value="unknown">unknown</option><option value="online">online</option><option value="offline">offline</option></select>
+      </div>
+      <div class="row">
+        <input id="new_ai_tasks" placeholder="AI tasks: summaries, research, code" style="flex:1.4" />
+        <input id="new_short_hint" placeholder="short hint" style="flex:1.1" />
+        <input id="new_featured_rank" type="number" min="1" placeholder="rank" style="width:90px" />
       </div>
       <div class="row">
         <input id="new_notes" placeholder="short description" style="flex:1.4" />
@@ -1247,30 +1298,63 @@ async function loadCategories() {
 // ══ tools ════════════════════════════════════════════════════
 
 let activeCategory = '';
-let activeAiLane = 'all';
 let activeHomeGroup = '';
 let _toolCache = [];
 let _aiFeedCache = [];
 let _homeLabOverviewRequest = 0;
 let _aiRadarRequest = 0;
+let _toolSearchOpen = false;
+let _manageToolsOpen = false;
+
+const AI_TASK_ORDER = [
+  { id: 'summaries', title: 'Summaries', hint: 'Fast briefs, PDFs, article digestion and notes.' },
+  { id: 'research', title: 'Research', hint: 'Deep dives, grounded answers and source comparison.' },
+  { id: 'learn', title: 'Learn / Study', hint: 'Study companions, explainers and notebook-style workflows.' },
+  { id: 'code', title: 'Code', hint: 'Coding help, debugging, agents and editor copilots.' },
+  { id: 'build_apps', title: 'Build Apps', hint: 'Prompt-to-app builders, UI generators and API surfaces.' },
+  { id: 'images', title: 'Images', hint: 'Image generation and visual ideation.' },
+  { id: 'video', title: 'Video', hint: 'Video generation, edits and motion workflows.' },
+  { id: 'voice', title: 'Voice', hint: 'Speech, dubbing, voiceovers and cloning.' },
+  { id: 'automation', title: 'Automation', hint: 'Workflow builders, chains and orchestration tools.' },
+  { id: 'local_ai', title: 'Local AI', hint: 'Private local-first stacks and self-hosted model surfaces.' },
+];
+
+const AI_TASK_LABELS = Object.fromEntries(AI_TASK_ORDER.map(task => [task.id, task.title]));
+
+const AI_CURATION_PRESETS = {
+  'chatgpt': { tasks: ['summaries','research','learn','code'], rank: 20, hint: 'general daily driver' },
+  'claude': { tasks: ['summaries','research','learn','code'], rank: 10, hint: 'great long context' },
+  'gemini': { tasks: ['summaries','research','learn','video'], rank: 25, hint: 'multimodal workspace' },
+  'perplexity': { tasks: ['research','summaries'], rank: 5, hint: 'best for web answers' },
+  'notebooklm': { tasks: ['summaries','research','learn'], rank: 1, hint: 'best for PDFs' },
+  'mistral-le-chat': { tasks: ['summaries','research'], rank: 40, hint: 'lightweight general chat' },
+  'deepseek': { tasks: ['research','code'], rank: 35, hint: 'reasoning-heavy answers' },
+  'openrouter': { tasks: ['build_apps','code'], rank: 25, hint: 'multi-model API' },
+  'openai-platform': { tasks: ['build_apps','automation'], rank: 18, hint: 'official API console' },
+  'anthropic-console': { tasks: ['build_apps','code'], rank: 14, hint: 'official API console' },
+  'cursor': { tasks: ['code'], rank: 4, hint: 'AI code editor' },
+  'claude-code': { tasks: ['code'], rank: 1, hint: 'terminal coding agent' },
+  'codex-cli': { tasks: ['code'], rank: 2, hint: 'terminal pair programming' },
+  'github-copilot': { tasks: ['code'], rank: 12, hint: 'IDE autocomplete' },
+  'bolt-new': { tasks: ['build_apps'], rank: 2, hint: 'prompt to full-stack app' },
+  'v0': { tasks: ['build_apps'], rank: 3, hint: 'UI code generation' },
+  'runway': { tasks: ['video'], rank: 1, hint: 'creative video studio' },
+  'pika': { tasks: ['video'], rank: 3, hint: 'quick text-to-video' },
+  'midjourney': { tasks: ['images'], rank: 3, hint: 'high-end image generation' },
+  'elevenlabs': { tasks: ['voice'], rank: 1, hint: 'voice and dubbing' },
+  'huggingface': { tasks: ['research','local_ai'], rank: 2, hint: 'models and datasets' },
+  'ollama': { tasks: ['local_ai','code'], rank: 1, hint: 'local models' },
+  'n8n': { tasks: ['automation'], rank: 3, hint: 'visual workflow builder' },
+  'zapier': { tasks: ['automation'], rank: 6, hint: 'app automations' },
+  'make': { tasks: ['automation'], rank: 5, hint: 'workflow routing' },
+};
 
 function setCategory(cat, btn) {
   activeCategory = cat;
-  activeAiLane = 'all';
   activeHomeGroup = '';
   document.querySelectorAll('#cat-tabs button').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('#ai-lane-tabs .tool-group-tab').forEach(b=>b.classList.remove('active'));
-  const allAiBtn = document.querySelector('#ai-lane-tabs .tool-group-tab');
-  if (allAiBtn) allAiBtn.classList.add('active');
   if (btn) btn.classList.add('active');
   loadTools();
-}
-
-function setAiLane(lane, btn) {
-  activeAiLane = lane;
-  document.querySelectorAll('#ai-lane-tabs .tool-group-tab').forEach(b=>b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  renderToolSections(_toolCache);
 }
 
 function setHomeGroup(group, btn) {
@@ -1278,6 +1362,60 @@ function setHomeGroup(group, btn) {
   document.querySelectorAll('#home-group-tabs .tool-group-tab').forEach(b=>b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderToolSections(_toolCache);
+}
+
+function toggleToolSearchPanel(force) {
+  const panel = document.getElementById('tool-search-panel');
+  const trigger = document.getElementById('tool-search-trigger');
+  if (!panel) return;
+  _toolSearchOpen = typeof force === 'boolean' ? force : !_toolSearchOpen;
+  panel.hidden = !_toolSearchOpen;
+  if (trigger) trigger.classList.toggle('active', _toolSearchOpen);
+  if (_toolSearchOpen) window.setTimeout(() => document.getElementById('q')?.focus(), 0);
+}
+
+function applyToolSearch() {
+  loadTools();
+  toggleToolSearchPanel(false);
+}
+
+function clearToolSearch() {
+  const qEl = document.getElementById('q');
+  const sortEl = document.getElementById('tool-sort');
+  if (qEl) qEl.value = '';
+  if (sortEl) sortEl.value = '';
+  loadTools();
+  toggleToolSearchPanel(false);
+}
+
+function toggleManageTools(force) {
+  const panel = document.getElementById('manage-tools-panel');
+  const btn = document.getElementById('manage-tools-toggle');
+  if (!panel) return;
+  _manageToolsOpen = typeof force === 'boolean' ? force : !_manageToolsOpen;
+  panel.hidden = !_manageToolsOpen;
+  if (btn) {
+    btn.classList.toggle('active', _manageToolsOpen);
+    btn.textContent = _manageToolsOpen ? 'Close Manage' : 'Manage Tools';
+  }
+}
+
+function handleToolHubShortcuts(e) {
+  const toolsTab = document.getElementById('tab-tools');
+  const toolsVisible = !!toolsTab && toolsTab.style.display !== 'none';
+  const tag = (document.activeElement?.tagName || '').toLowerCase();
+  const typing = ['input','textarea','select'].includes(tag) || document.activeElement?.isContentEditable;
+  if ((e.ctrlKey || e.metaKey) && String(e.key || '').toLowerCase() === 'k') {
+    e.preventDefault();
+    toggleToolSearchPanel(true);
+    return;
+  }
+  if (toolsVisible && !typing && e.key === '/') {
+    e.preventDefault();
+    toggleToolSearchPanel(true);
+    return;
+  }
+  if (e.key === 'Escape' && _toolSearchOpen) toggleToolSearchPanel(false);
 }
 
 function isHomeTool(tool) {
@@ -1290,90 +1428,106 @@ function isAiTool(tool) {
   return ['ai','code','image','video','voice','audio','research','orchestration','automation'].some(k => cat.includes(k));
 }
 
-function getAiLane(tool) {
-  const category = String(tool?.category || '').toLowerCase();
-  const name = String(tool?.name || '').toLowerCase();
-  const tags = new Set((tool?.tags || []).map(tag => String(tag).toLowerCase()));
-  const serviceKind = String(tool?.service_kind || '').toLowerCase();
-  if (tool?.local_or_cloud === 'local' && (category.includes('ai services') || serviceKind.includes('local') || tags.has('local'))) return 'local';
-  if (category.includes('code')) return 'code';
-  if (category.includes('image') || category.includes('video') || category.includes('voice')) return 'create';
-  if (category.includes('research')) return 'research';
-  if (category.includes('indexes')) return 'discover';
-  if (category.includes('orchestration') || tags.has('automation') || tags.has('workflows')) return 'automate';
-  if (tags.has('api') || tags.has('dev') || name.includes('platform') || name.includes('console') || name.includes('studio') || name.includes('openrouter')) return 'builders';
-  return 'assist';
+function normalizeAiTask(task) {
+  const raw = String(task || '').trim().toLowerCase();
+  const compact = raw.replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '');
+  return {
+    summary: 'summaries',
+    summaries: 'summaries',
+    summarize: 'summaries',
+    research: 'research',
+    learn: 'learn',
+    study: 'learn',
+    learn_study: 'learn',
+    code: 'code',
+    build: 'build_apps',
+    build_apps: 'build_apps',
+    apps: 'build_apps',
+    image: 'images',
+    images: 'images',
+    video: 'video',
+    voice: 'voice',
+    audio: 'voice',
+    automation: 'automation',
+    automate: 'automation',
+    workflows: 'automation',
+    local: 'local_ai',
+    local_ai: 'local_ai',
+  }[compact] || compact;
 }
 
-function aiLaneLabel(lane) {
-  return {
-    all: 'All lanes',
-    assist: 'Assistants',
-    builders: 'Builders',
-    code: 'Code',
-    create: 'Create',
-    research: 'Research',
-    automate: 'Automate',
-    discover: 'Discover',
-    local: 'Local',
-  }[lane] || lane;
+function parseAiTasksInput(raw) {
+  if (Array.isArray(raw)) {
+    return [...new Set(raw.map(normalizeAiTask).filter(task => AI_TASK_LABELS[task]))];
+  }
+  return [...new Set(String(raw || '').split(',').map(part => normalizeAiTask(part)).filter(task => AI_TASK_LABELS[task]))];
+}
+
+function formatAiTasksInput(tasks) {
+  return parseAiTasksInput(tasks).map(task => AI_TASK_LABELS[task] || task).join(', ');
+}
+
+function getAiPreset(tool) {
+  return AI_CURATION_PRESETS[String(tool?.id || '')] || null;
+}
+
+function getToolAiTasks(tool) {
+  const explicit = parseAiTasksInput(tool?.ai_tasks);
+  if (explicit.length) return explicit;
+  const preset = getAiPreset(tool);
+  if (preset?.tasks?.length) return preset.tasks;
+  const category = String(tool?.category || '').toLowerCase();
+  const serviceKind = String(tool?.service_kind || '').toLowerCase();
+  const tags = new Set((tool?.tags || []).map(tag => String(tag).toLowerCase()));
+  if (tool?.local_or_cloud === 'local' && (category.includes('ai') || serviceKind.includes('local') || tags.has('local'))) return ['local_ai'];
+  if (category.includes('code')) return ['code'];
+  if (category.includes('image')) return ['images'];
+  if (category.includes('video')) return ['video'];
+  if (category.includes('voice') || category.includes('audio')) return ['voice'];
+  if (category.includes('orchestration') || category.includes('automation')) return ['automation'];
+  if (category.includes('research') || category.includes('indexes')) return ['research'];
+  if (serviceKind.includes('chat')) return ['summaries','research'];
+  return ['summaries'];
+}
+
+function getToolShortHint(tool) {
+  if (String(tool?.short_hint || '').trim()) return String(tool.short_hint).trim();
+  const preset = getAiPreset(tool);
+  if (preset?.hint) return preset.hint;
+  const category = String(tool?.category || '').toLowerCase();
+  if (category.includes('code')) return 'coding workflow';
+  if (category.includes('image')) return 'visual generation';
+  if (category.includes('video')) return 'video workflow';
+  if (category.includes('voice') || category.includes('audio')) return 'speech workflow';
+  if (category.includes('research')) return 'research workflow';
+  if (category.includes('orchestration') || category.includes('automation')) return 'automation workflow';
+  return (tool?.notes || '').trim() || 'quick launch';
+}
+
+function getToolFeaturedRank(tool) {
+  const explicit = Number(tool?.featured_rank);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  const preset = getAiPreset(tool);
+  if (Number.isFinite(Number(preset?.rank))) return Number(preset.rank);
+  return 999;
+}
+
+function sortAiTools(items) {
+  return [...items].sort((a,b) =>
+    (getToolFeaturedRank(a) - getToolFeaturedRank(b)) ||
+    (Number(b.favorite) - Number(a.favorite)) ||
+    (Number(b.pinned) - Number(a.pinned)) ||
+    ((b.usage_count || 0) - (a.usage_count || 0)) ||
+    String(a.name || '').localeCompare(String(b.name || ''))
+  );
 }
 
 function getAiTaskBuckets(tools) {
   const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
-  const byLane = lane => aiTools.filter(tool => getAiLane(tool) === lane);
-  const preferred = items => [...items].sort((a,b) => (Number(b.favorite) - Number(a.favorite)) || (Number(b.pinned) - Number(a.pinned)) || ((b.usage_count||0) - (a.usage_count||0)) || String(a.name||'').localeCompare(String(b.name||''))).slice(0, 4);
-  return [
-    {
-      id: 'summaries',
-      title: 'Summaries',
-      hint: 'Fast briefs, PDFs, article digestion and notes.',
-      tags: ['long context', 'briefs', 'study notes'],
-      tools: preferred(aiTools.filter(tool => ['assist','research','discover'].includes(getAiLane(tool)))),
-    },
-    {
-      id: 'research',
-      title: 'Research',
-      hint: 'Deep dives, sources, comparisons and exploration.',
-      tags: ['sources', 'compare', 'grounding'],
-      tools: preferred(aiTools.filter(tool => ['research','discover','builders'].includes(getAiLane(tool)))),
-    },
-    {
-      id: 'learn',
-      title: 'Learn / Study',
-      hint: 'Understand topics, ask follow-ups and build personal memory.',
-      tags: ['study', 'Q&A', 'explainers'],
-      tools: preferred(aiTools.filter(tool => ['assist','research','local'].includes(getAiLane(tool)))),
-    },
-    {
-      id: 'code',
-      title: 'Code',
-      hint: 'Coding help, agents, debugging and implementation.',
-      tags: ['coding', 'agents', 'debugging'],
-      tools: preferred(aiTools.filter(tool => ['code','builders','local'].includes(getAiLane(tool)))),
-    },
-    {
-      id: 'create',
-      title: 'Images / Video',
-      hint: 'Generate visuals, media and creative outputs.',
-      tags: ['image', 'video', 'creative'],
-      tools: preferred(byLane('create')),
-    },
-    {
-      id: 'agents',
-      title: 'Agents / Automations',
-      hint: 'Chains, routing, workflow builders and orchestration.',
-      tags: ['workflows', 'automation', 'multi-step'],
-      tools: preferred(aiTools.filter(tool => ['automate','builders'].includes(getAiLane(tool)))),
-    },
-    {
-      id: 'local',
-      title: 'Local AI',
-      hint: 'Private, self-hosted and low-latency local stacks.',
-      tags: ['local-first', 'self-hosted', 'offline-ish'],
-      tools: preferred(byLane('local')),
-    },
-  ].filter(bucket => bucket.tools.length);
+  return AI_TASK_ORDER.map(task => {
+    const items = sortAiTools(aiTools.filter(tool => getToolAiTasks(tool).includes(task.id)));
+    return { ...task, tools: items };
+  }).filter(bucket => bucket.tools.length);
 }
 
 function normalizeToolGroup(group) {
@@ -1423,27 +1577,6 @@ function parseToolLinksInput(raw) {
     .filter(Boolean);
 }
 
-function buildFocusCards(tools) {
-  const strip = document.getElementById('tool-focus-strip');
-  if (!strip) return;
-  const home = tools.filter(isHomeTool);
-  const favorites = tools.filter(t => t.favorite || t.pinned);
-  const groups = [...new Set(home.map(t => normalizeToolGroup(t.group)).filter(Boolean))];
-  strip.innerHTML = `
-    <div class="tool-focus-card">
-      <strong>${esc(String(favorites.length))} quick launch${favorites.length === 1 ? '' : 'es'}</strong>
-      <span class="muted">Pinned and favorite tools stay visible as your first launcher row.</span>
-    </div>
-    <div class="tool-focus-card">
-      <strong>${esc(String(home.length))} Home Lab service${home.length === 1 ? '' : 's'}</strong>
-      <span class="muted">Grouped by ${esc(String(groups.length || 1))} lane${groups.length === 1 ? '' : 's'} for faster scanning.</span>
-    </div>
-    <div class="tool-focus-card">
-      <strong>${esc(String(tools.filter(t => isAiTool(t)).length))} AI tools</strong>
-      <span class="muted">Short links for chats, coding, research, orchestration, and media generation.</span>
-    </div>`;
-}
-
 function renderHomeGroupTabs(tools) {
   const tabs = document.getElementById('home-group-tabs');
   if (!tabs) return;
@@ -1472,49 +1605,46 @@ function renderToolGrid(target, tools, variant, emptyText) {
   tools.forEach(tool => target.appendChild(buildToolCard(tool, variant)));
 }
 
-function renderAiLaneTabs(tools) {
-  const tabs = document.getElementById('ai-lane-tabs');
-  if (!tabs) return;
-  const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
-  const laneCounts = {};
-  aiTools.forEach(tool => {
-    const lane = getAiLane(tool);
-    laneCounts[lane] = (laneCounts[lane] || 0) + 1;
-  });
-  const lanes = ['all','assist','builders','code','create','research','automate','discover','local'].filter(lane => lane === 'all' || laneCounts[lane]);
-  tabs.innerHTML = '';
-  lanes.forEach(lane => {
-    const btn = document.createElement('button');
-    btn.className = 'tool-group-tab' + ((lane === activeAiLane || (lane === 'all' && !activeAiLane)) ? ' active' : '');
-    btn.textContent = lane === 'all' ? aiLaneLabel(lane) : `${aiLaneLabel(lane)} ${laneCounts[lane] || 0}`;
-    btn.onclick = function(){ setAiLane(lane, this); };
-    tabs.appendChild(btn);
-  });
-}
-
 function renderAiOverview(tools) {
   const el = document.getElementById('ai-overview-grid');
   if (!el) return;
-  el.className = 'ai-overview-grid';
+  el.className = 'ai-task-grid';
   const taskBuckets = getAiTaskBuckets(tools);
   if (!taskBuckets.length) {
-    el.innerHTML = '<div class="ai-overview-card"><strong>No AI tools in this view</strong><span class="muted">Clear search or category filters to see the curated AI workspace again.</span></div>';
+    el.innerHTML = '<div class="ai-overview-card"><strong>No AI tools in this view</strong><span class="muted">Clear search or category filters to bring back the task-first launcher picks.</span></div>';
     return;
   }
-  el.className = 'ai-overview-grid tool-ai-pick-grid';
   el.innerHTML = taskBuckets.map(bucket => `
-    <div class="tool-ai-pick">
-      <strong>${esc(bucket.title)}</strong>
-      <span>${esc(bucket.hint)}</span>
-      <div class="meta">${bucket.tags.map(tag => `<span class="pill">${esc(tag)}</span>`).join('')}</div>
-      <div class="tool-ai-pick-list">
-        ${bucket.tools.map(tool => `
-          <div class="tool-ai-pick-item">
+    <div class="ai-task-bucket">
+      <div class="ai-directory-head">
+        <div>
+          <strong>${esc(bucket.title)}</strong>
+          <span class="muted">${esc(bucket.hint)}</span>
+        </div>
+        <span class="pill">${esc(String(bucket.tools.length))}</span>
+      </div>
+      <div class="ai-task-list">
+        ${bucket.tools.slice(0, 6).map(tool => `
+          <div class="ai-task-item">
             <a href="${esc(tool.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')">${esc(tool.name)}</a>
-            <span class="tool-minor">${esc(tool.provider || aiLaneLabel(getAiLane(tool)))}</span>
+            <span>${esc(tool.provider || 'AI')}</span>
+            <span class="muted">${esc(getToolShortHint(tool))}</span>
           </div>
         `).join('')}
       </div>
+      ${bucket.tools.length > 6 ? `
+        <details class="ai-task-more">
+          <summary>See more</summary>
+          <div class="ai-task-list">
+            ${bucket.tools.slice(6).map(tool => `
+              <div class="ai-task-item">
+                <a href="${esc(tool.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')">${esc(tool.name)}</a>
+                <span>${esc(tool.provider || 'AI')}</span>
+                <span class="muted">${esc(getToolShortHint(tool))}</span>
+              </div>
+            `).join('')}
+          </div>
+        </details>` : ''}
     </div>
   `).join('');
 }
@@ -1545,8 +1675,12 @@ function renderAiRail(tools) {
   }
   if (discoveryEl) {
     const picks = tools
-      .filter(t => isAiTool(t) && !isHomeTool(t) && ['discover','research','builders'].includes(getAiLane(t)))
-      .sort((a,b) => (Number(b.favorite) - Number(a.favorite)) || ((b.usage_count||0) - (a.usage_count||0)) || String(a.name||'').localeCompare(String(b.name||'')))
+      .filter(t => isAiTool(t) && !isHomeTool(t) && getToolAiTasks(t).some(task => ['research','build_apps','local_ai'].includes(task)))
+      .sort((a,b) =>
+        (getToolFeaturedRank(a) - getToolFeaturedRank(b)) ||
+        (Number(b.favorite) - Number(a.favorite)) ||
+        ((b.usage_count||0) - (a.usage_count||0)) ||
+        String(a.name||'').localeCompare(String(b.name||'')))
       .slice(0, 5);
     discoveryEl.innerHTML = '';
     if (!picks.length) {
@@ -1557,9 +1691,9 @@ function renderAiRail(tools) {
         row.className = 'ai-mini-item';
         row.innerHTML = `
           <a href="${esc(tool.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')">${esc(tool.name)}</a>
-          <p>${esc((tool.notes || `${normalizeToolCategory(tool.category)} resource`).trim())}</p>
+          <p>${esc(getToolShortHint(tool))}</p>
           <div class="ai-mini-meta">
-            <span>${esc(aiLaneLabel(getAiLane(tool)))}</span>
+            <span>${esc(getToolAiTasks(tool).map(task => AI_TASK_LABELS[task] || task).join(' / '))}</span>
             <span>${esc(tool.provider || '')}</span>
             <span>${esc(String(tool.usage_count || 0))} opens</span>
           </div>`;
@@ -1589,37 +1723,27 @@ function renderHomeLabOverview(data, errMsg='') {
   const el = document.getElementById('home-lab-overview');
   if (!el) return;
   if (errMsg) {
-    el.innerHTML = `<div class="home-overview-card"><strong>Home Lab checks unavailable</strong><span class="err-msg">${esc(errMsg)}</span></div>`;
+    el.innerHTML = `<div class="home-overview-card home-overview-compact"><strong>Home Lab checks unavailable</strong><span class="err-msg">${esc(errMsg)}</span></div>`;
     return;
   }
   const services = Array.isArray(data?.services) ? data.services : [];
   if (!services.length) {
-    el.innerHTML = '<div class="home-overview-card"><strong>No Home Lab services</strong><span class="muted">Add local services with host and port metadata to enable live checks.</span></div>';
+    el.innerHTML = '<div class="home-overview-card home-overview-compact"><strong>No Home Lab services</strong><span class="muted">Add local services with host and port metadata to enable live checks.</span></div>';
     return;
   }
   const summary = data.summary || {};
   const fastest = [...services].filter(item => item.status === 'online' && item.latency_ms !== null && item.latency_ms !== undefined).sort((a,b) => (a.latency_ms||999999) - (b.latency_ms||999999))[0];
-  const topGroups = (Array.isArray(data.groups) ? data.groups : []).slice(0, 3).map(item => `${item.name} ${item.count}`).join(' | ');
-  const topKinds = (Array.isArray(data.service_kinds) ? data.service_kinds : []).slice(0, 3).map(item => `${item.name} ${item.count}`).join(' | ');
+  const topGroups = (Array.isArray(data.groups) ? data.groups : []).slice(0, 2).map(item => `${item.name} ${item.count}`).join(' | ');
   el.innerHTML = `
-    <div class="home-overview-card">
+    <div class="home-overview-card home-overview-compact">
       <strong>Reachability</strong>
-      <div class="home-overview-metrics">
+      <div class="home-overview-copy">
         <span class="pill status-online">online ${esc(String(summary.online || 0))}</span>
         <span class="pill status-offline">offline ${esc(String(summary.offline || 0))}</span>
         <span class="pill status-unknown">unknown ${esc(String(summary.unknown || 0))}</span>
+        <span class="muted">${fastest ? `${esc(fastest.name)} ${esc(String(fastest.latency_ms))}ms` : 'No live response yet'}</span>
       </div>
-      <span class="muted">${esc(String(summary.total || services.length))} services checked, ${esc(String(summary.deep_links || 0))} deep links available.</span>
-    </div>
-    <div class="home-overview-card">
-      <strong>Fastest response</strong>
-      <span>${fastest ? `${esc(fastest.name)} in ${esc(String(fastest.latency_ms))}ms` : 'No live endpoint responded yet.'}</span>
-      <span class="muted">Updated ${data.generated_at ? esc(relTime(data.generated_at)) : 'just now'}.</span>
-    </div>
-    <div class="home-overview-card">
-      <strong>Coverage</strong>
-      <span>${topGroups || 'No group metadata yet.'}</span>
-      <span class="muted">${topKinds || 'Service kinds will appear as you tag more tools.'}</span>
+      <span class="muted">${esc(String(summary.total || services.length))} services checked${topGroups ? ` | ${esc(topGroups)}` : ''}${data.generated_at ? ` | Updated ${esc(relTime(data.generated_at))}` : ''}</span>
     </div>`;
 }
 
@@ -1648,8 +1772,6 @@ function renderToolSections(tools) {
   const elOther = document.getElementById('tools-other');
   const secOther = document.getElementById('other-tools-section');
 
-  buildFocusCards(tools);
-  renderAiLaneTabs(tools);
   renderAiOverview(tools);
   renderAiRail(tools);
   renderHomeGroupTabs(tools);
@@ -1661,8 +1783,43 @@ function renderToolSections(tools) {
   if (favorites.length) renderToolGrid(elQuick, favorites, 'quick', 'No favorites yet.');
 
   const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
-  const laneFilteredAiTools = activeAiLane && activeAiLane !== 'all' ? aiTools.filter(t => getAiLane(t) === activeAiLane) : aiTools;
-  renderToolGrid(elAi, laneFilteredAiTools, 'ai', activeAiLane && activeAiLane !== 'all' ? `No AI tools found in ${aiLaneLabel(activeAiLane)}.` : 'No AI tools found.');
+  elAi.innerHTML = '';
+  const aiBuckets = getAiTaskBuckets(aiTools);
+  if (!aiBuckets.length) {
+    elAi.innerHTML = '<div class="empty">No AI tools found.</div>';
+  } else {
+    aiBuckets.forEach(bucket => {
+      const section = document.createElement('section');
+      section.className = 'ai-directory-group';
+      const rows = sortAiTools(bucket.tools);
+      section.innerHTML = `
+        <div class="ai-directory-head">
+          <div>
+            <strong>${esc(bucket.title)}</strong>
+            <span class="muted">${esc(bucket.hint)}</span>
+          </div>
+          <span class="pill">${esc(String(rows.length))}</span>
+        </div>
+        <div class="ai-directory-list"></div>`;
+      const list = section.querySelector('.ai-directory-list');
+      rows.forEach(tool => {
+        const row = document.createElement('div');
+        row.className = 'ai-directory-row';
+        row.dataset.toolAnchor = tool.id;
+        row.innerHTML = `
+          <div class="ai-directory-main">
+            <a class="ai-directory-title" href="${esc(tool.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')">${esc(tool.name)}</a>
+            <div class="ai-directory-meta">${esc(tool.provider || 'AI')} • ${esc(getToolShortHint(tool))}</div>
+          </div>
+          <div class="ai-directory-actions">
+            <a class="tool-link-chip" href="${esc(tool.link)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')">Open</a>
+            <button class="sm" onclick="showEditForm('${esc(tool.id)}')">Edit</button>
+          </div>`;
+        list.appendChild(row);
+      });
+      elAi.appendChild(section);
+    });
+  }
 
   const homeTools = tools.filter(isHomeTool);
   const filteredHome = activeHomeGroup ? homeTools.filter(t => normalizeToolGroup(t.group) === activeHomeGroup) : homeTools;
@@ -1728,6 +1885,7 @@ function buildToolCard(t, variant='default') {
   const d = document.createElement('div');
   d.className = `tool-card tool-card-${variant}`;
   d.dataset.id = t.id;
+  d.dataset.toolAnchor = t.id;
   const icon = t.icon_url || deriveToolIcon(t.link);
   const category = normalizeToolCategory(t.category);
   const group = normalizeToolGroup(t.group);
@@ -1740,15 +1898,14 @@ function buildToolCard(t, variant='default') {
   const badges = [];
   if (t.pinned) badges.push('<span class="pill pinned">pin</span>');
   if (t.favorite) badges.push('<span class="pill featured">fav</span>');
-  const sublineParts = [t.provider, variant === 'home' ? group : (variant === 'ai' ? aiLaneLabel(getAiLane(t)) : category)].filter(Boolean);
+  const sublineParts = [t.provider, variant === 'home' ? group : category].filter(Boolean);
   const mainMeta = [];
   if (variant === 'home' && hostPort) mainMeta.push(`<span class="pill">${esc(hostPort)}</span>`);
   if (variant === 'home' && t.latency_ms !== null && t.latency_ms !== undefined) mainMeta.push(`<span class="pill">live ${esc(String(t.latency_ms))}ms</span>`);
   if (variant === 'quick' && hostPort) mainMeta.push(`<span class="pill">${esc(hostPort)}</span>`);
-  if (variant === 'ai' && t.local_or_cloud) mainMeta.push(`<span class="pill">${esc(t.local_or_cloud)}</span>`);
-  if (variant === 'ai' && t.service_kind) mainMeta.push(`<span class="pill">${esc(t.service_kind)}</span>`);
   if (!mainMeta.length && variant === 'default' && t.local_or_cloud) mainMeta.push(`<span class="pill">${esc(t.local_or_cloud)}</span>`);
   const detailTags = (t.tags || []).slice(0, 8).map(tag => `<span class="pill">${esc(tag)}</span>`).join('');
+  const aiTaskText = getToolAiTasks(t).map(task => AI_TASK_LABELS[task] || task).join(', ');
   d.innerHTML = `
     <div class="tool-card-top">
       <div class="tool-head">
@@ -1777,6 +1934,8 @@ function buildToolCard(t, variant='default') {
           <div class="small-row"><span>Usage</span><strong>${esc(String(t.usage_count || 0))} opens</strong></div>
           ${t.environment ? `<div class="small-row"><span>Environment</span><strong>${esc(t.environment)}</strong></div>` : ''}
           ${t.service_kind ? `<div class="small-row"><span>Kind</span><strong>${esc(t.service_kind)}</strong></div>` : ''}
+          ${aiTaskText ? `<div class="small-row"><span>AI tasks</span><strong>${esc(aiTaskText)}</strong></div>` : ''}
+          ${getToolShortHint(t) ? `<div class="small-row"><span>Hint</span><strong>${esc(getToolShortHint(t))}</strong></div>` : ''}
           ${t.last_used ? `<div class="small-row"><span>Last used</span><strong>${esc(relTime(t.last_used))}</strong></div>` : ''}
           ${t.status_checked_at ? `<div class="small-row"><span>Status checked</span><strong>${esc(relTime(t.status_checked_at))}</strong></div>` : ''}
         </div>
@@ -1815,7 +1974,7 @@ function showEditForm(toolId) {
   const existing = document.querySelector('.edit-form');
   if (existing && existing.dataset.for === toolId) { existing.remove(); return; }
   if (existing) existing.remove();
-  const card = document.querySelector(`.tool-card[data-id="${toolId}"]`);
+  const card = document.querySelector(`[data-tool-anchor="${toolId}"]`);
   if (!card) return;
   fetch(`${API}/tools`).then(r=>r.json()).then(tools => {
     const t = tools.find(x=>x.id===toolId);
@@ -1854,6 +2013,11 @@ function showEditForm(toolId) {
         <label class="check-inline"><input type="checkbox" id="e_pinned" ${t.pinned ? 'checked' : ''} /> Pin</label>
         <input id="e_links" value="${esc(formatToolLinksInput(t.links))}" placeholder="deep links: Label|URL, Label|URL" style="flex:1.5"/>
       </div>
+      <div class="row">
+        <input id="e_ai_tasks" value="${esc(formatAiTasksInput(t.ai_tasks))}" placeholder="AI tasks: Summaries, Research, Code" style="flex:1.4"/>
+        <input id="e_short_hint" value="${esc(t.short_hint || '')}" placeholder="short hint" style="flex:1"/>
+        <input id="e_featured_rank" value="${esc(t.featured_rank ?? '')}" type="number" min="1" placeholder="rank" style="width:90px"/>
+      </div>
       <textarea id="e_notes" placeholder="Notes…">${esc(t.notes||'')}</textarea>
       <div class="row">
         <button class="primary" onclick="saveEdit('${esc(toolId)}')">Save</button>
@@ -1866,6 +2030,7 @@ function showEditForm(toolId) {
 
 async function saveEdit(toolId) {
   const portRaw = document.getElementById('e_port').value.trim();
+  const rankRaw = document.getElementById('e_featured_rank').value.trim();
   const patch = {
     name: document.getElementById('e_name').value.trim(),
     provider: document.getElementById('e_provider').value.trim(),
@@ -1886,6 +2051,9 @@ async function saveEdit(toolId) {
     favorite: document.getElementById('e_favorite').checked,
     pinned: document.getElementById('e_pinned').checked,
     links: parseToolLinksInput(document.getElementById('e_links').value),
+    ai_tasks: parseAiTasksInput(document.getElementById('e_ai_tasks').value),
+    short_hint: document.getElementById('e_short_hint').value.trim(),
+    featured_rank: rankRaw ? parseInt(rankRaw, 10) : null,
   };
   const res = await fetch(`${API}/tools/${encodeURIComponent(toolId)}`, {
     method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(patch),
@@ -1913,6 +2081,7 @@ async function addTool() {
   if (!name||!provider||!link) { resultEl.textContent='Name, Provider and Link are required.'; return; }
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   const portRaw = document.getElementById('new_port').value.trim();
+  const rankRaw = document.getElementById('new_featured_rank').value.trim();
   const payload = {
     id, name, provider, link,
     icon_url: document.getElementById('new_icon').value.trim(),
@@ -1931,11 +2100,14 @@ async function addTool() {
     favorite: document.getElementById('new_favorite').checked,
     pinned: document.getElementById('new_pinned').checked,
     links: parseToolLinksInput(document.getElementById('new_links').value),
+    ai_tasks: parseAiTasksInput(document.getElementById('new_ai_tasks').value),
+    short_hint: document.getElementById('new_short_hint').value.trim(),
+    featured_rank: rankRaw ? parseInt(rankRaw, 10) : null,
   };
   const res = await fetch(`${API}/tools`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   if (res.ok) {
     resultEl.textContent='Tool added.';
-    ['new_name','new_provider','new_link','new_icon','new_tags','new_cost','new_group','new_service_kind','new_environment','new_host','new_port','new_notes','new_links'].forEach(id=>document.getElementById(id).value='');
+    ['new_name','new_provider','new_link','new_icon','new_tags','new_cost','new_group','new_service_kind','new_environment','new_host','new_port','new_notes','new_links','new_ai_tasks','new_short_hint','new_featured_rank'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('new_status').value = 'unknown';
     document.getElementById('new_favorite').checked = false;
     document.getElementById('new_pinned').checked = false;
@@ -5266,6 +5438,7 @@ async function addSource() {
 document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')loadTools();});
 document.getElementById('feed-q').addEventListener('keydown',e=>{if(e.key==='Enter')loadFeed();});
 document.getElementById('f1-season')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1({ force: true });});
+document.addEventListener('keydown', handleToolHubShortcuts);
 
 // ══ settings page ═════════════════════════════════════════════
 

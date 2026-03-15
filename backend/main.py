@@ -67,6 +67,9 @@ class Tool(BaseModel):
     status_checked_at: Optional[str] = None
     service_kind: Optional[str] = ""
     links: List[dict[str, str]] = Field(default_factory=list)
+    ai_tasks: List[str] = Field(default_factory=list)
+    featured_rank: Optional[int] = None
+    short_hint: Optional[str] = ""
 
 
 class AgentStatus(BaseModel):
@@ -97,7 +100,7 @@ class F1SecondaryIngestPayload(BaseModel):
 
 # ── app + state ───────────────────────────────────────────────────────────────
 
-app = FastAPI(title="Holocron API", version="0.2.0")
+app = FastAPI(title="HolocronHub API", version="0.2.0")
 
 _ingest_state: dict = {"running": False, "last_result": None, "started_at": None}
 _warframe_market_history_lock = Lock()
@@ -192,6 +195,7 @@ def _normalize_tool_record(raw: dict[str, Any]) -> dict[str, Any]:
     tool = dict(raw or {})
     host, port = _parse_tool_host_port(tool.get('link') or '')
     tags = [str(tag).strip() for tag in (tool.get('tags') or []) if str(tag).strip()]
+    ai_tasks = [str(task).strip() for task in (tool.get('ai_tasks') or []) if str(task).strip()]
     rating = tool.get('rating')
     try:
         rating = int(rating) if rating not in (None, '') else None
@@ -203,6 +207,10 @@ def _normalize_tool_record(raw: dict[str, Any]) -> dict[str, Any]:
         usage_count = max(0, int(tool.get('usage_count') or 0))
     except Exception:
         usage_count = 0
+    try:
+        featured_rank = int(tool.get('featured_rank')) if tool.get('featured_rank') not in (None, '') else None
+    except Exception:
+        featured_rank = None
     normalized = {
         'id': str(tool.get('id') or '').strip(),
         'name': str(tool.get('name') or '').strip(),
@@ -228,6 +236,9 @@ def _normalize_tool_record(raw: dict[str, Any]) -> dict[str, Any]:
         'status_checked_at': str(tool.get('status_checked_at') or '').strip() or None,
         'service_kind': str(tool.get('service_kind') or '').strip(),
         'links': _normalize_tool_links(tool.get('links')),
+        'ai_tasks': ai_tasks,
+        'featured_rank': featured_rank,
+        'short_hint': str(tool.get('short_hint') or '').strip(),
     }
     try:
         normalized['port'] = int(normalized['port']) if normalized['port'] is not None else None
@@ -5481,7 +5492,9 @@ def list_tools(
             or ql in str(t.get("environment") or "").lower()
             or ql in str(t.get("host") or "").lower()
             or ql in str(t.get("status") or "").lower()
+            or ql in str(t.get("short_hint") or "").lower()
             or any(ql in tag.lower() for tag in t.get("tags", []))
+            or any(ql in str(task).lower() for task in t.get("ai_tasks", []))
             or any(ql in str(link.get("label") or "").lower() or ql in str(link.get("url") or "").lower() for link in t.get("links", []))
         ]
     if sort == "rating":
@@ -6633,7 +6646,7 @@ def status():
     current_model = os.getenv("OPENCLAW_MODEL", "unknown")
     now = datetime.now().isoformat(timespec="seconds")
     return AppStatus(
-        app="holocron",
+        app="holocronhub",
         mode="single-user-local",
         tools_count=len(tools),
         agents=[

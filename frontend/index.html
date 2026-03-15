@@ -2648,6 +2648,16 @@ function f1SessionDataState(detail, options = {}) {
   return parts.join(' | ');
 }
 
+function f1SourceLabel(source) {
+  const key = String(source || '').trim();
+  if (!key) return 'Unknown source';
+  return key.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+}
+
+function f1LatestSnapshot(detail) {
+  return (detail?.snapshots || [])[0] || null;
+}
+
 function startF1ClockTicker() {
   clearF1ClockTicker();
   _f1ClockTicker = setInterval(() => {
@@ -2932,13 +2942,15 @@ function renderF1WeekendPhase(weekend, nextRace) {
 function renderF1WeatherCard(weather) {
   const panel = document.getElementById('f1-weather');
   if (!panel) return;
-  if (!weather || Object.values(weather).every(v => v == null || v === '')) {
+  const hasWeather = weather && ['air_temperature', 'track_temperature', 'humidity', 'rainfall', 'wind_speed', 'pressure', 'date'].some(key => weather[key] != null && weather[key] !== '');
+  if (!hasWeather) {
     panel.innerHTML = '<div class="muted">Trackside weather unavailable.</div>';
     return;
   }
   const rain = weather.rainfall ? 'Yes' : 'No';
   panel.innerHTML = `
     <h2 style="margin:0 0 6px">Trackside Weather</h2>
+    <div class="small-row"><span>Source</span><strong>${esc(f1SourceLabel(weather.source || 'unavailable'))}</strong></div>
     <div class="small-row"><span>Air / Track</span><strong>${esc(weather.air_temperature ?? '-')}C / ${esc(weather.track_temperature ?? '-')}C</strong></div>
     <div class="small-row"><span>Humidity</span><strong>${esc(weather.humidity ?? '-')}%</strong></div>
     <div class="small-row"><span>Wind</span><strong>${esc(weather.wind_speed ?? '-')} km/h</strong></div>
@@ -2955,8 +2967,11 @@ function renderF1TrackPanel(weekend) {
   const links = track.links || {};
   const selected = _f1Sessions[_f1SelectedSessionKey] || weekend?.current_session || weekend?.next_session || weekend?.latest_session || {};
   const detail = _f1SelectedSessionDetail || readF1SessionCache(String(_f1SelectedSessionKey || ''))?.data || null;
-  const leader = (detail?.leaderboard || [])[0] || {};
-  const controlItems = detail?.race_control || [];
+  const latestSnapshot = f1LatestSnapshot(detail);
+  const snapshotRows = latestSnapshot?.leaderboard || [];
+  const snapshotControl = latestSnapshot?.race_control || [];
+  const leader = (detail?.leaderboard || snapshotRows || [])[0] || {};
+  const controlItems = (detail?.race_control || []).length ? (detail?.race_control || []) : snapshotControl;
   const sessions = weekend?.sessions || [];
   const counts = {
     practice: sessions.filter(session => f1SessionFamily(session) === 'practice').length,
@@ -2980,8 +2995,10 @@ function renderF1TrackPanel(weekend) {
     <div class="small-row"><span>Filter</span><strong>${esc(f1FilterLabel(_f1SessionFilter))}</strong></div>
     <div class="small-row"><span>Board view</span><strong>${esc(activeMode)}</strong></div>
     <div class="small-row"><span>Data state</span><strong>${esc(f1SessionDataState(detail))}</strong></div>
+    <div class="small-row"><span>Session source</span><strong>${esc(f1SourceLabel(detail?.source || 'unavailable'))}</strong></div>
     ${leader.driver ? `<div class="small-row"><span>Leader</span><strong>P${esc(leader.position || '?')} ${esc(leader.driver || leader.code || 'Driver')}</strong></div>` : ''}
     ${controlItems.length ? `<div class="small-row"><span>Race control</span><strong>${esc(`${controlItems.length} msgs | ${flagged} flags/incidents`)}</strong></div>` : ''}
+    ${latestSnapshot?.generated_at ? `<div class="small-row"><span>Snapshot</span><strong>${esc(relTime(latestSnapshot.generated_at))}</strong></div>` : ''}
     <div class="f1-track-facts">
       <div class="f1-time-box">
         <span class="muted">Weekend window</span>
@@ -3110,6 +3127,7 @@ function renderF1BoardControls(detail) {
 function renderF1LiveMeta(detail, session, options = {}) {
   const liveMetaEl = document.getElementById('f1-live-meta');
   if (!liveMetaEl) return;
+  const latestSnapshot = f1LatestSnapshot(detail);
   const badges = [
     { label: `${detail.drivers_count || 0} drivers` },
     { label: detail.generated_at ? `Updated ${relTime(detail.generated_at)}` : 'Update pending' },
@@ -3117,11 +3135,13 @@ function renderF1LiveMeta(detail, session, options = {}) {
       label: detail.live ? 'Live' : (detail.cached ? 'Server cache' : 'Fresh'),
       cls: detail.live ? 'live' : (detail.cached ? 'cache' : ''),
     },
+    { label: f1SourceLabel(detail.source || 'unknown') },
   ];
   if (options.fromClientCache) badges.push({ label: 'Local cache', cls: 'cache' });
   if (detail.stale) badges.push({ label: `Stale ${Math.max(0, Math.round((detail.stale_age_seconds || 0) / 60))}m`, cls: 'stale' });
   if (options.refreshing) badges.push({ label: 'Refreshing' });
   if (options.refreshFailed) badges.push({ label: 'Refresh failed', cls: 'fail' });
+  if (latestSnapshot?.generated_at) badges.push({ label: `Snapshot ${relTime(latestSnapshot.generated_at)}`, cls: 'cache' });
   liveMetaEl.innerHTML = `<span class="f1-meta-pills">${badges.map(badge => `<span class="f1-meta-badge${badge.cls ? ` ${badge.cls}` : ''}">${esc(badge.label)}</span>`).join('')}</span>`;
 }
 
@@ -3131,7 +3151,8 @@ function renderF1SessionBoard(detail) {
   const session = detail?.session || _f1Sessions[_f1SelectedSessionKey] || {};
   renderF1BoardControls(detail);
   const mode = normalizeF1BoardMode(_f1BoardMode, session);
-  const baseRows = detail?.leaderboard || [];
+  const latestSnapshot = f1LatestSnapshot(detail);
+  const baseRows = (detail?.leaderboard || []).length ? (detail?.leaderboard || []) : (latestSnapshot?.leaderboard || []);
   const rows = mode === 'championship'
     ? _f1StandingsRows.slice(0, 12)
     : (mode === 'grid'
@@ -3160,7 +3181,7 @@ function renderF1SessionBoard(detail) {
   }).join('');
   boardEl.innerHTML = `
     <div class="diag-head" style="margin-bottom:8px">
-      <span class="tool-minor">${esc(mode === 'championship' ? 'Season standings snapshot' : (detail?.session?.status === 'finished' ? `${f1BoardModeLabel(mode)} | final snapshot` : `${f1BoardModeLabel(mode)} | live session view`))} | ${esc(rows.length)} rows</span>
+      <span class="tool-minor">${esc(mode === 'championship' ? 'Season standings snapshot' : (detail?.session?.status === 'finished' ? `${f1BoardModeLabel(mode)} | final snapshot` : `${f1BoardModeLabel(mode)} | live session view`))} | ${esc(rows.length)} rows${latestSnapshot?.generated_at && !(detail?.leaderboard || []).length ? ` | snapshot ${esc(relTime(latestSnapshot.generated_at))}` : ''}</span>
     </div>
     <div class="f1-session-summary-grid">${topCards}</div>
     ${rows.map(row => {
@@ -3212,7 +3233,8 @@ function renderF1SessionBoard(detail) {
 function renderF1RaceControl(detail) {
   const feedEl = document.getElementById('f1-race-control');
   if (!feedEl) return;
-  const items = detail?.race_control || [];
+  const latestSnapshot = f1LatestSnapshot(detail);
+  const items = (detail?.race_control || []).length ? (detail?.race_control || []) : (latestSnapshot?.race_control || []);
   if (!items.length) {
     feedEl.innerHTML = '<div class="muted">No race control messages for this session.</div>';
     return;

@@ -34,6 +34,8 @@ WARFRAME_MARKET_HISTORY_FILE = BASE_DIR / "data" / "warframe_market_history.json
 SCHEDULE_FILE = BASE_DIR / "data" / "schedule.json"
 SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
 LAST_GOOD_FILE = BASE_DIR / "data" / "last_good_cache.json"
+F1_SESSION_SNAPSHOTS_FILE = BASE_DIR / "data" / "f1_session_snapshots.json"
+F1_SECONDARY_INGEST_FILE = BASE_DIR / "data" / "f1_secondary_ingest.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
 
 
@@ -80,6 +82,18 @@ class AppStatus(BaseModel):
     agents: List[AgentStatus]
 
 
+class F1SecondaryIngestPayload(BaseModel):
+    session_key: str
+    session: dict[str, Any]
+    live: bool = False
+    drivers_count: int = 0
+    leaderboard: List[dict[str, Any]] = Field(default_factory=list)
+    race_control: List[dict[str, Any]] = Field(default_factory=list)
+    weather: dict[str, Any] = Field(default_factory=dict)
+    source: str = "secondary_ingest"
+    data_as_of: Optional[str] = None
+
+
 # ── app + state ───────────────────────────────────────────────────────────────
 
 app = FastAPI(title="Holocron API", version="0.2.0")
@@ -87,6 +101,14 @@ app = FastAPI(title="Holocron API", version="0.2.0")
 _ingest_state: dict = {"running": False, "last_result": None, "started_at": None}
 _warframe_market_history_lock = Lock()
 _last_good_lock = Lock()
+_f1_snapshot_lock = Lock()
+
+_PROVIDER_BREAKERS: dict[str, dict[str, Any]] = {
+    "openf1": {"fail_count": 0, "open_until": 0.0, "last_error": None},
+}
+
+_F1_SESSION_SNAPSHOTS: dict[str, list[dict[str, Any]]] = {}
+_F1_SECONDARY_INGEST: dict[str, dict[str, Any]] = {}
 
 app.add_middleware(
     CORSMiddleware,
@@ -654,6 +676,65 @@ def _save_last_good_store() -> None:
     LAST_GOOD_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def _load_f1_session_snapshots() -> dict[str, list[dict[str, Any]]]:
+    if not F1_SESSION_SNAPSHOTS_FILE.exists():
+        return {}
+    try:
+        raw = json.loads(F1_SESSION_SNAPSHOTS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+
+    loaded: dict[str, list[dict[str, Any]]] = {}
+    for session_key, entries in raw.items():
+        if not isinstance(entries, list):
+            continue
+        trimmed = []
+        for entry in entries[:24]:
+            if isinstance(entry, dict):
+                trimmed.append(entry)
+        if trimmed:
+            loaded[str(session_key)] = trimmed
+    return loaded
+
+
+def _save_f1_session_snapshots() -> None:
+    F1_SESSION_SNAPSHOTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        str(session_key): [deepcopy(entry) for entry in entries[:24] if isinstance(entry, dict)]
+        for session_key, entries in _F1_SESSION_SNAPSHOTS.items()
+        if isinstance(entries, list) and entries
+    }
+    F1_SESSION_SNAPSHOTS_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _load_f1_secondary_ingest() -> dict[str, dict[str, Any]]:
+    if not F1_SECONDARY_INGEST_FILE.exists():
+        return {}
+    try:
+        raw = json.loads(F1_SECONDARY_INGEST_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for session_key, payload in raw.items():
+        if isinstance(payload, dict):
+            out[str(session_key)] = payload
+    return out
+
+
+def _save_f1_secondary_ingest() -> None:
+    F1_SECONDARY_INGEST_FILE.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        str(session_key): deepcopy(entry)
+        for session_key, entry in _F1_SECONDARY_INGEST.items()
+        if isinstance(entry, dict)
+    }
+    F1_SECONDARY_INGEST_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def _boot_last_good_store() -> None:
     loaded = _load_last_good_store()
     if not loaded:
@@ -661,6 +742,103 @@ def _boot_last_good_store() -> None:
     with _last_good_lock:
         _LAST_GOOD.clear()
         _LAST_GOOD.update(loaded)
+
+
+def _boot_f1_session_snapshots() -> None:
+    loaded = _load_f1_session_snapshots()
+    if not loaded:
+        return
+    with _f1_snapshot_lock:
+        _F1_SESSION_SNAPSHOTS.clear()
+        _F1_SESSION_SNAPSHOTS.update(loaded)
+
+
+def _boot_f1_secondary_ingest() -> None:
+    loaded = _load_f1_secondary_ingest()
+    if not loaded:
+        return
+    _F1_SECONDARY_INGEST.clear()
+    _F1_SECONDARY_INGEST.update(loaded)
+
+
+def _record_f1_session_snapshot(session_key: str, payload: dict[str, Any]) -> None:
+    if not session_key or not isinstance(payload, dict):
+        return
+    row = {
+        "generated_at": payload.get("generated_at") or datetime.now().isoformat(timespec="seconds"),
+        "data_as_of": payload.get("data_as_of") or payload.get("generated_at"),
+        "live": bool(payload.get("live")),
+        "source": payload.get("source"),
+        "leaderboard": deepcopy((payload.get("leaderboard") or [])[:12]),
+        "race_control": deepcopy((payload.get("race_control") or [])[:10]),
+        "weather": deepcopy(payload.get("weather") or {}),
+    }
+    with _f1_snapshot_lock:
+        entries = list(_F1_SESSION_SNAPSHOTS.get(session_key) or [])
+        if entries and str(entries[0].get("generated_at") or "") == str(row.get("generated_at") or ""):
+            entries[0] = row
+        else:
+            entries.insert(0, row)
+        _F1_SESSION_SNAPSHOTS[session_key] = entries[:24]
+        try:
+            _save_f1_session_snapshots()
+        except Exception:
+            pass
+
+
+def _get_f1_session_snapshots(session_key: str, *, limit: int = 10) -> list[dict[str, Any]]:
+    with _f1_snapshot_lock:
+        entries = deepcopy(_F1_SESSION_SNAPSHOTS.get(session_key) or [])
+    return [entry for entry in entries[: max(1, min(int(limit or 10), 24))] if isinstance(entry, dict)]
+
+
+def _set_f1_secondary_session(session_key: str, payload: dict[str, Any]) -> None:
+    if not session_key or not isinstance(payload, dict):
+        return
+    entry = deepcopy(payload)
+    entry["session_key"] = session_key
+    entry["generated_at"] = entry.get("generated_at") or datetime.now().isoformat(timespec="seconds")
+    entry["data_as_of"] = entry.get("data_as_of") or entry.get("generated_at")
+    _F1_SECONDARY_INGEST[session_key] = entry
+    try:
+        _save_f1_secondary_ingest()
+    except Exception:
+        pass
+
+
+def _get_f1_secondary_session(session_key: str, *, max_age_seconds: int = 4 * 3600) -> tuple[Optional[dict[str, Any]], int]:
+    entry = deepcopy(_F1_SECONDARY_INGEST.get(session_key))
+    if not isinstance(entry, dict):
+        return None, 0
+    ts_raw = entry.get("data_as_of") or entry.get("generated_at")
+    dt = _parse_dt(ts_raw)
+    if dt is None:
+        return None, 0
+    age = max(0, int((datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()))
+    if age > max_age_seconds:
+        return None, age
+    return entry, age
+
+
+def _provider_breaker_open(name: str) -> bool:
+    state = _PROVIDER_BREAKERS.get(name) if isinstance(_PROVIDER_BREAKERS.get(name), dict) else {}
+    return float(state.get("open_until") or 0.0) > time.time()
+
+
+def _provider_breaker_error(name: str, err: str) -> None:
+    state = _PROVIDER_BREAKERS.setdefault(name, {"fail_count": 0, "open_until": 0.0, "last_error": None})
+    fail_count = int(state.get("fail_count") or 0) + 1
+    cooldown = 120 if fail_count >= 3 else 0
+    state["fail_count"] = fail_count
+    state["open_until"] = time.time() + cooldown if cooldown else 0.0
+    state["last_error"] = str(err or "")[:240]
+
+
+def _provider_breaker_success(name: str) -> None:
+    state = _PROVIDER_BREAKERS.setdefault(name, {"fail_count": 0, "open_until": 0.0, "last_error": None})
+    state["fail_count"] = 0
+    state["open_until"] = 0.0
+    state["last_error"] = None
 
 
 def _set_last_good(key: str, payload: dict[str, Any]) -> None:
@@ -791,12 +969,30 @@ def _http_get_json(
     merged_headers = dict(_DEFAULT_HTTP_HEADERS)
     if isinstance(headers, dict):
         merged_headers.update(headers)
-    try:
-        r = requests.get(url, params=params, headers=merged_headers, timeout=timeout)
-        r.raise_for_status()
-        return r.json(), None
-    except Exception as e:
-        return None, str(e)
+    provider_name = "openf1" if "api.openf1.org" in str(url or "") else None
+    if provider_name and _provider_breaker_open(provider_name):
+        state = _PROVIDER_BREAKERS.get(provider_name) or {}
+        retry_in = max(0, int((float(state.get("open_until") or 0.0) - time.time())))
+        return None, f"{provider_name}:circuit_open:{retry_in}s"
+
+    last_err: Optional[str] = None
+    attempts = 2 if provider_name == "openf1" else 1
+    for attempt in range(attempts):
+        try:
+            r = requests.get(url, params=params, headers=merged_headers, timeout=timeout)
+            r.raise_for_status()
+            payload = r.json()
+            if provider_name:
+                _provider_breaker_success(provider_name)
+            return payload, None
+        except Exception as e:
+            last_err = str(e)
+            if provider_name and attempt + 1 < attempts:
+                time.sleep(0.35)
+                continue
+    if provider_name:
+        _provider_breaker_error(provider_name, last_err or "request_failed")
+    return None, last_err
 
 
 def _coerce_symbol_list(raw: Optional[str]) -> list[str]:
@@ -1668,6 +1864,118 @@ def _build_f1_circuit_links(circuit: Optional[str], locality: Optional[str], cou
     }
 
 
+def _f1_schedule_race_coords(race: dict[str, Any]) -> tuple[Optional[float], Optional[float]]:
+    if not isinstance(race, dict):
+        return None, None
+    lat = _safe_float(_dig(race, "Circuit", "Location", "lat"))
+    lon = _safe_float(_dig(race, "Circuit", "Location", "long"))
+    return lat, lon
+
+
+def _find_f1_schedule_race_match(
+    schedule_races: list[dict[str, Any]],
+    next_race: Optional[dict[str, Any]] = None,
+    latest_race: Optional[dict[str, Any]] = None,
+    meeting: Optional[dict[str, Any]] = None,
+) -> Optional[dict[str, Any]]:
+    if not schedule_races:
+        return None
+    target_name = _f1_norm_text((meeting or {}).get("meeting_name") or (meeting or {}).get("meeting_official_name"))
+    target_country = _f1_norm_text((meeting or {}).get("country_name"))
+    target_location = _f1_norm_text((meeting or {}).get("location"))
+    target_circuit = _f1_norm_text((meeting or {}).get("circuit_short_name"))
+
+    chosen = next_race if isinstance(next_race, dict) and next_race else latest_race if isinstance(latest_race, dict) else None
+    if isinstance(chosen, dict):
+        target_name = target_name or _f1_norm_text(chosen.get("race_name"))
+        target_country = target_country or _f1_norm_text(chosen.get("country"))
+        target_location = target_location or _f1_norm_text(chosen.get("locality"))
+        target_circuit = target_circuit or _f1_norm_text(chosen.get("circuit"))
+
+    best_match: Optional[dict[str, Any]] = None
+    best_score = 0.0
+    for race in schedule_races:
+        if not isinstance(race, dict):
+            continue
+        score = 0.0
+        name = _f1_norm_text(race.get("raceName"))
+        country = _f1_norm_text(_dig(race, "Circuit", "Location", "country"))
+        location = _f1_norm_text(_dig(race, "Circuit", "Location", "locality"))
+        circuit = _f1_norm_text(_dig(race, "Circuit", "circuitName"))
+        if target_name and (target_name in name or name in target_name):
+            score += 70.0
+        if target_country and target_country == country:
+            score += 25.0
+        if target_location and (target_location == location or target_location in location or location in target_location):
+            score += 20.0
+        if target_circuit and (target_circuit == circuit or target_circuit in circuit or circuit in target_circuit):
+            score += 20.0
+        if score > best_score:
+            best_score = score
+            best_match = race
+    return best_match if best_score >= 25.0 else None
+
+
+def _fetch_open_meteo_weather(latitude: Optional[float], longitude: Optional[float]) -> tuple[dict[str, Any], Optional[str]]:
+    if latitude is None or longitude is None:
+        return {}, "open_meteo:coords_missing"
+    data, err = _http_get_json(
+        "https://api.open-meteo.com/v1/forecast",
+        params={
+            "latitude": latitude,
+            "longitude": longitude,
+            "current": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,surface_pressure",
+            "timezone": "auto",
+        },
+        timeout=12,
+    )
+    if err:
+        return {}, f"open_meteo:{err}"
+    current = data.get("current") if isinstance(data, dict) and isinstance(data.get("current"), dict) else {}
+    if not current:
+        return {}, "open_meteo:invalid_payload"
+    return {
+        "air_temperature": current.get("temperature_2m"),
+        "track_temperature": None,
+        "humidity": current.get("relative_humidity_2m"),
+        "rainfall": current.get("precipitation"),
+        "wind_direction": None,
+        "wind_speed": current.get("wind_speed_10m"),
+        "pressure": current.get("surface_pressure"),
+        "date": current.get("time"),
+        "source": "open_meteo",
+        "utc_offset_seconds": data.get("utc_offset_seconds") if isinstance(data, dict) else None,
+    }, None
+
+
+def _f1_weather_has_data(weather: Optional[dict[str, Any]]) -> bool:
+    if not isinstance(weather, dict):
+        return False
+    return any(weather.get(key) is not None for key in ["air_temperature", "track_temperature", "humidity", "rainfall", "wind_speed", "pressure", "date"])
+
+
+def _format_gmt_offset(offset_seconds: Any) -> str:
+    try:
+        total = int(offset_seconds or 0)
+    except Exception:
+        total = 0
+    sign = "+" if total >= 0 else "-"
+    abs_total = abs(total)
+    hh = abs_total // 3600
+    mm = (abs_total % 3600) // 60
+    ss = abs_total % 60
+    return f"{sign}{hh:02d}:{mm:02d}:{ss:02d}"
+
+
+def _apply_f1_session_offset(session: dict[str, Any], gmt_offset: str) -> dict[str, Any]:
+    out = deepcopy(session)
+    start_dt = _parse_dt(out.get("date_start"))
+    end_dt = _parse_dt(out.get("date_end"))
+    out["date_start_local"] = _fmt_local_offset(start_dt, gmt_offset)
+    out["date_end_local"] = _fmt_local_offset(end_dt, gmt_offset)
+    return out
+
+
 def _f1_status_is_finish(status: str) -> bool:
     st = str(status or "").strip().lower()
     if not st:
@@ -1835,6 +2143,195 @@ def _pick_openf1_meeting(meetings: list[dict[str, Any]], next_race: Optional[dic
     return ordered[-1]
 
 
+_F1_SCHEDULE_SESSION_SPECS: tuple[tuple[str, str, timedelta], ...] = (
+    ("FirstPractice", "Practice 1", timedelta(hours=1)),
+    ("SecondPractice", "Practice 2", timedelta(hours=1)),
+    ("ThirdPractice", "Practice 3", timedelta(hours=1)),
+    ("SprintQualifying", "Sprint Qualifying", timedelta(hours=1)),
+    ("Sprint", "Sprint", timedelta(hours=1)),
+    ("Qualifying", "Qualifying", timedelta(hours=1)),
+    ("Race", "Race", timedelta(hours=2)),
+)
+
+
+def _build_f1_schedule_sessions(season: str, race: dict[str, Any], now_utc: Optional[datetime] = None) -> list[dict[str, Any]]:
+    if not isinstance(race, dict):
+        return []
+    round_id = str(race.get("round") or "0").strip() or "0"
+    meeting_key = f"fallback:{season}:{round_id}"
+    locality = _dig(race, "Circuit", "Location", "locality")
+    country = _dig(race, "Circuit", "Location", "country")
+    circuit_name = _dig(race, "Circuit", "circuitName")
+    rows: list[tuple[datetime, dict[str, Any]]] = []
+    now_ref = now_utc or datetime.now(timezone.utc)
+    for field_name, label, duration in _F1_SCHEDULE_SESSION_SPECS:
+        node = race if field_name == "Race" else (race.get(field_name) if isinstance(race.get(field_name), dict) else {})
+        date_raw = race.get("date") if field_name == "Race" else node.get("date")
+        time_raw = race.get("time") if field_name == "Race" else node.get("time")
+        start_iso = _safe_iso_utc(date_raw, time_raw)
+        start_dt = _parse_dt(start_iso)
+        if not start_iso or start_dt is None:
+            continue
+        end_dt = start_dt + duration
+        session = {
+            "session_key": f"{meeting_key}:{field_name.lower()}",
+            "meeting_key": meeting_key,
+            "session_name": label,
+            "session_type": label,
+            "location": locality,
+            "country_name": country,
+            "circuit_short_name": circuit_name,
+            "date_start": start_iso,
+            "date_end": end_dt.isoformat(),
+            "gmt_offset": "+00:00:00",
+        }
+        rows.append((start_dt, _summarize_openf1_session(session, now_utc=now_ref)))
+    rows.sort(key=lambda item: item[0])
+    return [item[1] for item in rows]
+
+
+def _pick_f1_schedule_weekend_race(season: str, races: list[dict[str, Any]]) -> tuple[Optional[dict[str, Any]], list[dict[str, Any]]]:
+    now = datetime.now(timezone.utc)
+    candidates: list[tuple[datetime, datetime, dict[str, Any], list[dict[str, Any]]]] = []
+    for race in races:
+        if not isinstance(race, dict):
+            continue
+        sessions = _build_f1_schedule_sessions(season, race, now_utc=now)
+        if not sessions:
+            continue
+        start_dt = _parse_dt(sessions[0].get("date_start"))
+        end_dt = _parse_dt((sessions[-1].get("date_end") or sessions[-1].get("date_start")))
+        if start_dt is None or end_dt is None:
+            continue
+        candidates.append((start_dt, end_dt, race, sessions))
+
+    if not candidates:
+        return None, []
+
+    candidates.sort(key=lambda item: item[0])
+    active = next((item for item in candidates if item[0] - timedelta(hours=6) <= now <= item[1] + timedelta(hours=4)), None)
+    if active:
+        return active[2], active[3]
+
+    upcoming = [item for item in candidates if item[0] >= now - timedelta(hours=12)]
+    if upcoming:
+        return upcoming[0][2], upcoming[0][3]
+
+    latest = candidates[-1]
+    return latest[2], latest[3]
+
+
+def _build_f1_schedule_fallback_context(
+    season: str,
+    races: list[dict[str, Any]],
+) -> tuple[dict[str, Any], list[str]]:
+    race, sessions_summary = _pick_f1_schedule_weekend_race(season, races)
+    if not isinstance(race, dict) or not sessions_summary:
+        return {}, ["schedule_fallback:no_match"]
+
+    locality = _dig(race, "Circuit", "Location", "locality")
+    country = _dig(race, "Circuit", "Location", "country")
+    circuit_name = _dig(race, "Circuit", "circuitName")
+    lat, lon = _f1_schedule_race_coords(race)
+    weather, weather_err = _fetch_open_meteo_weather(lat, lon)
+    gmt_offset = _format_gmt_offset(weather.get("utc_offset_seconds")) if isinstance(weather, dict) else "+00:00:00"
+    sessions_summary = [_apply_f1_session_offset(session, gmt_offset) for session in sessions_summary]
+    current_session = next((session for session in sessions_summary if session.get("status") == "live"), None)
+    next_session = next((session for session in sessions_summary if session.get("status") == "upcoming"), None)
+    latest_session = next((session for session in reversed(sessions_summary) if session.get("status") in {"cooldown", "finished"}), None)
+    focus_session = current_session or next_session or latest_session or sessions_summary[0]
+
+    phase = "offseason"
+    if current_session:
+        phase = "live"
+    elif next_session:
+        phase = "upcoming"
+    elif latest_session:
+        phase = "completed"
+
+    weekend_start = sessions_summary[0]
+    weekend_end = sessions_summary[-1]
+    headline = race.get("raceName") or "F1 Weekend"
+    if phase == "live" and current_session:
+        headline = f"{headline} | {current_session.get('session_name')}"
+    elif phase == "upcoming" and next_session:
+        headline = f"{headline} | Next up: {next_session.get('session_name')}"
+    elif phase == "completed" and latest_session:
+        headline = f"{headline} | Last session: {latest_session.get('session_name')}"
+
+    fallback_errors = ["openf1:using_schedule_fallback"]
+    if weather_err:
+        fallback_errors.append(weather_err)
+
+    return {
+        "source": "schedule_fallback",
+        "meeting": {
+            "meeting_key": f"fallback:{season}:{race.get('round') or '0'}",
+            "meeting_name": race.get("raceName"),
+            "meeting_official_name": race.get("raceName"),
+            "location": locality,
+            "country_name": country,
+            "country_code": None,
+            "date_start": weekend_start.get("date_start"),
+            "date_end": weekend_end.get("date_end") or weekend_end.get("date_start"),
+            "gmt_offset": gmt_offset,
+            "date_start_local": weekend_start.get("date_start_local") or weekend_start.get("date_start"),
+            "date_end_local": weekend_end.get("date_end_local") or weekend_end.get("date_end") or weekend_end.get("date_start"),
+        },
+        "phase": phase,
+        "headline": headline,
+        "track": {
+            "circuit_key": _dig(race, "Circuit", "circuitId"),
+            "name": circuit_name,
+            "type": None,
+            "location": locality,
+            "country_name": country,
+            "country_code": None,
+            "country_flag": None,
+            "image_url": None,
+            "info_url": race.get("url") or _dig(race, "Circuit", "url"),
+            "links": _build_f1_circuit_links(circuit_name, locality, country),
+        },
+        "sessions": sessions_summary,
+        "current_session_key": current_session.get("session_key") if isinstance(current_session, dict) else None,
+        "focus_session_key": focus_session.get("session_key") if isinstance(focus_session, dict) else None,
+        "current_session": current_session,
+        "next_session": next_session,
+        "latest_session": latest_session,
+        "weather": {
+            "air_temperature": weather.get("air_temperature"),
+            "track_temperature": weather.get("track_temperature"),
+            "humidity": weather.get("humidity"),
+            "rainfall": weather.get("rainfall"),
+            "wind_direction": weather.get("wind_direction"),
+            "wind_speed": weather.get("wind_speed"),
+            "pressure": weather.get("pressure"),
+            "date": weather.get("date"),
+            "source": weather.get("source") or "unavailable",
+        },
+    }, fallback_errors[:10]
+
+
+def _fetch_f1_schedule_races(season: str) -> tuple[list[dict[str, Any]], list[str], str]:
+    errors: list[str] = []
+    source = "unknown"
+    schedule_urls = [
+        ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}.json"),
+        ("jolpica", f"https://api.jolpi.ca/ergast/f1/{season}/races/"),
+        ("ergast", f"https://ergast.com/api/f1/{season}.json"),
+    ]
+    for src, url in schedule_urls:
+        data, err = _http_get_json(url, timeout=15)
+        if err:
+            errors.append(f"schedule:{src}:{err}")
+            continue
+        races = _dig(data, "MRData", "RaceTable", "Races") or []
+        if isinstance(races, list):
+            return [row for row in races if isinstance(row, dict)], errors[:12], src
+        errors.append(f"schedule:{src}:invalid_payload")
+    return [], errors[:12], source
+
+
 def _latest_by_key(rows: list[dict[str, Any]], key_name: str = "driver_number") -> dict[Any, dict[str, Any]]:
     latest: dict[Any, dict[str, Any]] = {}
     for row in rows:
@@ -1849,15 +2346,22 @@ def _fetch_openf1_weekend_context(
     season: str,
     next_race: Optional[dict[str, Any]],
     latest_race: Optional[dict[str, Any]],
+    schedule_races: Optional[list[dict[str, Any]]] = None,
 ) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     season_year = _safe_int(season) or datetime.now(timezone.utc).year
     meetings, err = _openf1_get("meetings", params={"year": season_year}, timeout=20)
     if err:
+        fallback, fallback_errors = _build_f1_schedule_fallback_context(season, list(schedule_races or []))
+        if fallback:
+            return fallback, [err, *fallback_errors][:10]
         return {}, [err]
 
     meeting = _pick_openf1_meeting(meetings, next_race, latest_race)
     if not isinstance(meeting, dict):
+        fallback, fallback_errors = _build_f1_schedule_fallback_context(season, list(schedule_races or []))
+        if fallback:
+            return fallback, ["meetings:no_match", *fallback_errors][:10]
         return {}, ["meetings:no_match"]
 
     meeting_key = meeting.get("meeting_key")
@@ -1876,6 +2380,16 @@ def _fetch_openf1_weekend_context(
     if err and "404" not in str(err):
         errors.append(err)
     latest_weather = weather_rows[-1] if weather_rows else {}
+    matched_schedule_race = _find_f1_schedule_race_match(list(schedule_races or []), next_race, latest_race, meeting)
+    weather_source = "openf1" if latest_weather else "unavailable"
+    if not latest_weather and isinstance(matched_schedule_race, dict):
+        lat, lon = _f1_schedule_race_coords(matched_schedule_race)
+        backup_weather, weather_err = _fetch_open_meteo_weather(lat, lon)
+        if _f1_weather_has_data(backup_weather):
+            latest_weather = backup_weather
+            weather_source = backup_weather.get("source") or "open_meteo"
+        elif weather_err:
+            errors.append(weather_err)
 
     phase = "offseason"
     if current_session:
@@ -1939,11 +2453,63 @@ def _fetch_openf1_weekend_context(
             "wind_speed": latest_weather.get("wind_speed"),
             "pressure": latest_weather.get("pressure"),
             "date": latest_weather.get("date"),
+            "source": weather_source,
         },
     }, errors[:10]
 
 
+def _fetch_f1_schedule_session_detail(session_key: str) -> tuple[dict[str, Any], list[str]]:
+    parts = str(session_key or "").split(":")
+    if len(parts) != 4 or parts[0] != "fallback":
+        return {}, ["schedule_fallback:invalid_session_key"]
+
+    _, season, round_id, field_name = parts
+    schedule_races, schedule_errors, _ = _fetch_f1_schedule_races(season)
+    race = next((row for row in schedule_races if str(row.get("round") or "").strip() == round_id), None)
+    if not isinstance(race, dict):
+        return {}, [*schedule_errors, f"schedule_fallback:round_not_found:{round_id}"][:12]
+
+    sessions = _build_f1_schedule_sessions(season, race)
+    session = next((row for row in sessions if str(row.get("session_key") or "").strip() == session_key), None)
+    if not isinstance(session, dict):
+        return {}, [*schedule_errors, f"schedule_fallback:session_not_found:{field_name}"][:12]
+
+    return {
+        "source": "schedule_fallback",
+        "session": session,
+        "live": str(session.get("status") or "").lower() in {"live", "cooldown"},
+        "drivers_count": 0,
+        "leaderboard": [],
+        "race_control": [],
+        "snapshots": _get_f1_session_snapshots(session_key, limit=10),
+        "weather": {
+            "air_temperature": None,
+            "track_temperature": None,
+            "humidity": None,
+            "rainfall": None,
+            "wind_direction": None,
+            "wind_speed": None,
+            "pressure": None,
+            "date": None,
+            "source": "unavailable",
+        },
+    }, [*schedule_errors, "openf1:session_schedule_fallback"][:12]
+
+
+def _secondary_f1_session_payload_has_data(payload: dict[str, Any]) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    if len(payload.get("leaderboard") or []) > 0:
+        return True
+    if len(payload.get("race_control") or []) > 0:
+        return True
+    return _f1_weather_has_data(payload.get("weather"))
+
+
 def _fetch_openf1_session_detail(session_key: str) -> tuple[dict[str, Any], list[str]]:
+    if str(session_key or "").startswith("fallback:"):
+        return _fetch_f1_schedule_session_detail(session_key)
+
     errors: list[str] = []
     session_rows, err = _openf1_get("sessions", params={"session_key": session_key}, timeout=15)
     if err:
@@ -2076,6 +2642,27 @@ def _fetch_openf1_session_detail(session_key: str) -> tuple[dict[str, Any], list
     ]
 
     latest_weather = weather_rows[-1] if weather_rows else {}
+    weather_source = "openf1" if latest_weather else "unavailable"
+    if not latest_weather:
+        session_year = str((_parse_dt(session.get("date_start")) or datetime.now(timezone.utc)).year)
+        schedule_races, schedule_errors, _ = _fetch_f1_schedule_races(session_year)
+        errors.extend(schedule_errors[:2])
+        matched_schedule_race = _find_f1_schedule_race_match(
+            schedule_races,
+            meeting={
+                "location": session.get("location"),
+                "country_name": session.get("country_name"),
+                "circuit_short_name": session.get("circuit_short_name"),
+            },
+        )
+        if isinstance(matched_schedule_race, dict):
+            lat, lon = _f1_schedule_race_coords(matched_schedule_race)
+            backup_weather, weather_err = _fetch_open_meteo_weather(lat, lon)
+            if _f1_weather_has_data(backup_weather):
+                latest_weather = backup_weather
+                weather_source = backup_weather.get("source") or "open_meteo"
+            elif weather_err:
+                errors.append(weather_err)
 
     return {
         "source": "openf1",
@@ -2084,6 +2671,7 @@ def _fetch_openf1_session_detail(session_key: str) -> tuple[dict[str, Any], list
         "drivers_count": len(driver_map),
         "leaderboard": leaderboard[:20],
         "race_control": race_control,
+        "snapshots": _get_f1_session_snapshots(session_key, limit=10),
         "weather": {
             "air_temperature": latest_weather.get("air_temperature"),
             "track_temperature": latest_weather.get("track_temperature"),
@@ -2093,6 +2681,7 @@ def _fetch_openf1_session_detail(session_key: str) -> tuple[dict[str, Any], list
             "wind_speed": latest_weather.get("wind_speed"),
             "pressure": latest_weather.get("pressure"),
             "date": latest_weather.get("date"),
+            "source": weather_source,
         },
     }, errors[:12]
 
@@ -2441,6 +3030,7 @@ def _fetch_f1_overview(season: str) -> tuple[dict[str, Any], list[str], str]:
         "track_guide": track_guide[:14],
         "latest_race": latest_race_out,
         "driver_profiles": driver_profiles_list,
+        "_schedule_races": [race for race in races if isinstance(race, dict)],
     }, errors[:20], source
 
 
@@ -4531,6 +5121,8 @@ def _prewarm_provider_caches() -> None:
 @app.on_event("startup")
 def _startup() -> None:
     _boot_last_good_store()
+    _boot_f1_session_snapshots()
+    _boot_f1_secondary_ingest()
     settings_cfg = _load_settings()
     _apply_settings_env(settings_cfg)
 
@@ -5061,10 +5653,12 @@ def f1_overview(season: Optional[str] = None, force: bool = False):
         return {**cached, "cached": True}
 
     overview, errors, source = _fetch_f1_overview(season_key)
+    schedule_races = overview.pop("_schedule_races", [])
     weekend, weekend_errors = _fetch_openf1_weekend_context(
         season_key,
         overview.get("next_race"),
         overview.get("latest_race"),
+        schedule_races if isinstance(schedule_races, list) else [],
     )
     standings = overview.get("standings", [])
     all_errors = list(errors or []) + list(weekend_errors or [])
@@ -5128,11 +5722,48 @@ def f1_session(session_key: str, force: bool = False):
         return {**cached, "cached": True}
 
     detail, errors = _fetch_openf1_session_detail(session_key)
+    secondary_payload, secondary_age = _get_f1_secondary_session(session_key, max_age_seconds=4 * 3600)
+    if isinstance(detail, dict) and detail and isinstance(secondary_payload, dict):
+        detail_has_live_rows = bool((detail.get("leaderboard") or []) or (detail.get("race_control") or []) or _f1_weather_has_data(detail.get("weather")))
+        secondary_has_live_rows = _secondary_f1_session_payload_has_data(secondary_payload)
+        if secondary_has_live_rows and not detail_has_live_rows:
+            detail = {
+                **detail,
+                "source": secondary_payload.get("source") or "secondary_ingest",
+                "live": bool(secondary_payload.get("live")) or bool(detail.get("live")),
+                "drivers_count": int(secondary_payload.get("drivers_count") or detail.get("drivers_count") or 0),
+                "leaderboard": deepcopy(secondary_payload.get("leaderboard") or []),
+                "race_control": deepcopy(secondary_payload.get("race_control") or []),
+                "weather": deepcopy(secondary_payload.get("weather") or detail.get("weather") or {}),
+            }
+            errors = list(errors or []) + [f"fallback:secondary_ingest:f1_session:{secondary_age}s"]
     if not detail:
+        if isinstance(secondary_payload, dict):
+            fallback_errors = list(errors or []) + [f"fallback:secondary_ingest:f1_session:{secondary_age}s"]
+            payload = {
+                "generated_at": datetime.now().isoformat(timespec="seconds"),
+                "data_as_of": secondary_payload.get("data_as_of") or secondary_payload.get("generated_at"),
+                "stale": secondary_age > 120,
+                "stale_age_seconds": secondary_age,
+                "session_key": session_key,
+                "source": secondary_payload.get("source") or "secondary_ingest",
+                "session": deepcopy(secondary_payload.get("session") or {}),
+                "live": bool(secondary_payload.get("live")),
+                "drivers_count": int(secondary_payload.get("drivers_count") or 0),
+                "leaderboard": deepcopy(secondary_payload.get("leaderboard") or []),
+                "race_control": deepcopy(secondary_payload.get("race_control") or []),
+                "weather": deepcopy(secondary_payload.get("weather") or {}),
+                "snapshots": _get_f1_session_snapshots(session_key, limit=10),
+                "errors": fallback_errors[:24],
+                "duration_ms": int((time.perf_counter() - started) * 1000),
+            }
+            _cache_set(cache_key, payload)
+            return {**payload, "cached": False}
         stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
         if isinstance(stale_payload, dict):
             fallback_errors = list(errors or []) + [f"fallback:last_good:f1_session:{age}s"]
             stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+            stale_payload["snapshots"] = _get_f1_session_snapshots(session_key, limit=10)
             stale_payload["errors"] = fallback_errors[:24]
             _cache_set(cache_key, stale_payload)
             return {**stale_payload, "cached": False}
@@ -5151,14 +5782,17 @@ def f1_session(session_key: str, force: bool = False):
     }
     if _f1_session_payload_has_data(payload):
         _set_last_good(cache_key, payload)
+        _record_f1_session_snapshot(session_key, payload)
     else:
         stale_payload, age = _get_last_good(cache_key, max_age_seconds=12 * 3600)
         if isinstance(stale_payload, dict):
             fallback_errors = list(errors or []) + [f"fallback:last_good:f1_session:{age}s"]
             stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+            stale_payload["snapshots"] = _get_f1_session_snapshots(session_key, limit=10)
             stale_payload["errors"] = fallback_errors[:24]
             _cache_set(cache_key, stale_payload)
             return {**stale_payload, "cached": False}
+    payload["snapshots"] = _get_f1_session_snapshots(session_key, limit=10)
     _cache_set(cache_key, payload)
     return {**payload, "cached": False}
 
@@ -5504,8 +6138,17 @@ def debug_providers():
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "providers": _provider_health,
+        "provider_breakers": deepcopy(_PROVIDER_BREAKERS),
         "cache": cache_counts,
         "last_good": last_good_counts,
+        "f1_secondary_ingest": {
+            "sessions": len(_F1_SECONDARY_INGEST),
+            "live_sessions": sum(1 for entry in _F1_SECONDARY_INGEST.values() if isinstance(entry, dict) and entry.get("live")),
+        },
+        "f1_snapshots": {
+            "sessions": len(_F1_SESSION_SNAPSHOTS),
+            "entries": sum(len(rows) for rows in _F1_SESSION_SNAPSHOTS.values()),
+        },
         "prewarm": deepcopy(_PREWARM_STATE),
         "slowest": slowest[:3],
     }
@@ -5552,6 +6195,94 @@ def ingest_status():
         "running": _ingest_state["running"],
         "started_at": _ingest_state["started_at"],
         "last_result": _ingest_state["last_result"],
+    }
+
+
+@app.post("/api/f1/ingest/session")
+def ingest_f1_session(payload: F1SecondaryIngestPayload):
+    session_key = str(payload.session_key or "").strip()
+    if not session_key:
+        raise HTTPException(status_code=422, detail="session_key is required")
+
+    data_as_of = payload.data_as_of or datetime.now(timezone.utc).isoformat()
+    entry = {
+        "source": str(payload.source or "secondary_ingest").strip() or "secondary_ingest",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "data_as_of": data_as_of,
+        "session": deepcopy(payload.session),
+        "live": bool(payload.live),
+        "drivers_count": int(payload.drivers_count or 0),
+        "leaderboard": deepcopy(payload.leaderboard),
+        "race_control": deepcopy(payload.race_control),
+        "weather": deepcopy(payload.weather),
+    }
+    _set_f1_secondary_session(session_key, entry)
+
+    snapshot_payload = {
+        "generated_at": entry["generated_at"],
+        "data_as_of": data_as_of,
+        "source": entry["source"],
+        "live": entry["live"],
+        "leaderboard": deepcopy(entry["leaderboard"]),
+        "race_control": deepcopy(entry["race_control"]),
+        "weather": deepcopy(entry["weather"]),
+    }
+    if _secondary_f1_session_payload_has_data(entry):
+        _record_f1_session_snapshot(session_key, snapshot_payload)
+        _set_last_good(f"f1:session:{session_key}", {
+            "generated_at": entry["generated_at"],
+            "data_as_of": data_as_of,
+            "session_key": session_key,
+            "source": entry["source"],
+            "session": deepcopy(entry["session"]),
+            "live": entry["live"],
+            "drivers_count": entry["drivers_count"],
+            "leaderboard": deepcopy(entry["leaderboard"]),
+            "race_control": deepcopy(entry["race_control"]),
+            "weather": deepcopy(entry["weather"]),
+            "snapshots": _get_f1_session_snapshots(session_key, limit=10),
+            "errors": [],
+        })
+
+    return {
+        "ok": True,
+        "session_key": session_key,
+        "source": entry["source"],
+        "drivers_count": entry["drivers_count"],
+        "leaderboard_rows": len(entry["leaderboard"]),
+        "race_control_rows": len(entry["race_control"]),
+        "data_as_of": data_as_of,
+    }
+
+
+@app.get("/api/f1/ingest/status")
+def f1_ingest_status():
+    now = datetime.now(timezone.utc)
+    sessions = []
+    for session_key, payload in _F1_SECONDARY_INGEST.items():
+        if not isinstance(payload, dict):
+            continue
+        dt = _parse_dt(payload.get("data_as_of") or payload.get("generated_at"))
+        age_seconds = None
+        if dt is not None:
+            age_seconds = max(0, int((now - dt.astimezone(timezone.utc)).total_seconds()))
+        sessions.append(
+            {
+                "session_key": session_key,
+                "source": payload.get("source"),
+                "live": bool(payload.get("live")),
+                "drivers_count": int(payload.get("drivers_count") or 0),
+                "leaderboard_rows": len(payload.get("leaderboard") or []),
+                "race_control_rows": len(payload.get("race_control") or []),
+                "data_as_of": payload.get("data_as_of") or payload.get("generated_at"),
+                "age_seconds": age_seconds,
+            }
+        )
+    sessions.sort(key=lambda row: (row.get("age_seconds") is None, row.get("age_seconds") or 0))
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "count": len(sessions),
+        "sessions": sessions[:24],
     }
 
 

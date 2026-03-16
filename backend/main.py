@@ -657,8 +657,11 @@ _DEFAULT_MARKET_SYMBOLS = [
 
 
 _DEFAULT_HTTP_HEADERS = {
-    "User-Agent": "HolocronHub/0.5 (+self-hosted)",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Cache-Control": "no-cache",
 }
 
 _API_CACHE: dict[str, dict[str, Any]] = {}
@@ -2015,11 +2018,20 @@ def _fetch_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list
         timeout=12,
     )
 
+    # If query1 returns 401/error, retry against query2 before falling back
     if req_err:
-        fb_quotes, fb_errors = _fallback_market_quotes(symbols)
-        if fb_quotes:
-            return fb_quotes, [f"quote_primary:{req_err}", *fb_errors[:20]]
-        return [], [str(req_err)]
+        payload_data2, req_err2 = _http_get_json(
+            "https://query2.finance.yahoo.com/v7/finance/quote",
+            params={"symbols": ",".join(symbols)},
+            timeout=12,
+        )
+        if not req_err2 and payload_data2:
+            payload_data, req_err = payload_data2, None
+        else:
+            fb_quotes, fb_errors = _fallback_market_quotes(symbols)
+            if fb_quotes:
+                return fb_quotes, [f"quote_primary:{req_err}", *fb_errors[:20]]
+            return [], [str(req_err)]
 
     payload = _dig(payload_data, "quoteResponse", "result") or []
     if not isinstance(payload, list):

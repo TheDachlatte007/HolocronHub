@@ -206,12 +206,99 @@
     .saved-item .title{font-size:14px;font-weight:600;line-height:1.4}
     .saved-item .summary{font-size:13px;color:#64748b;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-    /* markets */
-    .market-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
-    .market-price{font-size:18px;font-weight:700;color:#f1f5f9}
-    .market-change.up{color:#86efac}
-    .market-change.down{color:#fca5a5}
+    /* markets – consumer finance layout */
+    .market-card{background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s,box-shadow .15s}
+    .market-card.interactive{cursor:pointer}
+    .market-card.interactive:hover{border-color:#334155;box-shadow:0 8px 24px rgba(2,6,23,.22);transform:translateY(-1px)}
+    .market-price{font-size:20px;font-weight:700;color:#f1f5f9;letter-spacing:-.01em}
+    .market-name{font-size:14px;font-weight:600;color:#f1f5f9}
+    .market-ticker{font-size:11px;color:#64748b}
+    .market-change{font-size:13px;font-weight:600}
+    .market-change.up{color:#4ade80}
+    .market-change.down{color:#f87171}
     .market-change.flat{color:#94a3b8}
+    .market-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap}
+    .market-badge.up{background:rgba(74,222,128,.12);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+    .market-badge.down{background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+    .market-badge.flat{background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.2)}
+    /* watchlist */
+    .wl-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    .wl-header h2{margin:0;font-size:1rem;color:#f1f5f9;text-transform:none;letter-spacing:0}
+    .wl-add-row{display:flex;gap:6px;align-items:center}
+    .wl-grid{display:flex;flex-direction:column;gap:1px;border-radius:12px;overflow:hidden;border:1px solid #1e293b;background:#0b1220}
+    .wl-row{display:grid;grid-template-columns:minmax(0,2fr) minmax(80px,1fr) minmax(80px,.9fr) minmax(90px,.9fr);gap:8px;align-items:center;padding:11px 14px;background:#0f172a;cursor:pointer;transition:background .13s}
+    .wl-row:not(:last-child){border-bottom:1px solid #1e293b}
+    .wl-row:hover{background:#141d2e}
+    .wl-row.active{background:#141d2e;border-left:2px solid #3b82f6}
+    .wl-col-name{display:flex;flex-direction:column;gap:1px;min-width:0}
+    .wl-col-price{text-align:right;font-size:15px;font-weight:600;color:#f1f5f9}
+    .wl-col-abs{text-align:right;font-size:12px}
+    .wl-col-chart{display:flex;justify-content:flex-end;align-items:center}
+    .wl-remove{background:none;border:none;color:#475569;font-size:14px;cursor:pointer;padding:2px 6px;border-radius:6px;line-height:1}
+    .wl-remove:hover{color:#f87171;background:rgba(248,113,113,.1)}
+    .wl-empty{padding:24px;text-align:center;color:#64748b;font-size:13px}
+    /* market sections */
+    .mkt-sections{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:16px}
+    .mkt-section{background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:14px}
+    .mkt-section-title{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+    .mkt-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #1a2438;gap:8px;cursor:pointer;transition:background .12s;border-radius:6px}
+    .mkt-row:last-child{border-bottom:none}
+    .mkt-row:hover{background:#141d2e;margin:0 -6px;padding:7px 6px}
+    .mkt-row-left{display:flex;flex-direction:column;gap:1px;min-width:0}
+    .mkt-row-right{display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex-shrink:0}
+    .mkt-row-price{font-size:13px;font-weight:600;color:#f1f5f9}
+    /* hot movers */
+    .hot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px}
+    .hot-card{background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+    .hot-card:hover{border-color:#334155;box-shadow:0 8px 24px rgba(2,6,23,.22)}
+    .hot-card-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b}
+    .hot-card-name{font-size:15px;font-weight:700;color:#f8fafc}
+    .hot-card-ticker{font-size:11px;color:#64748b}
+    .hot-card-move{font-size:18px;font-weight:800;letter-spacing:-.01em}
+    .hot-card-move.up{color:#4ade80}
+    .hot-card-move.down{color:#f87171}
+    .hot-card-sub{font-size:11px;color:#64748b}
+    /* news drivers */
+    .driver-list{display:flex;flex-direction:column;gap:6px}
+    .driver-item{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+    .driver-asset{font-size:11px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.05em}
+    .driver-headline{font-size:13px;color:#e2e8f0;line-height:1.45}
+    .driver-headline a{color:#e2e8f0;text-decoration:none}
+    .driver-headline a:hover{color:#93c5fd;text-decoration:underline}
+    .driver-meta{font-size:11px;color:#64748b}
+    .driver-none{font-size:12px;color:#64748b;font-style:italic}
+    /* detail panel / modal */
+    .mkt-detail-overlay{position:fixed;inset:0;background:rgba(5,10,20,.78);z-index:800;display:none;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity .2s}
+    .mkt-detail-overlay.open{opacity:1}
+    .mkt-detail-panel{background:#111827;border:1px solid #334155;border-radius:18px;padding:20px;width:min(620px,100%);max-height:calc(100vh - 60px);overflow-y:auto;display:flex;flex-direction:column;gap:14px;transform:translateY(16px);transition:transform .2s}
+    .mkt-detail-overlay.open .mkt-detail-panel{transform:translateY(0)}
+    .mkt-detail-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .mkt-detail-title{display:flex;flex-direction:column;gap:3px}
+    .mkt-detail-name{font-size:22px;font-weight:700;color:#f8fafc}
+    .mkt-detail-ticker{font-size:13px;color:#64748b}
+    .mkt-detail-price-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+    .mkt-detail-price{font-size:28px;font-weight:800;color:#f1f5f9;letter-spacing:-.02em}
+    .mkt-detail-chart{margin:4px 0}
+    .mkt-detail-chart .sparkline{height:110px}
+    .mkt-detail-timerange{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+    .mkt-tr-btn{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid #334155;background:#0f172a;color:#94a3b8;cursor:pointer;transition:background .13s,color .13s}
+    .mkt-tr-btn.active{background:#1d4ed8;border-color:#3b82f6;color:#fff}
+    .mkt-detail-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+    .mkt-stat-box{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+    .mkt-stat-label{font-size:11px;color:#64748b}
+    .mkt-stat-val{font-size:14px;font-weight:600;color:#e2e8f0}
+    .mkt-detail-news{display:flex;flex-direction:column;gap:8px}
+    .mkt-news-item{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+    .mkt-news-title{font-size:13px;font-weight:600;color:#e2e8f0}
+    .mkt-news-title a{color:#e2e8f0;text-decoration:none}
+    .mkt-news-title a:hover{color:#93c5fd;text-decoration:underline}
+    .mkt-news-meta{font-size:11px;color:#64748b}
+    /* section headings */
+    .mkt-section-heading{font-size:.85rem;font-weight:700;color:#e2e8f0;margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid #1e293b}
+    /* top-bar */
+    .mkt-topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+    .mkt-topbar-meta{font-size:12px;color:#64748b}
+    .mkt-topbar-actions{display:flex;gap:6px;align-items:center}
 
     /* f1 + warframe */
     .overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
@@ -411,6 +498,9 @@
     }
 
     @media (max-width: 640px){
+      .wl-row{grid-template-columns:minmax(0,1.6fr) minmax(60px,.8fr) minmax(60px,.8fr) 64px}
+      .mkt-sections{grid-template-columns:1fr}
+      .hot-grid{grid-template-columns:1fr 1fr}
       h1{font-size:1.15rem}
       .small-row{font-size:12px;gap:6px}
       .pill{font-size:10px}
@@ -625,33 +715,55 @@
   <!-- ═══ MARKETS ═══ -->
   <div id="tab-markets" style="display:none">
     <div class="card">
-      <h2>Markets Overview</h2>
-      <div class="row">
-        <input id="market-symbols" placeholder="Symbols (comma-separated), e.g. ^GSPC,BTC-USD,ETH-USD" style="flex:1;min-width:220px" />
-        <button class="primary" onclick="loadMarkets()">Refresh</button>
+      <!-- top bar -->
+      <div class="mkt-topbar">
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:2px">Markets</div>
+          <div id="market-meta" class="mkt-topbar-meta"></div>
+        </div>
+        <div class="mkt-topbar-actions">
+          <button class="sm" onclick="loadMarkets()">Refresh</button>
+        </div>
       </div>
-      <div id="market-meta" class="muted" style="margin-bottom:4px"></div>
       <div id="market-errors" class="warn-strip"></div>
-      <div class="market-layout">
-        <div class="market-main">
-          <div id="market-hero" class="market-hero-grid"><div class="market-hero-card"><strong>Market radar</strong><span class="muted">Hot movers, stress points and high-volatility instruments will appear here after the feed loads.</span></div></div>
-          <div id="market-spotlight" class="market-mini-grid"></div>
-          <div id="market-grid" class="grid"><div class="empty">Loading...</div></div>
-        </div>
-        <div class="market-side">
-          <div id="market-focus" class="market-focus-card">
-            <div class="tool-minor">Market Focus</div>
-            <strong>Waiting for tape</strong>
-            <div class="muted">Click a core market, stock or mover to pin a larger view here.</div>
-          </div>
-          <div class="stat-card">
-            <div class="market-section-head">
-              <h3>Core Board</h3>
-              <span class="tool-minor">Click to focus or load</span>
-            </div>
-            <div id="market-presets" class="market-preset-list"></div>
+
+      <!-- 1. My Watchlist -->
+      <div style="margin-bottom:20px">
+        <div class="wl-header">
+          <h2 class="mkt-section-heading" style="margin:0;border:none;padding:0">My Watchlist</h2>
+          <div class="wl-add-row">
+            <input id="wl-add-input" placeholder="Ticker, e.g. TSLA" style="width:130px;font-size:12px;padding:6px 9px" onkeydown="if(event.key==='Enter')addWatchlistItem()" />
+            <button class="sm primary" onclick="addWatchlistItem()">+ Add</button>
           </div>
         </div>
+        <div id="wl-grid" class="wl-grid"><div class="wl-empty">Loading watchlist…</div></div>
+      </div>
+
+      <!-- 2. Market Overview -->
+      <div style="margin-bottom:20px">
+        <div class="mkt-section-heading">Market Overview</div>
+        <div id="market-overview-sections" class="mkt-sections">
+          <div class="mkt-section"><div class="mkt-section-title">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- 3. Hot Right Now -->
+      <div style="margin-bottom:20px">
+        <div class="mkt-section-heading">Hot Right Now</div>
+        <div id="market-hot" class="hot-grid"><div class="muted">Loading…</div></div>
+      </div>
+
+      <!-- 4. Why It Moves -->
+      <div style="margin-bottom:20px">
+        <div class="mkt-section-heading">Why It Moves</div>
+        <div id="market-drivers" class="driver-list"><div class="muted" style="font-size:13px">Loading news drivers…</div></div>
+      </div>
+    </div>
+
+    <!-- Asset Detail Modal -->
+    <div id="mkt-detail-overlay" class="mkt-detail-overlay" onclick="closeMktDetail(event)">
+      <div class="mkt-detail-panel" id="mkt-detail-panel">
+        <div id="mkt-detail-content"></div>
       </div>
     </div>
   </div>
@@ -2300,18 +2412,53 @@ async function loadDigest() {
   }
 }
 
-const DEFAULT_MARKET_SYMBOLS = 'NVDA,MSFT,AAPL,^GSPC,^IXIC,BTC-USD,ETH-USD,GC=F,CL=F,EUNL.DE';
+// ══ MARKETS v2 ═══════════════════════════════════════════════
+
+// Known-name map: ticker → display name
+const ASSET_NAMES = {
+  'EUNL.DE': 'MSCI World ETF', 'NVDA': 'Nvidia', 'MSFT': 'Microsoft',
+  'AAPL': 'Apple', '^GSPC': 'S&P 500', '^IXIC': 'Nasdaq 100',
+  '^DJI': 'Dow Jones', 'GC=F': 'Gold', 'CL=F': 'Oil (WTI)',
+  'BTC-USD': 'Bitcoin', 'ETH-USD': 'Ethereum', 'EURUSD=X': 'EUR/USD',
+  '^VIX': 'Volatility Index', 'TSLA': 'Tesla', 'AMZN': 'Amazon',
+  'META': 'Meta', 'GOOGL': 'Alphabet', 'SPY': 'S&P 500 ETF',
+  'QQQ': 'Nasdaq ETF', 'IWM': 'Russell 2000', 'ARKK': 'ARK Innovation',
+  'SIL=F': 'Silver',
+};
+function assetName(symbol, fallbackName) {
+  return ASSET_NAMES[String(symbol).toUpperCase()] || fallbackName || symbol;
+}
+
+// Default watchlist symbols
+const WL_DEFAULT = ['EUNL.DE','NVDA','MSFT','AAPL','^GSPC','BTC-USD','GC=F'];
+const WL_STORAGE_KEY = 'holocronhub.markets.watchlist.v2';
+
+// Market overview sections (static symbol groups)
+const MKT_OVERVIEW_SECTIONS = [
+  { title: 'United States', symbols: ['^GSPC','^IXIC','^DJI','NVDA','AAPL','MSFT'] },
+  { title: 'Europe', symbols: ['EUNL.DE','EURUSD=X'] },
+  { title: 'Crypto', symbols: ['BTC-USD','ETH-USD'] },
+  { title: 'Commodities', symbols: ['GC=F','CL=F'] },
+];
+
+// All symbols we need to fetch (watchlist union + overview)
+let _wlSymbols = [];
+let _marketDecorated = [];
+let _marketFocusSymbol = '';
+let _mktDetailSymbol = '';
+let _mktDetailRange = '1mo';
+
 const MARKET_CORE_PRESETS = [
-  { symbol: 'EUNL.DE', label: 'MSCI World', hint: 'Acc ETF' },
-  { symbol: 'NVDA', label: 'Nvidia', hint: 'AI leader' },
-  { symbol: 'MSFT', label: 'Microsoft', hint: 'Mega cap' },
-  { symbol: 'AAPL', label: 'Apple', hint: 'Mega cap' },
-  { symbol: '^GSPC', label: 'S&P 500', hint: 'US equities' },
-  { symbol: '^IXIC', label: 'Nasdaq', hint: 'Growth risk' },
-  { symbol: 'GC=F', label: 'Gold', hint: 'Defensive' },
-  { symbol: 'CL=F', label: 'Oil', hint: 'Volatility' },
-  { symbol: 'BTC-USD', label: 'Bitcoin', hint: 'Crypto beta' },
-  { symbol: 'ETH-USD', label: 'Ethereum', hint: 'Crypto beta' },
+  { symbol: 'EUNL.DE', label: 'MSCI World ETF' },
+  { symbol: 'NVDA', label: 'Nvidia' },
+  { symbol: 'MSFT', label: 'Microsoft' },
+  { symbol: 'AAPL', label: 'Apple' },
+  { symbol: '^GSPC', label: 'S&P 500' },
+  { symbol: '^IXIC', label: 'Nasdaq' },
+  { symbol: 'GC=F', label: 'Gold' },
+  { symbol: 'CL=F', label: 'Oil' },
+  { symbol: 'BTC-USD', label: 'Bitcoin' },
+  { symbol: 'ETH-USD', label: 'Ethereum' },
 ];
 const WARFRAME_TOOL_LINKS = [
   { name:'Warframe Wiki', url:'https://wiki.warframe.com/w/Main_Page', summary:'Frame abilities, farm paths, drop tables and patch context.' },
@@ -2325,6 +2472,8 @@ const WARFRAME_TOOL_LINKS = [
   { name:'Deal Finder', url:'https://github.com/Luis-Munu/Warframe-Market-deal-finder', summary:'Community market-analysis project for inspiration and scanning ideas.' },
 ];
 
+
+// ── Sparkline utilities ──────────────────────────────────────
 
 function getSparklineTooltip() {
   let el = document.getElementById('sparkline-tooltip');
@@ -2380,20 +2529,24 @@ function normalizeSparklinePoints(points) {
   }).filter(Boolean);
 }
 
-function buildSparklineSvg(points, cls = '') {
+// Builds a sparkline SVG. isUp = forces color (null = derive from data).
+function buildSparklineSvg(points, cls = '', isUp = null) {
   const normalized = normalizeSparklinePoints(points);
-  const vals = normalized.map(point => point.value);
-  if (vals.length < 2) return '<div class="muted">No chart data.</div>';
+  const vals = normalized.map(p => p.value);
+  if (vals.length < 2) return '<div class="muted" style="font-size:11px;padding:4px 0">No chart data</div>';
 
-  const w = 260;
-  const h = 56;
-  const min = Math.min(...vals);
-  const max = Math.max(...vals);
+  const w = 260; const h = 56;
+  const min = Math.min(...vals); const max = Math.max(...vals);
   const span = max - min || 1;
+  // determine color
+  const trend = vals[vals.length - 1] - vals[0];
+  const up = isUp !== null ? isUp : trend >= 0;
+  const lineColor = up ? '#4ade80' : '#f87171';
+  const fillColor = up ? 'rgba(74,222,128,.12)' : 'rgba(248,113,113,.12)';
 
   const coords = vals.map((v, i) => {
     const x = (i / (vals.length - 1)) * w;
-    const y = h - ((v - min) / span) * h;
+    const y = h - 4 - ((v - min) / span) * (h - 8);
     return [x, y];
   });
 
@@ -2401,15 +2554,35 @@ function buildSparklineSvg(points, cls = '') {
   const fill = `0,${h} ${line} ${w},${h}`;
   const dots = coords.map(([x, y], idx) => {
     const label = normalized[idx]?.label || `Point ${idx + 1}`;
-    return `
-      <g>
-        <circle class="sparkline-hit" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="9" onmouseenter='showSparklineTooltip(event, ${JSON.stringify(label)})' onmousemove='showSparklineTooltip(event, ${JSON.stringify(label)})' onmouseleave="hideSparklineTooltip()"></circle>
-        <circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.8"><title>${esc(label)}</title></circle>
-      </g>
-    `;
+    return `<g>
+      <circle class="sparkline-hit" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="9" onmouseenter='showSparklineTooltip(event, ${JSON.stringify(label)})' onmousemove='showSparklineTooltip(event, ${JSON.stringify(label)})' onmouseleave="hideSparklineTooltip()"></circle>
+      <circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.8" style="fill:#f8fafc;stroke:${lineColor};stroke-width:1.5"><title>${esc(label)}</title></circle>
+    </g>`;
   }).join('');
 
-  return `<svg class="sparkline ${esc(cls)}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polygon class="sparkline-fill" points="${fill}" /><polyline class="sparkline-line" points="${line}" />${dots}</svg>`;
+  return `<svg class="sparkline ${esc(cls)}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="overflow:visible">
+    <polygon class="sparkline-fill" points="${fill}" style="fill:${fillColor}" />
+    <polyline class="sparkline-line" points="${line}" style="stroke:${lineColor};stroke-width:2;fill:none" />
+    ${dots}
+  </svg>`;
+}
+
+// Mini sparkline for watchlist rows (no dots, just the line)
+function buildMiniSparkline(vals, isUp) {
+  if (!vals || vals.length < 2) return '';
+  const w = 80; const h = 28;
+  const min = Math.min(...vals); const max = Math.max(...vals);
+  const span = max - min || 1;
+  const up = isUp !== null ? isUp : (vals[vals.length-1] >= vals[0]);
+  const color = up ? '#4ade80' : '#f87171';
+  const coords = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * w;
+    const y = h - 2 - ((v - min) / span) * (h - 4);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible">
+    <polyline points="${coords}" style="stroke:${color};stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round"/>
+  </svg>`;
 }
 
 function pctChangeFromSeries(points) {
@@ -2423,127 +2596,403 @@ function fmtMarketNum(v, digits=2) {
   return Number(v).toLocaleString(undefined, {maximumFractionDigits: digits});
 }
 
+function fmtPrice(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '—';
+  if (n >= 10000) return n.toLocaleString(undefined, {maximumFractionDigits: 0});
+  if (n >= 100) return n.toLocaleString(undefined, {maximumFractionDigits: 2});
+  return n.toLocaleString(undefined, {maximumFractionDigits: 4});
+}
+
 function getMarketDecoratedEntry(symbol) {
   return _marketDecorated.find(item => String(item.q?.symbol || '').toUpperCase() === String(symbol || '').toUpperCase()) || null;
 }
 
-function setMarketFocus(symbol) {
-  _marketFocusSymbol = String(symbol || '').trim();
-  renderMarketFocus();
-  renderMarketPresetRail();
+// ── Watchlist persistence ─────────────────────────────────────
+
+function loadWatchlistSymbols() {
+  try {
+    const stored = localStorage.getItem(WL_STORAGE_KEY);
+    if (stored) {
+      const arr = JSON.parse(stored);
+      if (Array.isArray(arr) && arr.length) return arr.map(s => String(s).toUpperCase());
+    }
+  } catch(_) {}
+  return [...WL_DEFAULT];
 }
 
-function renderMarketPresetRail() {
-  const el = document.getElementById('market-presets');
-  const inputEl = document.getElementById('market-symbols');
-  if (!el || !inputEl) return;
-
-  const loadedSymbols = new Set(_marketDecorated.map(item => String(item.q?.symbol || '').toUpperCase()));
-  el.innerHTML = MARKET_CORE_PRESETS.map(item => {
-    const isActive = String(item.symbol).toUpperCase() === String(_marketFocusSymbol || '').toUpperCase();
-    const isLoaded = loadedSymbols.has(String(item.symbol).toUpperCase());
-    return `
-      <button class="market-preset-btn ${isActive ? 'active' : ''}" onclick="handleMarketPresetClick('${esc(item.symbol)}')">
-        <span>${esc(item.label)}</span>
-        <span class="tool-minor">${esc(item.hint)}${isLoaded ? '' : ' | load'}</span>
-      </button>
-    `;
-  }).join('');
+function saveWatchlistSymbols(symbols) {
+  try { localStorage.setItem(WL_STORAGE_KEY, JSON.stringify(symbols)); } catch(_) {}
 }
 
-function handleMarketPresetClick(symbol) {
-  const inputEl = document.getElementById('market-symbols');
-  if (!inputEl) return;
-  const parts = (inputEl.value || '').split(',').map(s => s.trim()).filter(Boolean);
-  if (!parts.some(part => part.toUpperCase() === String(symbol).toUpperCase())) {
-    parts.unshift(symbol);
-    inputEl.value = parts.join(',');
+function addWatchlistItem() {
+  const input = document.getElementById('wl-add-input');
+  if (!input) return;
+  const sym = input.value.trim().toUpperCase();
+  if (!sym) return;
+  if (!_wlSymbols.includes(sym)) {
+    _wlSymbols.push(sym);
+    saveWatchlistSymbols(_wlSymbols);
+    input.value = '';
     loadMarkets();
-    return;
+  } else {
+    input.value = '';
+    input.placeholder = 'Already in watchlist';
+    setTimeout(() => { input.placeholder = 'Ticker, e.g. TSLA'; }, 2000);
   }
-  setMarketFocus(symbol);
 }
 
-function renderMarketFocus() {
-  const el = document.getElementById('market-focus');
+function removeWatchlistItem(symbol) {
+  _wlSymbols = _wlSymbols.filter(s => s !== symbol.toUpperCase());
+  saveWatchlistSymbols(_wlSymbols);
+  // re-render watchlist from current data without full reload
+  renderWatchlist();
+}
+
+// ── Render: Watchlist ─────────────────────────────────────────
+
+function renderWatchlist() {
+  const el = document.getElementById('wl-grid');
   if (!el) return;
-  const focusEntry = getMarketDecoratedEntry(_marketFocusSymbol) || _marketDecorated[0];
-  if (!focusEntry) {
-    el.innerHTML = '<div class="tool-minor">Market Focus</div><strong>Waiting for tape</strong><div class="muted">Click a core market, stock or mover to pin a larger view here.</div>';
+  if (!_wlSymbols.length) {
+    el.innerHTML = '<div class="wl-empty">Your watchlist is empty. Add a ticker above.</div>';
+    return;
+  }
+  const rows = _wlSymbols.map(sym => {
+    const entry = getMarketDecoratedEntry(sym);
+    if (!entry) {
+      return `<div class="wl-row" onclick="openMktDetail('${esc(sym)}')">
+        <div class="wl-col-name"><span class="market-name">${esc(assetName(sym, sym))}</span><span class="market-ticker">${esc(sym)}</span></div>
+        <div class="wl-col-price muted">—</div>
+        <div class="wl-col-abs muted">—</div>
+        <div class="wl-col-chart"><span class="muted" style="font-size:11px">no data</span></div>
+        <button class="wl-remove" onclick="event.stopPropagation();removeWatchlistItem('${esc(sym)}')" title="Remove">×</button>
+      </div>`;
+    }
+    const { q, series, pct, ch } = entry;
+    const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+    const miniVals = series.slice(-20);
+    const isUp = pct >= 0;
+    const sign = pct >= 0 ? '+' : '';
+    const absSign = ch >= 0 ? '+' : '';
+    return `<div class="wl-row${sym === _marketFocusSymbol ? ' active' : ''}" onclick="openMktDetail('${esc(sym)}')">
+      <div class="wl-col-name">
+        <span class="market-name">${esc(assetName(q.symbol, q.name))}</span>
+        <span class="market-ticker">${esc(q.symbol)}</span>
+      </div>
+      <div class="wl-col-price">${fmtPrice(q.price)}</div>
+      <div class="wl-col-abs">
+        <span class="market-change ${cls}" style="font-size:12px">${sign}${fmtMarketNum(pct, 2)}%</span>
+        <span class="market-ticker">${absSign}${fmtMarketNum(ch, 2)}</span>
+      </div>
+      <div class="wl-col-chart">${buildMiniSparkline(miniVals, isUp)}</div>
+      <button class="wl-remove" onclick="event.stopPropagation();removeWatchlistItem('${esc(sym)}')" title="Remove">×</button>
+    </div>`;
+  }).join('');
+  el.innerHTML = rows;
+}
+
+// ── Render: Market Overview sections ─────────────────────────
+
+function renderMarketOverview() {
+  const el = document.getElementById('market-overview-sections');
+  if (!el) return;
+  const html = MKT_OVERVIEW_SECTIONS.map(sec => {
+    const rows = sec.symbols.map(sym => {
+      const entry = getMarketDecoratedEntry(sym);
+      const name = assetName(sym, entry?.q?.name || sym);
+      if (!entry) {
+        return `<div class="mkt-row" onclick="openMktDetail('${esc(sym)}')">
+          <div class="mkt-row-left"><span class="market-name" style="font-size:13px">${esc(name)}</span><span class="market-ticker">${esc(sym)}</span></div>
+          <div class="mkt-row-right"><span class="mkt-row-price muted">—</span><span class="market-ticker">—</span></div>
+        </div>`;
+      }
+      const { q, pct, ch } = entry;
+      const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+      const sign = pct >= 0 ? '+' : '';
+      return `<div class="mkt-row" onclick="openMktDetail('${esc(sym)}')">
+        <div class="mkt-row-left">
+          <span class="market-name" style="font-size:13px">${esc(name)}</span>
+          <span class="market-ticker">${esc(q.symbol)}</span>
+        </div>
+        <div class="mkt-row-right">
+          <span class="mkt-row-price">${fmtPrice(q.price)}</span>
+          <span class="market-change ${cls}" style="font-size:12px">${sign}${fmtMarketNum(pct, 2)}%</span>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="mkt-section"><div class="mkt-section-title">${esc(sec.title)}</div>${rows}</div>`;
+  }).join('');
+  el.innerHTML = html;
+}
+
+// ── Render: Hot Right Now ─────────────────────────────────────
+
+function renderHotRightNow() {
+  const el = document.getElementById('market-hot');
+  if (!el || !_marketDecorated.length) return;
+
+  const sorted = [..._marketDecorated].filter(d => Number.isFinite(d.pct));
+  if (!sorted.length) { el.innerHTML = '<div class="muted">No data yet.</div>'; return; }
+
+  const hottest = [...sorted].sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))[0];
+  const topUp = [...sorted].sort((a, b) => b.pct - a.pct)[0];
+  const topDown = [...sorted].sort((a, b) => a.pct - b.pct)[0];
+  const mostVol = [...sorted].sort((a, b) => (b.volPct || 0) - (a.volPct || 0))[0];
+
+  const card = (label, entry, valueLine, sub) => {
+    if (!entry) return '';
+    const sym = entry.q.symbol;
+    const name = assetName(sym, entry.q.name);
+    const cls = entry.pct > 0 ? 'up' : entry.pct < 0 ? 'down' : 'flat';
+    return `<div class="hot-card" onclick="openMktDetail('${esc(sym)}')">
+      <div class="hot-card-label">${esc(label)}</div>
+      <div class="hot-card-name">${esc(name)}</div>
+      <div class="hot-card-ticker">${esc(sym)}</div>
+      <div class="hot-card-move ${cls}">${valueLine}</div>
+      <div class="hot-card-sub">${esc(sub)}</div>
+    </div>`;
+  };
+
+  el.innerHTML = [
+    card('Biggest mover', hottest, `${hottest.pct >= 0 ? '+' : ''}${fmtMarketNum(hottest.pct, 2)}%`, 'Largest absolute daily move'),
+    card('Top gainer', topUp, `+${fmtMarketNum(topUp.pct, 2)}%`, 'Best performing today'),
+    card('Top loser', topDown, `${fmtMarketNum(topDown.pct, 2)}%`, 'Worst performing today'),
+    mostVol && mostVol.volPct != null ? card('Most volatile', mostVol, `${fmtMarketNum(mostVol.volPct, 1)}% range`, '30-day price range') : '',
+  ].join('');
+}
+
+// ── Render: Why It Moves (news drivers) ──────────────────────
+
+async function renderWhyItMoves() {
+  const el = document.getElementById('market-drivers');
+  if (!el) return;
+
+  // Pick the top movers by abs pct
+  const movers = [..._marketDecorated]
+    .filter(d => Math.abs(d.pct) > 0.5)
+    .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+    .slice(0, 5);
+
+  if (!movers.length) {
+    el.innerHTML = '<div class="driver-none">No significant movers detected.</div>';
     return;
   }
 
-  const { q, series, pct, ch, min, max, volPct, trendPct } = focusEntry;
-  const moveClass = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
-  const trendClass = trendPct == null ? 'flat' : (trendPct > 0 ? 'up' : (trendPct < 0 ? 'down' : 'flat'));
-  el.innerHTML = `
-    <div class="tool-minor">Market Focus</div>
-    <div class="market-focus-top">
+  // Fetch finance news from digest
+  let financeItems = [];
+  try {
+    const digest = await fetch(`${API}/digest/morning?total_limit=30&per_category=10`).then(r => r.json());
+    financeItems = (digest?.by_category?.Finance || []);
+  } catch(_) {}
+
+  const rendered = movers.map(entry => {
+    const { q, pct } = entry;
+    const sym = q.symbol;
+    const name = assetName(sym, q.name);
+    const cls = pct > 0 ? 'up' : 'down';
+
+    // Match news: look for symbol or name in title/summary/drivers
+    const matched = financeItems.filter(item => {
+      const haystack = ((item.title || '') + ' ' + (item.summary || '') + ' ' + JSON.stringify(item.drivers || [])).toLowerCase();
+      return haystack.includes(sym.toLowerCase().replace(/[^a-z0-9]/g, ''))
+        || name.toLowerCase().split(' ').slice(0, 2).some(word => word.length > 3 && haystack.includes(word));
+    }).slice(0, 2);
+
+    const sign = pct >= 0 ? '+' : '';
+    const newsHtml = matched.length ? matched.map(item => `
       <div>
-        <strong>${esc(q.name || q.symbol)}</strong>
-        <div class="muted">${esc(q.symbol)}${q.currency ? ` | ${esc(q.currency)}` : ''}</div>
+        <div class="driver-headline">${item.url
+          ? `<a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.title)}</a>`
+          : esc(item.title)}</div>
+        <div class="driver-meta">${esc(item.source_name || '')} ${item.published_at ? '· ' + relTime(item.published_at) : ''}</div>
+      </div>`).join('')
+      : `<div class="driver-none">No clear driver yet</div>`;
+
+    return `<div class="driver-item">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div><span class="driver-asset">${esc(name)}</span> <span class="market-ticker">${esc(sym)}</span></div>
+        <span class="market-badge ${cls}">${sign}${fmtMarketNum(pct, 2)}%</span>
       </div>
-      <span class="market-chip ${moveClass}">${pct >= 0 ? '+' : ''}${fmtMarketNum(pct, 2)}%</span>
-    </div>
-    <div class="market-price">${fmtMarketNum(q.price, 4)}</div>
-    <div class="market-change ${moveClass}">${ch >= 0 ? '+' : ''}${fmtMarketNum(ch, 4)} (${pct >= 0 ? '+' : ''}${fmtMarketNum(pct, 2)}%)</div>
-    <div class="market-focus-chart">${buildSparklineSvg(series)}</div>
-    <div class="market-stat-grid">
-      <div class="small-row"><span>30d range</span><strong>${min == null || max == null ? 'n/a' : `${fmtMarketNum(min,2)} -> ${fmtMarketNum(max,2)}`}</strong></div>
-      <div class="small-row"><span>Volatility</span><strong>${volPct == null ? 'n/a' : `${fmtMarketNum(volPct,1)}%`}</strong></div>
-      <div class="small-row"><span>Trend</span><strong class="market-change ${trendClass}">${trendPct == null ? 'n/a' : `${trendPct >= 0 ? '+' : ''}${fmtMarketNum(trendPct,2)}%`}</strong></div>
-      <div class="small-row"><span>State</span><strong>${esc(q.market_state || 'n/a')}</strong></div>
-    </div>
-  `;
+      ${newsHtml}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = rendered || '<div class="driver-none">No drivers found.</div>';
 }
+
+// ── Asset Detail Modal ────────────────────────────────────────
+
+function openMktDetail(symbol) {
+  _mktDetailSymbol = symbol;
+  _mktDetailRange = '1mo';
+  renderMktDetail();
+  const overlay = document.getElementById('mkt-detail-overlay');
+  if (overlay) { overlay.style.display = 'flex'; requestAnimationFrame(() => overlay.classList.add('open')); }
+}
+
+function closeMktDetail(event) {
+  const overlay = document.getElementById('mkt-detail-overlay');
+  if (!overlay) return;
+  // close only when clicking the backdrop, not the panel
+  if (event && event.target !== overlay) return;
+  overlay.classList.remove('open');
+  setTimeout(() => { overlay.style.display = 'none'; }, 210);
+}
+
+function renderMktDetail() {
+  const contentEl = document.getElementById('mkt-detail-content');
+  if (!contentEl || !_mktDetailSymbol) return;
+  const sym = _mktDetailSymbol;
+  const entry = getMarketDecoratedEntry(sym);
+  const name = assetName(sym, entry?.q?.name || sym);
+
+  if (!entry) {
+    contentEl.innerHTML = `<div class="mkt-detail-header">
+      <div class="mkt-detail-title"><div class="mkt-detail-name">${esc(name)}</div><div class="mkt-detail-ticker">${esc(sym)}</div></div>
+      <button class="sm" onclick="closeMktDetail({target:document.getElementById('mkt-detail-overlay')})">Close</button>
+    </div>
+    <div class="muted">No data loaded for this asset. Add it to your watchlist or refresh.</div>`;
+    return;
+  }
+
+  const { q, series, pct, ch, min, max, volPct, trendPct } = entry;
+  const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+  const sign = pct >= 0 ? '+' : '';
+  const ranges = [
+    { key: '5d', label: '5D' },
+    { key: '1mo', label: '1M' },
+    { key: '3mo', label: '3M' },
+    { key: '6mo', label: '6M' },
+    { key: '1y', label: '1Y' },
+  ];
+  const rangeButtons = ranges.map(r =>
+    `<button class="mkt-tr-btn ${_mktDetailRange === r.key ? 'active' : ''}" onclick="setMktDetailRange('${esc(sym)}','${esc(r.key)}')">${esc(r.label)}</button>`
+  ).join('');
+
+  contentEl.innerHTML = `
+    <div class="mkt-detail-header">
+      <div class="mkt-detail-title">
+        <div class="mkt-detail-name">${esc(name)}</div>
+        <div class="mkt-detail-ticker">${esc(q.symbol)}${q.currency ? ' · ' + esc(q.currency) : ''}</div>
+      </div>
+      <button class="sm" onclick="closeMktDetail({target:document.getElementById('mkt-detail-overlay')})">Close</button>
+    </div>
+    <div class="mkt-detail-price-row">
+      <div class="mkt-detail-price">${fmtPrice(q.price)}</div>
+      <span class="market-badge ${cls}">${sign}${fmtMarketNum(pct, 2)}%</span>
+      <span class="market-change ${cls}" style="font-size:13px">${ch >= 0 ? '+' : ''}${fmtMarketNum(ch, 2)} today</span>
+    </div>
+    <div class="mkt-detail-timerange">${rangeButtons}</div>
+    <div class="mkt-detail-chart" id="mkt-detail-chart-wrap">
+      ${series.length >= 2 ? buildSparklineSvg(series, '', pct >= 0) : '<div class="muted">No chart data.</div>'}
+    </div>
+    <div class="mkt-detail-stats">
+      <div class="mkt-stat-box"><div class="mkt-stat-label">30d Low</div><div class="mkt-stat-val">${min != null ? fmtPrice(min) : '—'}</div></div>
+      <div class="mkt-stat-box"><div class="mkt-stat-label">30d High</div><div class="mkt-stat-val">${max != null ? fmtPrice(max) : '—'}</div></div>
+      <div class="mkt-stat-box"><div class="mkt-stat-label">Volatility</div><div class="mkt-stat-val">${volPct != null ? fmtMarketNum(volPct, 1) + '%' : '—'}</div></div>
+      <div class="mkt-stat-box"><div class="mkt-stat-label">Trend</div><div class="mkt-stat-val market-change ${trendPct > 0 ? 'up' : trendPct < 0 ? 'down' : 'flat'}">${trendPct != null ? (trendPct >= 0 ? '+' : '') + fmtMarketNum(trendPct, 2) + '%' : '—'}</div></div>
+      <div class="mkt-stat-box"><div class="mkt-stat-label">Market</div><div class="mkt-stat-val">${esc(q.market_state || '—')}</div></div>
+      <div class="mkt-stat-box"><div class="mkt-stat-label">Data points</div><div class="mkt-stat-val">${series.length}</div></div>
+    </div>
+    <div id="mkt-detail-news-section"><div class="muted" style="font-size:12px">Loading news…</div></div>
+  `;
+  // load news async
+  loadMktDetailNews(sym, name);
+}
+
+async function loadMktDetailNews(sym, name) {
+  const el = document.getElementById('mkt-detail-news-section');
+  if (!el) return;
+  try {
+    const digest = await fetch(`${API}/digest/morning?total_limit=30&per_category=10`).then(r => r.json());
+    const items = (digest?.by_category?.Finance || []).filter(item => {
+      const h = ((item.title || '') + ' ' + (item.summary || '') + ' ' + JSON.stringify(item.drivers || [])).toLowerCase();
+      return h.includes(sym.toLowerCase().replace(/[^a-z0-9]/g, ''))
+        || name.toLowerCase().split(' ').slice(0, 2).some(w => w.length > 3 && h.includes(w));
+    }).slice(0, 4);
+    if (!items.length) {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = `<div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Related News</div>
+      <div class="mkt-detail-news">${items.map(item => `
+        <div class="mkt-news-item">
+          <div class="mkt-news-title">${item.url
+            ? `<a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.title)}</a>`
+            : esc(item.title)}</div>
+          <div class="mkt-news-meta">${esc(item.source_name || '')}${item.published_at ? ' · ' + relTime(item.published_at) : ''}</div>
+        </div>`).join('')}
+      </div>`;
+  } catch(_) { el.innerHTML = ''; }
+}
+
+async function setMktDetailRange(sym, range) {
+  _mktDetailRange = range;
+  // update buttons immediately
+  document.querySelectorAll('.mkt-tr-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === {
+      '5d':'5D','1mo':'1M','3mo':'3M','6mo':'6M','1y':'1Y'
+    }[range]);
+  });
+  // fetch fresh history for this range
+  const chartWrap = document.getElementById('mkt-detail-chart-wrap');
+  if (chartWrap) chartWrap.innerHTML = '<div class="muted" style="font-size:12px;padding:8px 0">Loading…</div>';
+  try {
+    const params = new URLSearchParams({ symbols: sym, history_range: range, history_interval: range === '5d' ? '30m' : '1d' });
+    const data = await fetch(`${API}/markets/overview?${params}`).then(r => r.json());
+    const hist = (data.history?.[sym] || []).map(p => Number(p.close)).filter(v => Number.isFinite(v));
+    const entry = getMarketDecoratedEntry(sym);
+    const isUp = entry ? entry.pct >= 0 : hist.length > 1 ? hist[hist.length-1] >= hist[0] : true;
+    if (chartWrap) chartWrap.innerHTML = hist.length >= 2 ? buildSparklineSvg(hist, '', isUp) : '<div class="muted">No data for this range.</div>';
+  } catch(_) {
+    if (chartWrap) chartWrap.innerHTML = '<div class="muted">Chart unavailable.</div>';
+  }
+}
+
+// ── Main: loadMarkets ─────────────────────────────────────────
 
 async function loadMarkets() {
-  const symbolsInput = document.getElementById('market-symbols');
   const metaEl = document.getElementById('market-meta');
   const errEl = document.getElementById('market-errors');
-  const gridEl = document.getElementById('market-grid');
-  const heroEl = document.getElementById('market-hero');
-  const spotlightEl = document.getElementById('market-spotlight');
-  const focusEl = document.getElementById('market-focus');
-  if (!symbolsInput || !metaEl || !gridEl || !heroEl || !spotlightEl || !focusEl) return;
   if (errEl) errEl.innerHTML = '';
 
-  if (!symbolsInput.value.trim()) symbolsInput.value = DEFAULT_MARKET_SYMBOLS;
-  const symbols = symbolsInput.value.trim();
+  // Build watchlist from storage
+  _wlSymbols = loadWatchlistSymbols();
 
-  heroEl.innerHTML = '<div class="market-hero-card"><strong>Scanning market tape</strong><span class="muted">Building movers, volatility and spotlight summaries.</span></div>';
-  spotlightEl.innerHTML = '';
-  focusEl.innerHTML = '<div class="tool-minor">Market Focus</div><strong>Loading focus panel</strong><div class="muted">Core assets and the selected instrument will appear here.</div>';
-  renderMarketPresetRail();
-  gridEl.innerHTML = '<div class="empty">Loading...</div>';
+  // Collect all needed symbols (watchlist + overview)
+  const allSymbols = [...new Set([
+    ..._wlSymbols,
+    ...MKT_OVERVIEW_SECTIONS.flatMap(s => s.symbols),
+  ])].slice(0, 30);
+
+  // Show loading states
+  const wlEl = document.getElementById('wl-grid');
+  if (wlEl) wlEl.innerHTML = '<div class="wl-empty">Loading…</div>';
+
   try {
-    const params = new URLSearchParams();
-    if (symbols) params.set('symbols', symbols);
-    params.set('history_range', '1mo');
-    params.set('history_interval', '1d');
+    const params = new URLSearchParams({
+      symbols: allSymbols.join(','),
+      history_range: '1mo',
+      history_interval: '1d',
+    });
+    const data = await fetch(`${API}/markets/overview?${params}`).then(r => r.json());
 
-    const data = await fetch(`${API}/markets/overview?${params}`).then(r=>r.json());
-
-    const warnings = (data.errors?.length || 0) + (data.history_errors?.length || 0);
-    const cacheTag = data.cached ? ' | cache' : '';
-    const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
-    const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
-    metaEl.textContent = `${data.count||0} quotes | ${data.history_range || '1mo'} trend | updated ${relTime(data.generated_at)}` + cacheTag + staleTag + asOfTag + (warnings ? ` | WARN ${warnings}` : '');
+    // Meta bar
+    if (metaEl) {
+      const stale = data.stale ? ` · stale ${Math.round((data.stale_age_seconds || 0) / 60)}m` : '';
+      const warn = (data.errors?.length || 0) + (data.history_errors?.length || 0);
+      metaEl.textContent = `Updated ${relTime(data.generated_at)}${stale}${warn ? ' · ' + warn + ' warnings' : ''}`;
+    }
     if (errEl) {
-      const allErrs = [...(data.errors || []), ...(data.history_errors || [])].slice(0, 6);
+      const allErrs = [...(data.errors || []), ...(data.history_errors || [])].slice(0, 4);
       errEl.innerHTML = allErrs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
     }
 
+    // Decorate all quotes
     const quotes = data.quotes || [];
     const history = data.history || {};
-    gridEl.innerHTML = '';
-    if (!quotes.length) {
-      heroEl.innerHTML = '';
-      gridEl.innerHTML = '<div class="empty">No market data.</div>';
-      return;
-    }
-
-    const decorated = quotes.map(q => {
+    _marketDecorated = quotes.map(q => {
       const series = (history[q.symbol] || []).map(p => Number(p.close)).filter(v => Number.isFinite(v));
       const pct = Number(q.change_pct || 0);
       const ch = Number(q.change || 0);
@@ -2553,99 +3002,16 @@ async function loadMarkets() {
       const trendPct = pctChangeFromSeries(series);
       return { q, series, pct, ch, max, min, volPct, trendPct };
     });
-    _marketDecorated = decorated;
 
-    const topUp = [...decorated].sort((a, b) => b.pct - a.pct)[0];
-    const topDown = [...decorated].sort((a, b) => a.pct - b.pct)[0];
-    const hottest = [...decorated].sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))[0];
-    const mostVolatile = [...decorated].sort((a, b) => (b.volPct || -Infinity) - (a.volPct || -Infinity))[0];
+    renderWatchlist();
+    renderMarketOverview();
+    renderHotRightNow();
+    renderWhyItMoves(); // async, non-blocking
 
-    const renderHeroCard = (label, entry, detailLabel, value, cls='flat') => entry ? `
-      <div class="market-hero-card">
-        <div class="tool-minor">${esc(label)}</div>
-        <strong>${esc(entry.q.name || entry.q.symbol)}</strong>
-        <div class="muted">${esc(entry.q.symbol)}</div>
-        <div class="market-change ${cls}">${value}</div>
-        <div class="tool-minor">${esc(detailLabel)}</div>
-      </div>
-    ` : '';
-
-    heroEl.innerHTML = [
-      renderHeroCard('Hot Right Now', hottest, 'largest absolute daily move', hottest ? `${hottest.pct >= 0 ? '+' : ''}${fmtMarketNum(hottest.pct, 2)}%` : 'n/a', hottest?.pct > 0 ? 'up' : hottest?.pct < 0 ? 'down' : 'flat'),
-      renderHeroCard('Risk-On Leader', topUp, 'strongest daily gain', topUp ? `${fmtMarketNum(topUp.pct, 2)}%` : 'n/a', 'up'),
-      renderHeroCard('Risk-Off Leader', topDown, 'largest daily drop', topDown ? `${fmtMarketNum(topDown.pct, 2)}%` : 'n/a', 'down'),
-      renderHeroCard('Volatility Leader', mostVolatile, 'widest 30d range', mostVolatile?.volPct != null ? `${fmtMarketNum(mostVolatile.volPct, 1)}% range` : 'n/a', mostVolatile?.trendPct > 0 ? 'up' : mostVolatile?.trendPct < 0 ? 'down' : 'flat'),
-    ].join('');
-
-    if (!_marketFocusSymbol || !getMarketDecoratedEntry(_marketFocusSymbol)) {
-      _marketFocusSymbol = (getMarketDecoratedEntry('EUNL.DE')?.q?.symbol) || (hottest?.q?.symbol) || (decorated[0]?.q?.symbol) || '';
-    }
-    renderMarketFocus();
-    renderMarketPresetRail();
-
-    const spotlight = [...decorated]
-      .sort((a, b) => ((Math.abs(b.pct) * 1.6) + (b.volPct || 0)) - ((Math.abs(a.pct) * 1.6) + (a.volPct || 0)))
-      .slice(0, 4);
-
-    spotlightEl.innerHTML = spotlight.map(({ q, series, pct, volPct, trendPct, min, max }) => {
-      const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
-      const trendCls = trendPct == null ? 'flat' : (trendPct > 0 ? 'up' : (trendPct < 0 ? 'down' : 'flat'));
-      return `
-        <div class="market-card interactive" onclick="setMarketFocus('${esc(q.symbol)}')">
-          <div class="diag-head">
-            <strong>${esc(q.name || q.symbol)}</strong>
-            <span class="market-chip ${cls}">${pct >= 0 ? '+' : ''}${fmtMarketNum(pct, 2)}%</span>
-          </div>
-          <div class="muted">${esc(q.symbol)}${q.currency ? ` | ${esc(q.currency)}` : ''}</div>
-          ${buildSparklineSvg(series, 'sparkline-muted')}
-          <div class="market-chip-row">
-            <span class="market-chip ${trendCls}">30d ${trendPct == null ? 'n/a' : `${trendPct >= 0 ? '+' : ''}${fmtMarketNum(trendPct, 2)}%`}</span>
-            <span class="market-chip">${volPct == null ? 'range n/a' : `${fmtMarketNum(volPct, 1)}% range`}</span>
-            <span class="market-chip">${min == null || max == null ? 'band n/a' : `${fmtMarketNum(min, 2)} -> ${fmtMarketNum(max, 2)}`}</span>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    decorated.forEach(({ q, ch, pct, series, min, max, volPct }) => {
-      const cls = ch > 0 ? 'up' : (ch < 0 ? 'down' : 'flat');
-      const trendPct = pctChangeFromSeries(series);
-      const trendCls = trendPct == null ? 'flat' : (trendPct > 0 ? 'up' : (trendPct < 0 ? 'down' : 'flat'));
-
-      const card = document.createElement('div');
-      card.className = 'market-card interactive';
-      card.onclick = () => setMarketFocus(q.symbol);
-      card.innerHTML = `
-        <div class="diag-head">
-          <strong>${esc(q.name || q.symbol)}</strong>
-          <span class="market-chip ${cls}">${pct>=0?'+':''}${fmtMarketNum(pct,2)}%</span>
-        </div>
-        <div class="muted">${esc(q.symbol)}${q.currency ? ` | ${esc(q.currency)}` : ''}${q.market_state ? ` | ${esc(q.market_state)}` : ''}</div>
-        <div class="market-price">${fmtMarketNum(q.price, 4)}</div>
-        <div class="market-change ${cls}">${ch>=0?'+':''}${fmtMarketNum(ch,4)} (${pct>=0?'+':''}${fmtMarketNum(pct,2)}%)</div>
-        <div class="market-stat-grid">
-          <div class="small-row"><span>30d Range</span><strong>${min == null || max == null ? 'n/a' : `${fmtMarketNum(min,2)} -> ${fmtMarketNum(max,2)}`}</strong></div>
-          <div class="small-row"><span>Volatility</span><strong>${volPct == null ? 'n/a' : `${fmtMarketNum(volPct,1)}%`}</strong></div>
-        </div>
-        <div class="chart-wrap sparkline-muted">
-          ${buildSparklineSvg(series)}
-          <div class="sparkline-label">
-            <span>30d trend</span>
-            <span class="market-change ${trendCls}">${trendPct == null ? 'n/a' : `${trendPct >= 0 ? '+' : ''}${fmtMarketNum(trendPct,2)}%`}</span>
-          </div>
-        </div>
-        <div class="actions">
-          <span class="tool-minor">${series.length ? `${series.length} datapoints` : 'no history'}</span>
-        </div>
-      `;
-      gridEl.appendChild(card);
-    });
   } catch (e) {
     _marketDecorated = [];
-    heroEl.innerHTML = '';
-    spotlightEl.innerHTML = '';
-    focusEl.innerHTML = '<div class="tool-minor">Market Focus</div><strong>Market feed unavailable</strong><div class="muted">Refresh to retry loading the overview and focus board.</div>';
-    gridEl.innerHTML = `<div class="empty err-msg">Market API failed: ${esc(e.message)}</div>`;
+    if (wlEl) wlEl.innerHTML = `<div class="wl-empty">Could not load market data: ${esc(e.message)}</div>`;
+    if (metaEl) metaEl.textContent = 'Market data unavailable';
   }
 }
 
@@ -2664,8 +3030,6 @@ let _f1SeasonKey = 'current';
 let _f1Weekend = null;
 let _f1SessionTimer = null;
 let _f1ClockTicker = null;
-let _marketDecorated = [];
-let _marketFocusSymbol = '';
 let _warframeStaticCache = { platform: '', worldstate: null, top_sells: [] };
 let _warframeHotItems = [];
 let _warframeHotExpanded = false;

@@ -2924,7 +2924,7 @@ async function loadMktDetailNews(sym, name) {
           <div class="mkt-news-meta">${esc(item.source_name || '')}${item.published_at ? ' · ' + relTime(item.published_at) : ''}</div>
         </div>`).join('')}
       </div>`;
-  } catch(_) { el.innerHTML = ''; }
+  } catch(_) { el.innerHTML = '<div class="muted" style="font-size:12px">News unavailable.</div>'; }
 }
 
 async function setMktDetailRange(sym, range) {
@@ -2961,10 +2961,15 @@ async function loadMarkets() {
   _wlSymbols = loadWatchlistSymbols();
 
   // Collect all needed symbols (watchlist + overview)
-  const allSymbols = [...new Set([
+  const _allSymbolsFull = [...new Set([
     ..._wlSymbols,
     ...MKT_OVERVIEW_SECTIONS.flatMap(s => s.symbols),
-  ])].slice(0, 30);
+  ])];
+  const allSymbols = _allSymbolsFull.slice(0, 30);
+  if (_allSymbolsFull.length > 30 && errEl) {
+    const dropped = _allSymbolsFull.slice(30);
+    errEl.innerHTML += `<span class="warn-item">Symbol limit: ${dropped.join(', ')} not loaded (max 30)</span>`;
+  }
 
   // Show loading states
   const wlEl = document.getElementById('wl-grid');
@@ -4278,7 +4283,8 @@ async function loadF1(options = {}) {
     const cacheTag = data.cached ? ' | cache' : '';
     const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
     const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
-    metaEl.textContent = `${data.standings_count || 0} drivers | overview ${data.source || 'unknown'} | weekend ${data.weekend_source || 'unknown'} | updated ${relTime(data.generated_at)}${cacheTag} | local cache${staleTag}${asOfTag}${cachedAge > F1_OVERVIEW_FRESH_MS && !force ? ' | refreshing' : ''}${errInfo}`;
+    const refreshTag = cachedAge > F1_OVERVIEW_FRESH_MS && !force ? ' · refreshing' : '';
+    metaEl.textContent = `${data.standings_count || 0} drivers · ${relTime(data.generated_at)} (local cache${staleTag ? ', server ' + staleTag.replace(' | stale ','').replace(/[()]/g,'') + ' stale' : ''})${asOfTag.replace(' | data ',', as of ')}${refreshTag}${errInfo}`;
     if (errEl) {
       const errs = [...new Set((data.errors || []).map(e => String(e || '').trim()).filter(Boolean))].slice(0, 6);
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
@@ -4327,7 +4333,7 @@ async function loadF1(options = {}) {
     const cacheTag = data.cached ? ' | cache' : '';
     const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
     const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
-    metaEl.textContent = `${data.standings_count || 0} drivers | overview ${data.source || 'unknown'} | weekend ${data.weekend_source || 'unknown'} | updated ${relTime(data.generated_at)}${cacheTag}${staleTag}${asOfTag}${errInfo}`;
+    metaEl.textContent = `${data.standings_count || 0} drivers · ${relTime(data.generated_at)}${data.stale ? ', server data stale ' + Math.max(0, Math.round((data.stale_age_seconds || 0) / 60)) + 'm' : ''}${asOfTag.replace(' | data ',', as of ')}${errInfo}`;
     if (errEl) {
       const errs = [...new Set((data.errors || []).map(e => String(e || '').trim()).filter(Boolean))].slice(0, 6);
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
@@ -4491,17 +4497,35 @@ async function applyF1OverviewData(data, preferredSession, options = {}) {
 
   const latestRace = data.latest_race;
   if (latestRace && (latestRace.results || []).length) {
-    const rows = (latestRace.results || []).slice(0, 6).map(r => `
-      <div class="small-row">
-        <span>P${esc(r.position || '?')} ${esc(r.driver || 'Driver')}</span>
-        <span class="muted">${esc(r.status || r.time || '')}</span>
-      </div>
-    `).join('');
-    lastRaceEl.innerHTML = `
-      <h2 style="margin:0 0 6px">Last Race Snapshot</h2>
-      <div class="muted">${esc(latestRace.race_name || '')} (${esc(latestRace.circuit || '-')})</div>
-      <div class="small-list">${rows}</div>
-    `;
+    const allResults = latestRace.results || [];
+    const buildLastRace = (expanded) => {
+      const shown = expanded ? allResults : allResults.slice(0, 6);
+      const rows = shown.map(r => `
+        <div class="small-row">
+          <span>P${esc(r.position || '?')} ${esc(r.driver || 'Driver')}</span>
+          <span class="muted">${esc(r.status || r.time || '')}</span>
+        </div>
+      `).join('');
+      const toggleBtn = allResults.length > 6
+        ? `<button class="sm" style="margin-top:6px" onclick="this.closest('.stat-card')._f1RaceExpanded=!this.closest('.stat-card')._f1RaceExpanded;applyF1LastRace(window._f1LastRaceData)">
+            ${expanded ? 'Show less' : `Show all ${allResults.length} results`}
+           </button>`
+        : '';
+      lastRaceEl.innerHTML = `
+        <h2 style="margin:0 0 6px">Last Race Snapshot</h2>
+        <div class="muted">${esc(latestRace.race_name || '')} (${esc(latestRace.circuit || '-')})</div>
+        <div class="small-list">${rows}</div>
+        ${toggleBtn}
+      `;
+    };
+    window._f1LastRaceData = data;
+    window.applyF1LastRace = (d) => {
+      const race = d?.latest_race;
+      if (!race) return;
+      const expanded = !!lastRaceEl._f1RaceExpanded;
+      buildLastRace(expanded);
+    };
+    buildLastRace(false);
   } else {
     lastRaceEl.innerHTML = '<div class="muted">No completed race data yet.</div>';
   }
@@ -4908,7 +4932,8 @@ async function loadWarframe(options = {}) {
   const cachedOverview = force ? null : readWarframeOverviewCache(cacheKey);
   const cachedAge = cachedOverview?.data ? Date.now() - Number(cachedOverview.ts || 0) : Number.POSITIVE_INFINITY;
   const canUseClientCache = !!(cachedOverview?.data && cachedAge <= WARFRAME_OVERVIEW_STALE_MS);
-  const samePlatformContext = _warframeStaticCache.platform === platform && (_warframeStaticCache.worldstate || (_warframeStaticCache.top_sells || []).length);
+  const cachedPlatform = _warframeStaticCache.platform || 'pc';
+  const samePlatformContext = cachedPlatform === platform && (_warframeStaticCache.worldstate || (_warframeStaticCache.top_sells || []).length);
   const hasWatchlistContent = !!document.getElementById('wf-watchlist')?.children.length;
   const hasPulseContent = !!document.getElementById('wf-demand')?.children.length;
   const hasRadarContent = !!document.getElementById('wf-profit')?.children.length;
@@ -5014,14 +5039,15 @@ async function loadWarframePulse() {
         volume_total: Math.max(Number(existing.volume_total || 0), Number(item.volume_total || 0)),
       });
     });
-    const recos = [...recoMap.values()]
-      .map(item => {
+    const scoredItems = [...recoMap.values()].map(item => {
         const demandScore = Number(item.demand_score || 0);
         const liqScore = Number(item.liquidity_score || 0);
         const move = Number(item.price_change_pct || 0);
         const score = (demandScore * 1.35) + (liqScore * 1.05) + Math.max(move, -8) + Math.min(Number(item.volume_total || 0) / 12, 40);
         return { ...item, farm_score: score };
-      })
+      });
+    const dumpItems = scoredItems.filter(item => String(item.signal || 'watch') === 'dump');
+    const recos = scoredItems
       .filter(item => String(item.signal || 'watch') !== 'dump')
       .sort((a, b) => Number(b.farm_score || 0) - Number(a.farm_score || 0))
       .slice(0, 4);
@@ -5051,6 +5077,12 @@ async function loadWarframePulse() {
         </div>
       `;
     }).join('') : '<div class="muted">No clear farm recommendation yet. More history will make this sharper.</div>';
+    if (dumpItems.length) {
+      farmEl.innerHTML += `<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);font-size:12px;color:#f87171">
+        <strong style="display:block;margin-bottom:3px">Avoid right now:</strong>
+        ${dumpItems.map(i => `<span style="margin-right:8px">${esc(i.name || 'Item')} ${warframeSignalChip(i.signal)}</span>`).join('')}
+      </div>`;
+    }
     _warframeDemandItems = demand;
     _warframeLiquidityItems = liquidity;
     _warframeSignalItems = signals;

@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Environment
+.env
+backend/.env
+
+# Logs
+*.log
+error.log
+debug.log
+
+# Local OS / editor files
+.DS_Store
+Thumbs.db

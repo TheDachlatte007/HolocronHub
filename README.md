@@ -12,6 +12,10 @@ HolocronHub is a local single-user dashboard for curated AI tools, home network 
 - JSON-based local data store
 - FastAPI backend API
 
+## Status
+- Work in progress
+- Early public version
+
 ## Run Local
 
 ### Backend + UI (single port)
@@ -87,4 +91,22 @@ Notes:
 - n8n integration
 - Workflow execution + queue
 - Provider adapters
+
+---
+## Support
+
+If you find this project useful and want to support development:
+
+☕ Ko-fi: https://ko-fi.com/thedachlatte007
+
+Your support helps with development, testing, and maintenance.
+
+---
+## Legal / Disclaimer
+
+This project is provided "as is", without warranty of any kind.
+
+HolocronHub may integrate with or display third-party data, images, or metadata. All respective trademarks, images, and content remain the property of their respective owners.
+
+Users are responsible for ensuring their usage complies with applicable laws and the terms of any third-party services they connect to.
 

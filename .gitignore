@@ -1,7 +1,19 @@
 # Local secrets/runtime state
+.env
+stack.env
 backend/.env
 data/settings.json
 data/saved_items.json
 data/schedule.json
 data/warframe_watchlist.json
 data/warframe_market_history.json
+__pycache__/
+backend/__pycache__/
+*.log
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.DS_Store
+Thumbs.db
+.playwright-cli/
+.claude/

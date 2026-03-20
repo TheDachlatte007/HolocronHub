@@ -1,19 +1,21 @@
-# Settings Page Notes (v1 scope add-on)
+# Settings Page Notes (v1.2)
 
 ## Purpose
-Simple local settings to control UX and source behavior without risky auto-execution.
+Central configuration page for UX, feed behavior, ingest scheduling, and API/model credentials.
 
-## v1 fields
-- default_category (AI/Finance/Gaming/Warframe)
-- show_disabled_sources (bool)
-- refresh_interval_minutes (int)
-- digest_mode (off/daily/twice)
-- language (DE/EN)
+## Current sections
+- General: language, default feed category, show disabled sources
+- Feed & Digest: refresh interval, digest mode
+- Ingest: enable schedule, interval hours, run at startup
+- API: OpenClaw model, Marketaux/Finnhub/Alpha Vantage keys
 
 ## storage
-- Frontend localStorage first
-- optional backend config file in v1.1
+- Backend file: `data/settings.json`
+- Schedule remains in: `data/schedule.json`
+- Frontend keeps a local UX cache for fallback (`localStorage`)
 
-## safety
-- no secret keys in settings page
-- key management remains env-based
+## behavior
+- `GET /api/settings` returns unified settings payload (including schedule + next run)
+- `PATCH /api/settings` updates partial sections and applies env vars at runtime
+- API keys can be managed from UI (self-hosted/private use)
+

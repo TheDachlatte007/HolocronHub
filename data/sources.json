@@ -272,5 +272,125 @@
       "politics",
       "eu"
     ]
+  },
+  {
+    "id": "ai-huggingface-blog",
+    "name": "Hugging Face Blog",
+    "category": "AI",
+    "type": "rss",
+    "url": "https://huggingface.co/blog/feed.xml",
+    "enabled": true,
+    "trust_weight": 0.82,
+    "tags": [
+      "ai",
+      "models",
+      "opensource"
+    ]
+  },
+  {
+    "id": "ai-venturebeat-ai",
+    "name": "VentureBeat AI",
+    "category": "AI",
+    "type": "rss",
+    "url": "https://venturebeat.com/category/ai/feed/",
+    "enabled": true,
+    "trust_weight": 0.74,
+    "tags": [
+      "ai",
+      "industry",
+      "startup"
+    ]
+  },
+  {
+    "id": "ai-arxiv-cs-ai",
+    "name": "arXiv cs.AI",
+    "category": "AI",
+    "type": "rss",
+    "url": "https://arxiv.org/rss/cs.AI",
+    "enabled": true,
+    "trust_weight": 0.86,
+    "tags": [
+      "ai",
+      "research",
+      "papers"
+    ]
+  },
+  {
+    "id": "gaming-polygon",
+    "name": "Polygon Gaming",
+    "category": "Gaming",
+    "type": "rss",
+    "url": "https://www.polygon.com/rss/index.xml",
+    "enabled": true,
+    "trust_weight": 0.7,
+    "tags": [
+      "gaming",
+      "news"
+    ]
+  },
+  {
+    "id": "gaming-motorsport-f1",
+    "name": "Motorsport F1",
+    "category": "Gaming",
+    "type": "rss",
+    "url": "https://www.motorsport.com/rss/f1/news/",
+    "enabled": true,
+    "trust_weight": 0.78,
+    "tags": [
+      "f1",
+      "motorsport"
+    ]
+  },
+  {
+    "id": "gaming-racefans-f1",
+    "name": "RaceFans F1",
+    "category": "Gaming",
+    "type": "rss",
+    "url": "https://www.racefans.net/feed/",
+    "enabled": true,
+    "trust_weight": 0.76,
+    "tags": [
+      "f1",
+      "analysis"
+    ]
+  },
+  {
+    "id": "warframe-reddit",
+    "name": "Reddit r/Warframe",
+    "category": "Warframe",
+    "type": "rss",
+    "url": "https://www.reddit.com/r/Warframe/.rss",
+    "enabled": true,
+    "trust_weight": 0.62,
+    "tags": [
+      "warframe",
+      "community"
+    ]
+  },
+  {
+    "id": "finance-yahoo-markets",
+    "name": "Yahoo Finance Markets",
+    "category": "Finance",
+    "type": "rss",
+    "url": "https://finance.yahoo.com/news/rssindex",
+    "enabled": true,
+    "trust_weight": 0.76,
+    "tags": [
+      "finance",
+      "markets"
+    ]
+  },
+  {
+    "id": "finance-investopedia",
+    "name": "Investopedia",
+    "category": "Finance",
+    "type": "rss",
+    "url": "https://www.investopedia.com/feedbuilder/feed/getfeed/?feedName=rss_headline",
+    "enabled": true,
+    "trust_weight": 0.72,
+    "tags": [
+      "finance",
+      "education"
+    ]
   }
 ]

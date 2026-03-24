@@ -2413,18 +2413,19 @@ async function loadDigest() {
   try {
     const data = await fetch(`${API}/digest/morning?total_limit=15&per_category=4`).then(r=>r.json());
     document.getElementById('digest-meta').textContent=
-      `${data.selected_count} core items | ${data.tldr_count||0} TLDR | ${data.breaking_count} breaking | ${relTime(data.generated_at)}`;
+      `${data.selected_count} core items | ${data.tldr_count||0} TLDR picks | ${data.breaking_count} breaking | ${relTime(data.generated_at)}`;
 
     const fs = data.finance_summary;
     let html='';
     const newsletters = data.by_newsletter || {};
     const newsletterNames = Object.keys(newsletters);
+    const tldrCards = [];
     if (newsletterNames.length) {
       html += `<div class="newsletter-panel">
         <div class="newsletter-panel-head">
           <div>
             <h3>TLDR Morning Stack</h3>
-            <p>Curated TLDR reads live only inside the digest, with server-side fallback cache when TLDR is flaky.</p>
+            <p>Curated TLDR reads stay grouped here and are also listed below as clickable AI briefings.</p>
           </div>
           <span class="newsletter-pill">${newsletterNames.length} newsletters</span>
         </div>
@@ -2440,6 +2441,12 @@ async function loadDigest() {
           </div>
           <div class="newsletter-list">`;
         items.forEach(item => {
+          tldrCards.push({
+            ...item,
+            category: 'AI',
+            source_name: item.newsletter_label || item.source_name || name,
+            published_at: item.issue_date || item.published_at,
+          });
           html += `<div class="newsletter-item">
             <a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.title)}</a>
             <div class="muted">${esc(item.reading_time || 'newsletter read')} | ${relTime(item.issue_date || item.published_at)}</div>
@@ -2469,6 +2476,14 @@ async function loadDigest() {
       html+=`</div>`;
     }
     contentEl.innerHTML=html;
+
+    if (tldrCards.length) {
+      const tldrSection=document.createElement('div'); tldrSection.className='digest-section';
+      tldrSection.innerHTML=`<h3>AI Briefings</h3><div class="digest-grid"></div>`;
+      const tldrGrid=tldrSection.querySelector('.digest-grid');
+      tldrCards.forEach(item=>tldrGrid.appendChild(renderFeedItem(item)));
+      contentEl.appendChild(tldrSection);
+    }
 
     for (const cat of ['AI','World','Politics','Gaming','Finance']) {
       const items = (data.by_category||{})[cat]||[];

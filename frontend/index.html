@@ -170,9 +170,24 @@
     .cat-politics{background:#2d1f1f;color:#fca5a5}
 
     /* digest */
-    .digest-section{margin-bottom:20px}
-    .digest-section>h3{font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin:0 0 8px}
-    .digest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px}
+.digest-section{margin-bottom:20px}
+.digest-section>h3{font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin:0 0 8px}
+.digest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px}
+.newsletter-panel{margin-bottom:20px;padding:14px 16px;border:1px solid #22304a;border-radius:16px;background:linear-gradient(180deg,rgba(30,41,59,.92),rgba(15,23,42,.96))}
+.newsletter-panel-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:12px}
+.newsletter-panel-head h3{margin:0;font-size:.8rem;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em}
+.newsletter-panel-head p{margin:4px 0 0;color:#94a3b8;font-size:.84rem}
+.newsletter-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.newsletter-column{padding:12px;border:1px solid #243146;border-radius:14px;background:#0f172a}
+.newsletter-column h4{margin:0 0 10px;font-size:.92rem;color:#e2e8f0}
+.newsletter-meta{display:flex;gap:8px;align-items:center;color:#64748b;font-size:.76rem;margin-bottom:10px;flex-wrap:wrap}
+.newsletter-pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#13233b;color:#93c5fd;border:1px solid #27466f;font-size:.7rem;letter-spacing:.04em;text-transform:uppercase}
+.newsletter-list{display:flex;flex-direction:column;gap:10px}
+.newsletter-item{padding-top:10px;border-top:1px solid #1e293b}
+.newsletter-item:first-child{padding-top:0;border-top:0}
+.newsletter-item a{color:#e2e8f0;font-weight:600;text-decoration:none}
+.newsletter-item a:hover{text-decoration:underline}
+.newsletter-item p{margin:6px 0 0;color:#94a3b8;font-size:.82rem;line-height:1.45}
     .finance-summary{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:14px;margin-bottom:16px}
     .finance-summary h3{font-size:.75rem;color:#6ee7b7;text-transform:uppercase;letter-spacing:.07em;margin:0 0 10px}
     .watchlist-item{padding:8px 0;border-bottom:1px solid #1e293b;display:flex;flex-direction:column;gap:3px}
@@ -438,6 +453,17 @@
     .f1-day-card{background:#101827;border:1px solid #1f2937;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
     .f1-day-list{display:flex;flex-direction:column;gap:6px}
     .f1-day-row{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px}
+    .f1-history-panel{background:linear-gradient(145deg,#0b1220,#101827);border-color:#334b7a}
+    .f1-history-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+    .f1-history-stat{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px}
+    .f1-history-stat strong{font-size:18px;color:#f8fafc}
+    .f1-history-results{display:flex;flex-direction:column;gap:8px}
+    .f1-history-item{background:#0f172a;border:1px solid #1f2937;border-radius:12px;padding:12px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .f1-history-main{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .f1-history-main strong{font-size:14px;color:#f8fafc}
+    .f1-history-copy{font-size:12px;color:#94a3b8;line-height:1.45}
+    .f1-history-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:0 0 auto}
+    .f1-history-actions .pill{white-space:nowrap}
     .wf-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
     .wf-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
@@ -828,6 +854,19 @@
             <div id="f1-race-control" class="small-list"></div>
           </div>
         </div>
+      </div>
+      <div class="stat-card f1-history-panel" style="margin-bottom:10px">
+        <div class="diag-head">
+          <h2 style="margin:0">History Vault</h2>
+          <span id="f1-history-meta" class="tool-minor">Persistent F1 session store</span>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <input id="f1-history-q" placeholder="Search stored sessions, e.g. australia 2025 quali" style="flex:1;min-width:240px" />
+          <button class="primary" onclick="loadF1History({ force: true })">Search</button>
+          <button onclick="openF1CurrentHistoryQuery()">Use top query</button>
+        </div>
+        <div id="f1-history-summary" class="f1-history-summary"></div>
+        <div id="f1-history-results" class="f1-history-results" style="margin-top:10px"></div>
       </div>
       <div class="f1-driver-panels" style="margin-bottom:10px">
         <div id="f1-driver-detail" class="stat-card"></div>
@@ -2374,10 +2413,43 @@ async function loadDigest() {
   try {
     const data = await fetch(`${API}/digest/morning?total_limit=15&per_category=4`).then(r=>r.json());
     document.getElementById('digest-meta').textContent=
-      `${data.selected_count} items | ${data.breaking_count} breaking | ${relTime(data.generated_at)}`;
+      `${data.selected_count} core items | ${data.tldr_count||0} TLDR | ${data.breaking_count} breaking | ${relTime(data.generated_at)}`;
 
     const fs = data.finance_summary;
     let html='';
+    const newsletters = data.by_newsletter || {};
+    const newsletterNames = Object.keys(newsletters);
+    if (newsletterNames.length) {
+      html += `<div class="newsletter-panel">
+        <div class="newsletter-panel-head">
+          <div>
+            <h3>TLDR Morning Stack</h3>
+            <p>Curated TLDR reads live only inside the digest, with server-side fallback cache when TLDR is flaky.</p>
+          </div>
+          <span class="newsletter-pill">${newsletterNames.length} newsletters</span>
+        </div>
+        <div class="newsletter-columns">`;
+      newsletterNames.forEach(name => {
+        const items = newsletters[name] || [];
+        const stale = items.some(item => item.stale);
+        html += `<div class="newsletter-column">
+          <h4>${esc(name)}</h4>
+          <div class="newsletter-meta">
+            <span class="newsletter-pill">${items.length} picks</span>
+            <span>${stale ? 'cached last good' : 'fresh issue'}</span>
+          </div>
+          <div class="newsletter-list">`;
+        items.forEach(item => {
+          html += `<div class="newsletter-item">
+            <a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.title)}</a>
+            <div class="muted">${esc(item.reading_time || 'newsletter read')} | ${relTime(item.issue_date || item.published_at)}</div>
+            <p>${esc(item.summary || '')}</p>
+          </div>`;
+        });
+        html += `</div></div>`;
+      });
+      html += `</div></div>`;
+    }
     if (fs&&(fs.watchlist?.length||fs.top_drivers?.length)) {
       html+=`<div class="finance-summary"><h3>Finance Watchlist</h3>`;
       if (fs.top_drivers?.length) {
@@ -3036,6 +3108,8 @@ let _f1SeasonKey = 'current';
 let _f1Weekend = null;
 let _f1SessionTimer = null;
 let _f1ClockTicker = null;
+let _f1HistoryResults = [];
+let _f1HistorySummary = null;
 let _warframeStaticCache = { platform: '', worldstate: null, top_sells: [] };
 let _warframeHotItems = [];
 let _warframeHotExpanded = false;
@@ -3231,6 +3305,109 @@ async function resolveF1HistorySession(query) {
   } catch {
     return null;
   }
+}
+
+function renderF1HistorySummary(summary) {
+  const el = document.getElementById('f1-history-summary');
+  const metaEl = document.getElementById('f1-history-meta');
+  if (!el) return;
+  _f1HistorySummary = summary || null;
+  if (!summary) {
+    if (metaEl) metaEl.textContent = 'Persistent F1 session store';
+    el.innerHTML = '<div class="muted">History database is waiting for its first stored session.</div>';
+    return;
+  }
+  if (metaEl) metaEl.textContent = `${summary.stored_sessions || 0} stored sessions | ${summary.stored_seasons || 0} seasons`;
+  el.innerHTML = `
+    <div class="f1-history-stat">
+      <span class="tool-minor">Stored sessions</span>
+      <strong>${esc(summary.stored_sessions || 0)}</strong>
+      <span class="muted">Local SQLite history</span>
+    </div>
+    <div class="f1-history-stat">
+      <span class="tool-minor">Seasons</span>
+      <strong>${esc(summary.stored_seasons || 0)}</strong>
+      <span class="muted">Distinct year coverage</span>
+    </div>
+    <div class="f1-history-stat">
+      <span class="tool-minor">Latest sync</span>
+      <strong>${summary.latest_data_as_of ? esc(relTime(summary.latest_data_as_of)) : 'n/a'}</strong>
+      <span class="muted">${summary.latest_data_as_of ? esc(f1FormatDateTime(summary.latest_data_as_of)) : 'No stored session yet'}</span>
+    </div>
+  `;
+}
+
+function renderF1HistoryResults(results, query = '') {
+  const el = document.getElementById('f1-history-results');
+  if (!el) return;
+  _f1HistoryResults = Array.isArray(results) ? results : [];
+  if (!_f1HistoryResults.length) {
+    el.innerHTML = `<div class="muted">${query ? `No stored sessions match "${esc(query)}".` : 'Recent stored sessions will appear here once the history store has data.'}</div>`;
+    return;
+  }
+  el.innerHTML = _f1HistoryResults.map((item, idx) => `
+    <div class="f1-history-item">
+      <div class="f1-history-main">
+        <strong>${esc(item.meeting_name || item.circuit || 'Stored session')} | ${esc(item.session_name || 'Session')}</strong>
+        <div class="f1-history-copy">${esc(item.circuit || item.location || 'Unknown circuit')}${item.country_name ? `, ${esc(item.country_name)}` : ''}</div>
+        <div class="f1-history-copy">Season ${esc(item.year || item.season || '?')}${item.round ? ` • Round ${esc(item.round)}` : ''}${item.date_start ? ` • ${esc(f1FormatDateTime(item.date_start))}` : ''}</div>
+        <div class="f1-track-links">
+          ${item.live ? '<span class="pill" style="background:#14532d;color:#86efac">Live snapshot</span>' : '<span class="pill">Stored session</span>'}
+          <span class="pill">${esc(item.source || 'history_db')}</span>
+          <span class="pill">${esc(item.drivers_count || 0)} drivers</span>
+        </div>
+      </div>
+      <div class="f1-history-actions">
+        <button class="primary" onclick="openF1HistoryResult(_f1HistoryResults[${idx}])">Open</button>
+        <span class="tool-minor">${item.data_as_of ? `Data ${esc(relTime(item.data_as_of))}` : 'Stored locally'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadF1History(options = {}) {
+  const cfg = options && typeof options === 'object' ? options : {};
+  const input = document.getElementById('f1-history-q');
+  const forcedQuery = typeof cfg.query === 'string' ? cfg.query : '';
+  const query = String(forcedQuery || input?.value || '').trim();
+  if (input && typeof cfg.query === 'string' && !cfg.keepInput) input.value = forcedQuery;
+  const resultsEl = document.getElementById('f1-history-results');
+  if (resultsEl && !cfg.background) resultsEl.innerHTML = '<div class="muted">Loading history vault...</div>';
+  try {
+    const summary = await fetchJson(`${API}/f1/history/summary?limit=6`);
+    renderF1HistorySummary(summary);
+    if (query) {
+      const params = new URLSearchParams({ q: query, limit: '10' });
+      const payload = await fetchJson(`${API}/f1/history/search?${params}`);
+      renderF1HistoryResults(payload.results || [], query);
+      return;
+    }
+    renderF1HistoryResults(summary.recent_sessions || [], '');
+  } catch (e) {
+    if (resultsEl) resultsEl.innerHTML = `<div class="err-msg">History vault failed: ${esc(e.message)}</div>`;
+  }
+}
+
+function openF1CurrentHistoryQuery() {
+  const topInput = document.getElementById('f1-season');
+  const historyInput = document.getElementById('f1-history-q');
+  const raw = String(topInput?.value || '').trim();
+  if (historyInput) historyInput.value = raw;
+  void loadF1History({ query: raw });
+}
+
+async function openF1HistoryResult(result) {
+  const archivedSession = makeF1ArchivedSession(result);
+  if (!archivedSession) return;
+  _f1Sessions[String(archivedSession.session_key)] = archivedSession;
+  const family = f1SessionFamily(archivedSession);
+  if (_f1SessionFilter !== 'all' && family !== 'other' && _f1SessionFilter !== family) _f1SessionFilter = family;
+  rememberF1Preferences();
+  renderF1SessionFilters();
+  renderF1SessionPicker();
+  renderF1SessionSummary(archivedSession.session_key);
+  renderF1TrackPanel(_f1Weekend || null);
+  await selectF1Session(archivedSession.session_key, { force: true });
 }
 
 function f1SessionFamily(session) {
@@ -4269,6 +4446,7 @@ async function loadF1(options = {}) {
   _f1BoardMode = String(prefs.board_mode || 'timing');
   const queryInfo = parseF1SeasonQuery(seasonInput.value || 'current');
   const season = queryInfo.season || 'current';
+  const historyQuery = queryInfo.search || ((queryInfo.raw && normalizeTextKey(queryInfo.raw) !== normalizeTextKey(queryInfo.season)) ? queryInfo.raw : '');
   _f1SeasonKey = makeF1OverviewCacheKey(season);
   rememberF1Preferences();
 
@@ -4291,6 +4469,7 @@ async function loadF1(options = {}) {
       errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
     }
     await applyF1OverviewData(data, preferredSession, { background: true, searchQuery: queryInfo.search, rawQuery: queryInfo.raw, preferredSessionKey });
+    await loadF1History({ query: historyQuery, background: true, keepInput: true });
     if (cachedAge <= F1_OVERVIEW_FRESH_MS && !force) return;
   } else {
     _f1Weekend = null;
@@ -4318,6 +4497,8 @@ async function loadF1(options = {}) {
       document.getElementById('f1-live-board').innerHTML = '<div class="muted">Select a session to load timing.</div>';
       document.getElementById('f1-live-focus').innerHTML = '<div class="muted">Pinned driver focus will appear here.</div>';
       document.getElementById('f1-race-control').innerHTML = '<div class="muted">Session race control will appear here.</div>';
+      document.getElementById('f1-history-summary').innerHTML = '<div class="muted">Scanning local history vault...</div>';
+      document.getElementById('f1-history-results').innerHTML = '<div class="muted">Loading stored sessions...</div>';
       document.getElementById('f1-live-meta').textContent = '';
       document.getElementById('f1-session-meta').textContent = '';
     }
@@ -4341,6 +4522,7 @@ async function loadF1(options = {}) {
     }
 
     await applyF1OverviewData(data, preferredSession, { force, searchQuery: queryInfo.search, rawQuery: queryInfo.raw, preferredSessionKey });
+    await loadF1History({ query: historyQuery, background: true, keepInput: true });
   } catch (e) {
     clearF1SessionPolling();
     if (!canUseClientCache) {
@@ -4348,6 +4530,8 @@ async function loadF1(options = {}) {
       standingsEl.innerHTML = `<div class="empty err-msg">F1 API failed: ${esc(e.message)}</div>`;
       nextEl.innerHTML = '';
       phaseEl.innerHTML = '';
+      document.getElementById('f1-history-summary').innerHTML = '';
+      document.getElementById('f1-history-results').innerHTML = '<div class="muted">History vault unavailable while F1 overview failed.</div>';
       weatherEl.innerHTML = '';
       lastRaceEl.innerHTML = '';
       profileEl.innerHTML = '';
@@ -5835,6 +6019,7 @@ async function addSource() {
 document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')loadTools();});
 document.getElementById('feed-q').addEventListener('keydown',e=>{if(e.key==='Enter')loadFeed();});
 document.getElementById('f1-season')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1({ force: true });});
+document.getElementById('f1-history-q')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1History({ force: true });});
 document.addEventListener('keydown', handleToolHubShortcuts);
 
 // ══ settings page ═════════════════════════════════════════════

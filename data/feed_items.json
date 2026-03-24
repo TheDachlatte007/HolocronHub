@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-08T22:21:38.034911+00:00",
+  "generated_at": "2026-03-24T22:41:25.408086+00:00",
   "raw_count": 224,
   "count": 224,
   "unique_count": 224,
@@ -704,6 +704,34 @@
       "finance_signal_score": 62.65,
       "actionability": "watch",
       "actionability_reason": "default-monitor"
+    },
+    {
+      "id": "tldr-tech::4072551250489032674",
+      "title": "Anthropic's Claude Can Now Control Your Computer",
+      "url": "https://www.cnet.com/tech/services-and-software/claude-control-your-computer-to-perform-tasks/?utm_source=tldrnewsletter",
+      "summary": "Claude can now take control of a computer to perform tasks for Claude Pro and Claude Max users on macOS. It can manually perform tasks by typing or moving the cursor and use programs like web browsers, dev tools, and file browsers. The agent will always ask for permission before performing tasks, and users can stop the agent from performing a task at any time. Anthropic has implemented safeguards to minimize risks like prompt injections.",
+      "category": "TLDR",
+      "source_id": "tldr-tech",
+      "source_name": "TLDR Tech",
+      "provider": "tldr",
+      "tags": [
+        "newsletter",
+        "tech",
+        "tldr"
+      ],
+      "published_at": "2026-03-24T08:00:00+00:00",
+      "score": 82.0,
+      "digest_only": true,
+      "newsletter_group": "TLDR",
+      "newsletter_label": "TLDR Tech",
+      "newsletter_slug": "tech",
+      "issue_date": "2026-03-24T08:00:00+00:00",
+      "reading_time": "3 minute read",
+      "daniel_score": 62.0,
+      "confidence_score": 78.0,
+      "confidence": "high",
+      "actionability": "watch",
+      "actionability_reason": "newsletter-curated"
     },
     {
       "id": "world-dw::4608823829943690630",

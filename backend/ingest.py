@@ -9,15 +9,17 @@ from typing import Any
 
 import feedparser
 import requests
+from bs4 import BeautifulSoup
 
 try:
-    from backend.normalize import normalize_rss_entry, normalize_api_entry
+    from backend.normalize import normalize_rss_entry, normalize_api_entry, normalize_newsletter_entry
 except ImportError:
-    from normalize import normalize_rss_entry, normalize_api_entry
+    from normalize import normalize_rss_entry, normalize_api_entry, normalize_newsletter_entry
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 SOURCES_FILE = BASE_DIR / "data" / "sources.json"
 FEED_FILE = BASE_DIR / "data" / "feed_items.json"
+NEWSLETTER_CACHE_DIR = BASE_DIR / "data" / "newsletter_cache"
 ENV_FILE = Path(__file__).resolve().parent / ".env"
 
 
@@ -46,6 +48,28 @@ def load_sources() -> list[dict]:
     if not SOURCES_FILE.exists():
         return []
     return json.loads(SOURCES_FILE.read_text(encoding="utf-8"))
+
+
+def _newsletter_cache_file(source_id: str) -> Path:
+    return NEWSLETTER_CACHE_DIR / f"{source_id}.json"
+
+
+def _load_newsletter_cache(source_id: str) -> dict[str, Any] | None:
+    path = _newsletter_cache_file(source_id)
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _save_newsletter_cache(source_id: str, payload: dict[str, Any]) -> None:
+    NEWSLETTER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    _newsletter_cache_file(source_id).write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
 
 def _finance_markers(item: dict[str, Any]) -> list[dict[str, str]]:
@@ -240,6 +264,137 @@ def _alphavantage_items(src: dict, max_per_source: int) -> list[dict]:
     r.raise_for_status()
     data = r.json().get("feed", [])[:max_per_source]
     return [normalize_api_entry(src, e, provider="alphavantage") for e in data]
+
+
+def _parse_tldr_issue_date(slug: str, soup: BeautifulSoup) -> str:
+    pattern = re.compile(rf"/{re.escape(slug)}/(\d{{4}}-\d{{2}}-\d{{2}})")
+    for anchor in soup.find_all("a", href=True):
+        match = pattern.search(str(anchor.get("href", "")))
+        if match:
+            return f"{match.group(1)}T08:00:00+00:00"
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _parse_tldr_title_parts(text: str) -> tuple[str, str | None]:
+    raw = " ".join(str(text or "").split())
+    match = re.search(r"\(([^()]*minute read|Website)\)$", raw, re.IGNORECASE)
+    if not match:
+        return raw, None
+    title = raw[: match.start()].strip()
+    reading_time = match.group(1).strip()
+    return title or raw, reading_time
+
+
+def _parse_tldr_html(src: dict[str, Any], html: str, max_per_source: int) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    soup = BeautifulSoup(html, "html.parser")
+    slug = str(src.get("newsletter_slug") or "").strip().lower()
+    label = str(src.get("newsletter_label") or src.get("name") or "TLDR").strip()
+    issue_date = _parse_tldr_issue_date(slug, soup)
+    seen: set[str] = set()
+    items: list[dict[str, Any]] = []
+
+    for heading in soup.find_all("h3"):
+        anchor = heading.find_parent("a", href=True)
+        if not anchor:
+            continue
+        link = str(anchor.get("href") or "").strip()
+        if not link.startswith("http"):
+            continue
+        if "utm_source=tldr" not in link.lower():
+            continue
+        title, reading_time = _parse_tldr_title_parts(heading.get_text(" ", strip=True))
+        if not title or link in seen:
+            continue
+        seen.add(link)
+        card = heading.find_parent("div")
+        summary = ""
+        if card:
+            candidates: list[str] = []
+            for sibling in card.find_all("div", recursive=False):
+                text = sibling.get_text(" ", strip=True)
+                if not text or text == heading.get_text(" ", strip=True):
+                    continue
+                if text.lower() == "subscribe":
+                    continue
+                if "|" in text and len(text) <= 32:
+                    continue
+                if len(text) >= 40:
+                    candidates.append(text)
+            if candidates:
+                summary = max(candidates, key=len)
+        if not summary:
+            continue
+        items.append(
+            normalize_newsletter_entry(
+                src,
+                {
+                    "title": title,
+                    "url": link,
+                    "summary": summary,
+                    "published_at": issue_date,
+                    "tags": [slug, label.lower().replace(" ", "-")],
+                    "newsletter_group": "TLDR",
+                    "newsletter_label": label,
+                    "newsletter_slug": slug,
+                    "issue_date": issue_date,
+                    "reading_time": reading_time,
+                },
+                provider="tldr",
+            )
+        )
+        if len(items) >= max_per_source:
+            break
+
+    meta = {
+        "issue_date": issue_date,
+        "newsletter_slug": slug,
+        "newsletter_label": label,
+        "item_count": len(items),
+    }
+    return items, meta
+
+
+def _tldr_newsletter_items(src: dict[str, Any], max_per_source: int) -> list[dict[str, Any]]:
+    url = str(src.get("url") or "").strip()
+    if not url:
+        raise RuntimeError("newsletter url missing")
+
+    cache = _load_newsletter_cache(str(src.get("id") or "newsletter"))
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=20)
+        response.raise_for_status()
+        items, meta = _parse_tldr_html(src, response.text, max_per_source)
+        if not items:
+            raise RuntimeError("newsletter returned no parsable items")
+        _save_newsletter_cache(
+            str(src.get("id") or "newsletter"),
+            {
+                "source_id": src.get("id"),
+                "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "meta": meta,
+                "items": items,
+            },
+        )
+        return items
+    except Exception as exc:
+        if cache and isinstance(cache.get("items"), list) and cache.get("items"):
+            fallback_items: list[dict[str, Any]] = []
+            for raw_item in cache.get("items", [])[:max_per_source]:
+                if not isinstance(raw_item, dict):
+                    continue
+                item = dict(raw_item)
+                item["stale"] = True
+                item["stale_reason"] = "newsletter_last_good"
+                item["newsletter_cache_fetched_at"] = cache.get("fetched_at")
+                fallback_items.append(item)
+            if fallback_items:
+                return fallback_items
+        raise RuntimeError(f"newsletter fetch failed: {exc}")
 
 
 def _fetch_api_items(src: dict, max_per_source: int) -> list[dict]:
@@ -458,6 +613,13 @@ def run_ingest(max_per_source: int = 20) -> dict:
                     out.append(normalize_rss_entry(src, e))
             elif src.get("type") == "api":
                 out.extend(_fetch_api_items(src, max_per_source))
+            elif src.get("type") == "newsletter":
+                source_cap = int(src.get("max_items") or max_per_source)
+                source_cap = max(1, min(source_cap, max_per_source))
+                if str(src.get("provider", "")).lower() == "tldr":
+                    out.extend(_tldr_newsletter_items(src, source_cap))
+                else:
+                    raise RuntimeError(f"No adapter for newsletter source '{src.get('id')}'")
         except Exception as e:
             errors.append({"source": src.get("id"), "error": str(e)})
 

@@ -114,3 +114,45 @@ def normalize_api_entry(source: dict[str, Any], entry: dict[str, Any], provider:
         "published_at": entry.get("time_published", datetime.now(timezone.utc).isoformat()),
         "score": round(float(source.get("trust_weight", 0.5)) * 100, 2),
     }
+
+
+def normalize_newsletter_entry(source: dict[str, Any], entry: dict[str, Any], provider: str = "newsletter") -> dict[str, Any]:
+    title = entry.get("title", "Untitled")
+    link = entry.get("url", "")
+    summary = entry.get("summary", "")
+    published = entry.get("published_at") or datetime.now(timezone.utc).isoformat()
+
+    tags = sorted(
+        set(
+            list(source.get("tags", []))
+            + [str(tag) for tag in entry.get("tags", []) if str(tag).strip()]
+        )
+    )
+
+    payload = {
+        "id": f"{source.get('id','src')}::{hash((title, link))}",
+        "title": title,
+        "url": link,
+        "summary": summary,
+        "category": source.get("category", "General"),
+        "source_id": source.get("id"),
+        "source_name": source.get("name"),
+        "provider": source.get("provider", source.get("name", provider)),
+        "tags": tags,
+        "published_at": published,
+        "score": round(float(source.get("trust_weight", 0.5)) * 100, 2),
+        "digest_only": bool(source.get("digest_only", False)),
+    }
+
+    for key in (
+        "newsletter_group",
+        "newsletter_label",
+        "newsletter_slug",
+        "issue_date",
+        "section",
+        "reading_time",
+    ):
+        if entry.get(key):
+            payload[key] = entry.get(key)
+
+    return payload

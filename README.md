@@ -69,6 +69,43 @@ python backend/f1_signalr_ingest.py --session-key fallback:2026:2:race --session
 
 The current backend ingest target is `http://127.0.0.1:8787/api/f1/ingest/session`.
 
+## F1 History Store
+
+The backend now includes a local SQLite-backed F1 history store.
+
+- Database file: `data/f1_history.db`
+- Search API: `GET /api/f1/history/search`
+- Summary API: `GET /api/f1/history/summary`
+- Backfill CLI: `backend/f1_history_backfill.py`
+- Default scope: the latest two seasons when `--season` is omitted
+
+Example backfill:
+
+```bash
+python backend/f1_history_backfill.py --season 2025
+```
+
+Backfill the current and previous season:
+
+```bash
+python backend/f1_history_backfill.py
+```
+
+Quick test backfill:
+
+```bash
+python backend/f1_history_backfill.py --season 2025 --limit 10
+```
+
+## TLDR Digest
+
+Morning Digest now supports a dedicated TLDR block that stays out of the main feed.
+
+- Sources live in `data/sources.json` as `type: "newsletter"`
+- TLDR Tech is fetched from the public newsletter page on `tldr.tech`
+- Last good newsletter snapshots are cached in `data/newsletter_cache/`
+- TLDR items are shown only inside `Morning Digest`, not the main `Feed`
+
 ## Portainer (GitHub)
 
 1. In Portainer: `Stacks` -> `Add stack` -> `Repository`.

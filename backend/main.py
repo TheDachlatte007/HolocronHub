@@ -23,6 +23,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+try:
+    from .f1_history_store import (
+        ensure_f1_history_db,
+        f1_history_summary as load_f1_history_summary,
+        get_f1_history_session,
+        search_f1_history_sessions,
+        upsert_f1_history_session,
+    )
+except Exception:
+    from f1_history_store import (
+        ensure_f1_history_db,
+        f1_history_summary as load_f1_history_summary,
+        get_f1_history_session,
+        search_f1_history_sessions,
+        upsert_f1_history_session,
+    )
+
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_FILE = BASE_DIR / "data" / "tools.json"
 SAMPLE_FILE = BASE_DIR / "data" / "tools.sample.json"
@@ -38,6 +55,7 @@ LAST_GOOD_FILE = BASE_DIR / "data" / "last_good_cache.json"
 F1_SESSION_SNAPSHOTS_FILE = BASE_DIR / "data" / "f1_session_snapshots.json"
 F1_SECONDARY_INGEST_FILE = BASE_DIR / "data" / "f1_secondary_ingest.json"
 F1_SESSION_ARCHIVE_FILE = BASE_DIR / "data" / "f1_session_archive.json"
+F1_HISTORY_DB_FILE = BASE_DIR / "data" / "f1_history.db"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
 
 
@@ -914,6 +932,28 @@ def _seed_f1_session_archive_from_last_good() -> None:
             pass
 
 
+def _sync_f1_history_db_from_archive() -> None:
+    with _f1_archive_lock:
+        items = [(str(session_key), deepcopy(entry)) for session_key, entry in _F1_SESSION_ARCHIVE.items() if isinstance(entry, dict)]
+    for session_key, entry in items:
+        payload = {
+            "generated_at": entry.get("generated_at"),
+            "data_as_of": entry.get("data_as_of"),
+            "session_key": session_key,
+            "source": entry.get("source"),
+            "session": deepcopy(entry.get("session") or {}),
+            "live": bool(entry.get("live")),
+            "drivers_count": int(entry.get("drivers_count") or 0),
+            "leaderboard": deepcopy(entry.get("leaderboard") or []),
+            "race_control": deepcopy(entry.get("race_control") or []),
+            "weather": deepcopy(entry.get("weather") or {}),
+        }
+        try:
+            upsert_f1_history_session(F1_HISTORY_DB_FILE, entry, payload)
+        except Exception:
+            continue
+
+
 def _record_f1_session_snapshot(session_key: str, payload: dict[str, Any]) -> None:
     if not session_key or not isinstance(payload, dict):
         return
@@ -1025,6 +1065,7 @@ def _f1_archive_entry(session_key: str, payload: dict[str, Any]) -> Optional[dic
     ).strip()
     entry = {
         "session_key": session_key,
+        "season": str(year) if year else "",
         "generated_at": payload.get("generated_at") or datetime.now().isoformat(timespec="seconds"),
         "data_as_of": payload.get("data_as_of") or payload.get("generated_at") or datetime.now().isoformat(timespec="seconds"),
         "source": str(payload.get("source") or "archive").strip() or "archive",
@@ -1051,6 +1092,18 @@ def _archive_f1_session_payload(session_key: str, payload: dict[str, Any]) -> No
     entry = _f1_archive_entry(session_key, payload)
     if not isinstance(entry, dict):
         return
+    db_payload = {
+        "generated_at": payload.get("generated_at") or entry.get("generated_at"),
+        "data_as_of": payload.get("data_as_of") or entry.get("data_as_of"),
+        "session_key": session_key,
+        "source": payload.get("source") or entry.get("source"),
+        "session": deepcopy(payload.get("session") or entry.get("session") or {}),
+        "live": bool(payload.get("live")),
+        "drivers_count": int(payload.get("drivers_count") or entry.get("drivers_count") or 0),
+        "leaderboard": deepcopy(payload.get("leaderboard") or entry.get("leaderboard") or []),
+        "race_control": deepcopy(payload.get("race_control") or entry.get("race_control") or []),
+        "weather": deepcopy(payload.get("weather") or entry.get("weather") or {}),
+    }
     with _f1_archive_lock:
         existing = deepcopy(_F1_SESSION_ARCHIVE.get(session_key))
         if isinstance(existing, dict):
@@ -1065,12 +1118,24 @@ def _archive_f1_session_payload(session_key: str, payload: dict[str, Any]) -> No
             _save_f1_session_archive()
         except Exception:
             pass
+    try:
+        upsert_f1_history_session(F1_HISTORY_DB_FILE, entry, db_payload)
+    except Exception:
+        pass
 
 
 def _get_f1_archived_session(session_key: str) -> Optional[dict[str, Any]]:
     with _f1_archive_lock:
         entry = deepcopy(_F1_SESSION_ARCHIVE.get(session_key))
     if not isinstance(entry, dict):
+        db_payload = get_f1_history_session(F1_HISTORY_DB_FILE, session_key)
+        if isinstance(db_payload, dict):
+            return {
+                **db_payload,
+                "stale": True,
+                "stale_age_seconds": max(0, int((datetime.now(timezone.utc) - (_parse_dt(db_payload.get("data_as_of")) or datetime.now(timezone.utc)).astimezone(timezone.utc)).total_seconds())),
+                "snapshots": _get_f1_session_snapshots(session_key, limit=10),
+            }
         return None
     data_as_of = entry.get("data_as_of") or entry.get("generated_at")
     dt = _parse_dt(data_as_of)
@@ -2702,6 +2767,33 @@ def _fetch_f1_schedule_races(season: str) -> tuple[list[dict[str, Any]], list[st
             return [row for row in races if isinstance(row, dict)], errors[:12], src
         errors.append(f"schedule:{src}:invalid_payload")
     return [], errors[:12], source
+
+
+def _fetch_openf1_season_sessions(season: str) -> tuple[list[dict[str, Any]], list[str]]:
+    season_year = _safe_int(season) or datetime.now(timezone.utc).year
+    errors: list[str] = []
+    meetings, err = _openf1_get("meetings", params={"year": season_year}, timeout=20)
+    if err:
+        return [], [err]
+
+    rows: list[dict[str, Any]] = []
+    for meeting in meetings:
+        meeting_key = meeting.get("meeting_key")
+        if not meeting_key:
+            continue
+        sessions, err = _openf1_get("sessions", params={"meeting_key": meeting_key}, timeout=20)
+        if err:
+            errors.append(err)
+            continue
+        for session in sessions:
+            summary = _summarize_openf1_session(session)
+            summary["meeting_name"] = meeting.get("meeting_name") or meeting.get("meeting_official_name")
+            summary["meeting_official_name"] = meeting.get("meeting_official_name")
+            summary["year"] = season_year
+            summary["round"] = meeting.get("meeting_key")
+            rows.append(summary)
+    rows.sort(key=lambda row: _parse_dt(row.get("date_start")) or datetime.min.replace(tzinfo=timezone.utc))
+    return rows, errors[:24]
 
 
 def _latest_by_key(rows: list[dict[str, Any]], key_name: str = "driver_number") -> dict[Any, dict[str, Any]]:
@@ -5501,11 +5593,13 @@ def _prewarm_provider_caches() -> None:
 
 @app.on_event("startup")
 def _startup() -> None:
+    ensure_f1_history_db(F1_HISTORY_DB_FILE)
     _boot_last_good_store()
     _boot_f1_session_snapshots()
     _boot_f1_secondary_ingest()
     _boot_f1_session_archive()
     _seed_f1_session_archive_from_last_good()
+    _sync_f1_history_db_from_archive()
     settings_cfg = _load_settings()
     _apply_settings_env(settings_cfg)
 
@@ -5712,7 +5806,7 @@ def list_categories():
 @app.get("/api/feed")
 def get_feed(category: Optional[str] = None, q: Optional[str] = None, limit: int = 50):
     payload = _load_feed_payload()
-    items = payload.get("items", [])
+    items = [i for i in payload.get("items", []) if not bool(i.get("digest_only", False))]
     if category:
         items = [i for i in items if str(i.get("category", "")).lower() == category.lower()]
     if q:
@@ -5773,9 +5867,11 @@ def get_morning_digest(
 ):
     payload = _load_feed_payload()
     items = payload.get("items", [])
+    tldr_items = [i for i in items if str(i.get("newsletter_group", "")).lower() == "tldr"]
+    core_items = [i for i in items if str(i.get("newsletter_group", "")).lower() != "tldr"]
 
     items_sorted = sorted(
-        items,
+        core_items,
         key=lambda i: (
             bool(i.get("breaking", False)),
             float(i.get("daniel_score", 0.0)),
@@ -5880,6 +5976,23 @@ def get_morning_digest(
     coverage = {k: len(by_cat.get(k, [])) for k in categories}
     missing = [k for k, n in coverage.items() if n == 0]
 
+    tldr_sorted = sorted(
+        tldr_items,
+        key=lambda i: (
+            str(i.get("issue_date") or i.get("published_at") or ""),
+            float(i.get("daniel_score", 0.0)),
+            str(i.get("published_at", "")),
+        ),
+        reverse=True,
+    )
+    tldr_by_newsletter: dict[str, list[dict]] = {}
+    for item in tldr_sorted:
+        label = str(item.get("newsletter_label") or item.get("source_name") or "TLDR").strip()
+        bucket = tldr_by_newsletter.setdefault(label, [])
+        if len(bucket) < 3:
+            bucket.append(item)
+    tldr_total = sum(len(v) for v in tldr_by_newsletter.values())
+
     return {
         "generated_at": payload.get("generated_at"),
         "breaking_count": int(payload.get("breaking_count", 0)),
@@ -5896,6 +6009,8 @@ def get_morning_digest(
         },
         "items": picked,
         "by_category": by_cat,
+        "tldr_count": tldr_total,
+        "by_newsletter": tldr_by_newsletter,
     }
 
 
@@ -6207,12 +6322,24 @@ def f1_session(session_key: str, force: bool = False):
 
 @app.get("/api/f1/history/search")
 def f1_history_search(q: str = "", limit: int = Query(default=8, ge=1, le=16)):
-    results = _search_f1_session_archive(q, limit=limit)
+    results = search_f1_history_sessions(F1_HISTORY_DB_FILE, q=q, limit=limit)
+    if not results:
+        results = _search_f1_session_archive(q, limit=limit)
     return {
         "q": q,
         "count": len(results),
         "results": results,
-        "source": "f1_session_archive",
+        "source": "f1_history_db" if results else "f1_session_archive",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+    }
+
+
+@app.get("/api/f1/history/summary")
+def f1_history_summary(limit: int = Query(default=6, ge=1, le=12)):
+    summary = load_f1_history_summary(F1_HISTORY_DB_FILE, limit=limit)
+    return {
+        **summary,
+        "source": "f1_history_db",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
     }
 

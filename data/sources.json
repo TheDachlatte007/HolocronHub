@@ -392,5 +392,82 @@
       "finance",
       "education"
     ]
+  },
+  {
+    "id": "tldr-tech",
+    "name": "TLDR Tech",
+    "category": "TLDR",
+    "type": "newsletter",
+    "provider": "tldr",
+    "url": "https://tldr.tech/tech",
+    "newsletter_slug": "tech",
+    "newsletter_label": "TLDR Tech",
+    "digest_only": true,
+    "enabled": true,
+    "trust_weight": 0.82,
+    "max_items": 4,
+    "tags": [
+      "tldr",
+      "tech",
+      "newsletter"
+    ]
+  },
+  {
+    "id": "tldr-ai",
+    "name": "TLDR AI",
+    "category": "TLDR",
+    "type": "newsletter",
+    "provider": "tldr",
+    "url": "https://tldr.tech/ai",
+    "newsletter_slug": "ai",
+    "newsletter_label": "TLDR AI",
+    "digest_only": true,
+    "enabled": false,
+    "trust_weight": 0.84,
+    "max_items": 4,
+    "tags": [
+      "tldr",
+      "ai",
+      "newsletter"
+    ]
+  },
+  {
+    "id": "tldr-webdev",
+    "name": "TLDR Web Dev",
+    "category": "TLDR",
+    "type": "newsletter",
+    "provider": "tldr",
+    "url": "https://tldr.tech/webdev",
+    "newsletter_slug": "webdev",
+    "newsletter_label": "TLDR Web Dev",
+    "digest_only": true,
+    "enabled": false,
+    "trust_weight": 0.8,
+    "max_items": 4,
+    "tags": [
+      "tldr",
+      "webdev",
+      "newsletter"
+    ]
+  },
+  {
+    "id": "tldr-founders",
+    "name": "TLDR Founders",
+    "category": "TLDR",
+    "type": "newsletter",
+    "provider": "tldr",
+    "url": "https://tldr.tech/founders",
+    "newsletter_slug": "founders",
+    "newsletter_label": "TLDR Founders",
+    "digest_only": true,
+    "enabled": false,
+    "trust_weight": 0.78,
+    "max_items": 3,
+    "tags": [
+      "tldr",
+      "founders",
+      "newsletter",
+      "startup"
+    ]
   }
 ]

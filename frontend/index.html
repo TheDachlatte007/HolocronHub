@@ -213,6 +213,7 @@
 .tldr-reader-link{padding:6px 10px;border-radius:999px;border:1px solid #22304a;background:#0f172a;color:#93c5fd;text-decoration:none;font-size:.76rem}
 .tldr-reader-frame{width:100%;min-height:980px;border:1px solid #22304a;border-radius:16px;background:#fff}
 .tldr-empty{padding:26px;border:1px dashed #294264;border-radius:16px;color:#94a3b8;text-align:center}
+.tldr-upload-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
     .finance-summary{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:14px;margin-bottom:16px}
     .finance-summary h3{font-size:.75rem;color:#6ee7b7;text-transform:uppercase;letter-spacing:.07em;margin:0 0 10px}
     .watchlist-item{padding:8px 0;border-bottom:1px solid #1e293b;display:flex;flex-direction:column;gap:3px}
@@ -774,6 +775,8 @@
           <div class="muted">Import TLDR newsletters directly from Gmail, store them locally, and read them here without opening your inbox.</div>
         </div>
         <div class="row" style="justify-content:flex-end">
+          <input id="tldr-client-secret-file" type="file" accept=".json,application/json" style="display:none" />
+          <button class="sm" onclick="document.getElementById('tldr-client-secret-file').click()">Upload Google JSON</button>
           <button class="sm" onclick="startTLDRAuth()">Connect Gmail</button>
           <button class="primary" onclick="syncTLDR()">Sync TLDR</button>
         </div>
@@ -2519,7 +2522,7 @@ function renderTLDRStatus() {
   const profileEmail = status.profile?.emailAddress || 'Not connected';
   const needsAuth = !status.has_token;
   const needsClient = !status.has_client_secret;
-  let hint = 'Drop your Google OAuth client JSON into `backend/google_client_secret.json`, then connect Gmail.';
+  let hint = 'Upload your Google OAuth client JSON here, then connect Gmail.';
   if (status.has_client_secret && !status.has_token) hint = 'OAuth client is ready. Click `Connect Gmail`, approve access, then run `Sync TLDR`.';
   if (status.has_token) hint = 'Gmail is connected. Sync pulls your latest TLDR issues into the local reader.';
   el.innerHTML = `
@@ -2534,7 +2537,9 @@ function renderTLDRStatus() {
       <div class="tldr-stat"><div class="label">Unread</div><div class="value">${summary.unread_count || 0}</div></div>
     </div>
     ${status.auth_error ? `<div class="warn-strip" style="margin-top:12px">Gmail auth issue: ${esc(status.auth_error)}</div>` : ''}
-    ${needsClient ? `<div class="muted" style="margin-top:10px">Expected client secret path: <code>${esc(status.client_secret_path || '')}</code></div>` : ''}
+    <div class="tldr-upload-row">
+      <span class="muted">Server config file: <code>${esc(status.client_secret_path || '')}</code></span>
+    </div>
   `;
 }
 
@@ -2667,6 +2672,29 @@ async function startTLDRAuth() {
     document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Google auth opened in a new tab. Approve access there, then come back and click `Sync TLDR`.</div>';
   } catch (e) {
     document.getElementById('tldr-reader').innerHTML = `<div class="tldr-empty">Gmail connect failed: ${esc(e.message)}</div>`;
+  }
+}
+
+async function uploadTLDRClientSecret(file) {
+  if (!file) return;
+  try {
+    const raw = await file.text();
+    const parsed = JSON.parse(raw);
+    await fetch(`${API}/tldr/auth/client-secret`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parsed),
+    }).then(async r => {
+      if (!r.ok) throw new Error((await r.json()).detail || 'Upload failed');
+      return r.json();
+    });
+    await loadTLDRStatus();
+    document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Google OAuth JSON uploaded. Click `Connect Gmail` next.</div>';
+  } catch (e) {
+    document.getElementById('tldr-reader').innerHTML = `<div class="tldr-empty">Google JSON upload failed: ${esc(e.message)}</div>`;
+  } finally {
+    const input = document.getElementById('tldr-client-secret-file');
+    if (input) input.value = '';
   }
 }
 
@@ -6321,6 +6349,7 @@ document.getElementById('f1-season')?.addEventListener('keydown',e=>{if(e.key===
 document.getElementById('f1-history-q')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1History({ force: true });});
 document.getElementById('tldr-q')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadTLDR();});
 document.getElementById('tldr-unread')?.addEventListener('change',()=>loadTLDRIssues());
+document.getElementById('tldr-client-secret-file')?.addEventListener('change',e=>uploadTLDRClientSecret(e.target.files?.[0]));
 document.addEventListener('keydown', handleToolHubShortcuts);
 
 // ══ settings page ═════════════════════════════════════════════

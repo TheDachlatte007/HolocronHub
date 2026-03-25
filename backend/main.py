@@ -5442,6 +5442,27 @@ def _tldr_auth_status() -> dict[str, Any]:
     }
 
 
+def _validate_tldr_client_secret_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("OAuth client JSON must be an object.")
+    candidate = None
+    if isinstance(payload.get("installed"), dict):
+        candidate = payload["installed"]
+    elif isinstance(payload.get("web"), dict):
+        candidate = payload["web"]
+    else:
+        raise ValueError("Expected Google OAuth JSON with `installed` or `web` root.")
+    client_id = str(candidate.get("client_id") or "").strip()
+    client_secret = str(candidate.get("client_secret") or "").strip()
+    auth_uri = str(candidate.get("auth_uri") or "").strip()
+    token_uri = str(candidate.get("token_uri") or "").strip()
+    if not client_id or not client_secret:
+        raise ValueError("Google OAuth JSON is missing `client_id` or `client_secret`.")
+    if not auth_uri or not token_uri:
+        raise ValueError("Google OAuth JSON is missing Google auth/token URIs.")
+    return payload
+
+
 def _sync_tldr_from_gmail(*, max_results: int = 25, query: str | None = None) -> dict[str, Any]:
     if not TLDR_GMAIL_TOKEN_FILE.exists():
         raise RuntimeError("TLDR Gmail token missing. Connect Gmail first.")
@@ -6151,6 +6172,21 @@ def start_tldr_auth():
         }
     )
     return {"auth_url": auth_url, "state": state}
+
+
+@app.post("/api/tldr/auth/client-secret")
+async def upload_tldr_client_secret(request: Request):
+    try:
+        payload = await request.json()
+        validated = _validate_tldr_client_secret_payload(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    TLDR_GMAIL_CLIENT_SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
+    TLDR_GMAIL_CLIENT_SECRET_FILE.write_text(
+        json.dumps(validated, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return {"ok": True, "status": _tldr_auth_status()}
 
 
 @app.get("/api/tldr/auth/callback", response_class=HTMLResponse)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import ipaddress
 import math
 import os
 import re
@@ -5421,9 +5422,23 @@ def _tldr_auth_redirect_uri(request: Request | None = None) -> str:
     if override:
         return override
     if request is not None:
-        base = str(request.base_url).rstrip("/")
+        parsed = urlparse(str(request.base_url))
+        host = (parsed.hostname or "").strip().lower()
+        port = parsed.port
+        scheme = parsed.scheme or "http"
+        redirect_host = host or "localhost"
+        try:
+            if host and ipaddress.ip_address(host).is_private:
+                redirect_host = "localhost"
+        except Exception:
+            if host in {"127.0.0.1", "0.0.0.0"}:
+                redirect_host = "localhost"
+        if port:
+            base = f"{scheme}://{redirect_host}:{port}"
+        else:
+            base = f"{scheme}://{redirect_host}"
         return f"{base}/api/tldr/auth/callback"
-    return "http://127.0.0.1:8000/api/tldr/auth/callback"
+    return "http://localhost:8787/api/tldr/auth/callback"
 
 
 def _tldr_auth_status(request: Request | None = None) -> dict[str, Any]:

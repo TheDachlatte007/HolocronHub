@@ -96,7 +96,7 @@ def build_gmail_auth_url(
     auth_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
-        prompt="consent",
+        prompt="consent select_account",
     )
     return auth_url, state
 

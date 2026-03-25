@@ -123,6 +123,8 @@ Recommended setup:
 2. Save the downloaded client JSON as `backend/google_client_secret.json`
 3. Open the `TLDR` tab in HolocronHub, click `Connect Gmail`, then `Sync TLDR`
 
+If you access HolocronHub over a LAN host like `http://192.168.x.x:8787`, use that exact host as the redirect URI instead. The TLDR tab now shows the redirect URI it expects.
+
 If you prefer environment variables instead of a client JSON file, set:
 
 - `GOOGLE_OAUTH_CLIENT_ID`

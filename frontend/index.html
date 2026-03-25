@@ -2522,7 +2522,7 @@ function renderTLDRStatus() {
   const profileEmail = status.profile?.emailAddress || 'Not connected';
   const needsAuth = !status.has_token;
   const needsClient = !status.has_client_secret;
-  let hint = 'Upload your Google OAuth client JSON here, then connect Gmail.';
+  let hint = 'Upload your Google OAuth client JSON here, then add the shown redirect URI in Google before connecting Gmail.';
   if (status.has_client_secret && !status.has_token) hint = 'OAuth client is ready. Click `Connect Gmail`, approve access, then run `Sync TLDR`.';
   if (status.has_token) hint = 'Gmail is connected. Sync pulls your latest TLDR issues into the local reader.';
   el.innerHTML = `
@@ -2537,6 +2537,9 @@ function renderTLDRStatus() {
       <div class="tldr-stat"><div class="label">Unread</div><div class="value">${summary.unread_count || 0}</div></div>
     </div>
     ${status.auth_error ? `<div class="warn-strip" style="margin-top:12px">Gmail auth issue: ${esc(status.auth_error)}</div>` : ''}
+    <div class="tldr-upload-row">
+      <span class="muted">Redirect URI: <code>${esc(status.oauth_redirect_uri || '')}</code></span>
+    </div>
     <div class="tldr-upload-row">
       <span class="muted">Server config file: <code>${esc(status.client_secret_path || '')}</code></span>
     </div>

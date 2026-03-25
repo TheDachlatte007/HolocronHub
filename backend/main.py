@@ -5416,11 +5416,17 @@ def _tldr_gmail_client_creds() -> tuple[str, str]:
     )
 
 
-def _tldr_auth_redirect_uri() -> str:
+def _tldr_auth_redirect_uri(request: Request | None = None) -> str:
+    override = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "").strip()
+    if override:
+        return override
+    if request is not None:
+        base = str(request.base_url).rstrip("/")
+        return f"{base}/api/tldr/auth/callback"
     return "http://127.0.0.1:8000/api/tldr/auth/callback"
 
 
-def _tldr_auth_status() -> dict[str, Any]:
+def _tldr_auth_status(request: Request | None = None) -> dict[str, Any]:
     client_id, client_secret = _tldr_gmail_client_creds()
     has_client_secret = TLDR_GMAIL_CLIENT_SECRET_FILE.exists() or bool(client_id and client_secret)
     has_token = TLDR_GMAIL_TOKEN_FILE.exists()
@@ -5437,7 +5443,7 @@ def _tldr_auth_status() -> dict[str, Any]:
         "profile": profile,
         "auth_error": auth_error,
         "summary": load_tldr_summary(TLDR_DB_FILE),
-        "oauth_redirect_uri": _tldr_auth_redirect_uri(),
+        "oauth_redirect_uri": _tldr_auth_redirect_uri(request),
         "client_secret_path": str(TLDR_GMAIL_CLIENT_SECRET_FILE),
     }
 
@@ -6148,17 +6154,17 @@ def get_morning_digest(
 # ── TLDR mail ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/tldr/status")
-def get_tldr_status():
-    return _tldr_auth_status()
+def get_tldr_status(request: Request):
+    return _tldr_auth_status(request)
 
 
 @app.post("/api/tldr/auth/start")
-def start_tldr_auth():
+def start_tldr_auth(request: Request):
     client_id, client_secret = _tldr_gmail_client_creds()
     try:
         auth_url, state = build_gmail_auth_url(
             TLDR_GMAIL_CLIENT_SECRET_FILE,
-            _tldr_auth_redirect_uri(),
+            _tldr_auth_redirect_uri(request),
             client_id=client_id or None,
             client_secret=client_secret or None,
         )
@@ -6186,7 +6192,7 @@ async def upload_tldr_client_secret(request: Request):
         json.dumps(validated, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
-    return {"ok": True, "status": _tldr_auth_status()}
+    return {"ok": True, "status": _tldr_auth_status(request)}
 
 
 @app.get("/api/tldr/auth/callback", response_class=HTMLResponse)
@@ -6200,7 +6206,7 @@ def tldr_auth_callback(request: Request, state: str = "", code: str = ""):
     try:
         exchange_gmail_auth_code(
             TLDR_GMAIL_CLIENT_SECRET_FILE,
-            _tldr_auth_redirect_uri(),
+            _tldr_auth_redirect_uri(request),
             authorization_response=str(request.url),
             state=state,
             token_file=TLDR_GMAIL_TOKEN_FILE,

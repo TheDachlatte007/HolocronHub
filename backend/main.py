@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import ipaddress
 import math
 import os
 import re
@@ -21,7 +20,7 @@ from typing import Any, List, Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 try:
@@ -61,9 +60,9 @@ except Exception:
     )
 
 try:
-    from .tldr_gmail import build_gmail_auth_url, exchange_gmail_auth_code, fetch_tldr_messages, gmail_profile
+    from .tldr_imap import fetch_tldr_messages_imap
 except Exception:
-    from tldr_gmail import build_gmail_auth_url, exchange_gmail_auth_code, fetch_tldr_messages, gmail_profile
+    from tldr_imap import fetch_tldr_messages_imap
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_FILE = BASE_DIR / "data" / "tools.json"
@@ -82,8 +81,7 @@ F1_SECONDARY_INGEST_FILE = BASE_DIR / "data" / "f1_secondary_ingest.json"
 F1_SESSION_ARCHIVE_FILE = BASE_DIR / "data" / "f1_session_archive.json"
 F1_HISTORY_DB_FILE = BASE_DIR / "data" / "f1_history.db"
 TLDR_DB_FILE = BASE_DIR / "data" / "tldr_issues.db"
-TLDR_GMAIL_TOKEN_FILE = BASE_DIR / "data" / "tldr_gmail_token.json"
-TLDR_GMAIL_CLIENT_SECRET_FILE = BASE_DIR / "backend" / "google_client_secret.json"
+TLDR_IMAP_CONFIG_FILE = BASE_DIR / "data" / "tldr_imap_config.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
 
 
@@ -162,7 +160,6 @@ _PROVIDER_BREAKERS: dict[str, dict[str, Any]] = {
 _F1_SESSION_SNAPSHOTS: dict[str, list[dict[str, Any]]] = {}
 _F1_SECONDARY_INGEST: dict[str, dict[str, Any]] = {}
 _F1_SESSION_ARCHIVE: dict[str, dict[str, Any]] = {}
-_TLDR_GMAIL_AUTH_STATE: dict[str, Any] = {}
 
 app.add_middleware(
     CORSMiddleware,
@@ -5410,127 +5407,98 @@ def _settings_response(cfg: dict[str, Any]) -> dict[str, Any]:
     return {**cfg, "schedule": {**schedule_cfg, "next_run": next_run}}
 
 
-def _tldr_gmail_client_creds() -> tuple[str, str]:
-    return (
-        os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip(),
-        os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip(),
-    )
-
-
-def _tldr_auth_redirect_uri(request: Request | None = None) -> str:
-    override = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "").strip()
-    if override:
-        return override
-    if request is not None:
-        parsed = urlparse(str(request.base_url))
-        host = (parsed.hostname or "").strip().lower()
-        port = parsed.port
-        scheme = parsed.scheme or "http"
-        redirect_host = host or "localhost"
+def _load_tldr_imap_config() -> dict[str, Any]:
+    config = {
+        "email": os.getenv("TLDR_GMAIL_ADDRESS", "").strip(),
+        "app_password": os.getenv("TLDR_GMAIL_APP_PASSWORD", "").strip().replace(" ", ""),
+        "imap_host": os.getenv("TLDR_IMAP_HOST", "imap.gmail.com").strip() or "imap.gmail.com",
+        "imap_port": int(os.getenv("TLDR_IMAP_PORT", "993") or 993),
+        "mailbox": os.getenv("TLDR_IMAP_MAILBOX", "INBOX").strip() or "INBOX",
+    }
+    if TLDR_IMAP_CONFIG_FILE.exists():
         try:
-            if host and ipaddress.ip_address(host).is_private:
-                redirect_host = "localhost"
+            persisted = json.loads(TLDR_IMAP_CONFIG_FILE.read_text(encoding="utf-8"))
+            if isinstance(persisted, dict):
+                config.update({k: persisted.get(k, config.get(k)) for k in config.keys()})
         except Exception:
-            if host in {"127.0.0.1", "0.0.0.0"}:
-                redirect_host = "localhost"
-        if port:
-            base = f"{scheme}://{redirect_host}:{port}"
-        else:
-            base = f"{scheme}://{redirect_host}"
-        return f"{base}/api/tldr/auth/callback"
-    return "http://localhost:8787/api/tldr/auth/callback"
-
-
-def _tldr_is_localish_host(host: str) -> bool:
-    value = str(host or "").strip().lower()
-    if not value:
-        return False
-    if value in {"localhost", "127.0.0.1", "0.0.0.0"}:
-        return True
+            pass
+    config["email"] = str(config.get("email") or "").strip()
+    config["app_password"] = str(config.get("app_password") or "").strip().replace(" ", "")
+    config["imap_host"] = str(config.get("imap_host") or "imap.gmail.com").strip() or "imap.gmail.com"
     try:
-        ip = ipaddress.ip_address(value)
-        return bool(ip.is_private or ip.is_loopback)
+        config["imap_port"] = int(config.get("imap_port") or 993)
     except Exception:
-        return False
+        config["imap_port"] = 993
+    config["mailbox"] = str(config.get("mailbox") or "INBOX").strip() or "INBOX"
+    return config
 
 
-def _tldr_return_url(request: Request | None = None, candidate: str | None = None) -> str:
-    fallback = "http://localhost:8787/#tldr"
-    raw = str(candidate or "").strip()
-    if not raw and request is not None:
-        raw = str(request.headers.get("origin") or request.headers.get("referer") or "").strip()
-    if not raw and request is not None:
-        raw = str(request.base_url)
-    if not raw:
-        return fallback
-
-    parsed = urlparse(raw)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        return fallback
-
-    if not _tldr_is_localish_host(parsed.hostname):
-        origin_header = str(request.headers.get("origin") or "").strip() if request is not None else ""
-        origin_host = urlparse(origin_header).hostname if origin_header else ""
-        if not origin_host or parsed.hostname.lower() != origin_host.lower():
-            return fallback
-
-    netloc = parsed.netloc
-    path = parsed.path or "/"
-    if path == "/api/tldr/auth/callback":
-        path = "/"
-    return f"{parsed.scheme}://{netloc}{path}#tldr"
+def _save_tldr_imap_config(config: dict[str, Any]) -> None:
+    payload = {
+        "email": str(config.get("email") or "").strip(),
+        "app_password": str(config.get("app_password") or "").strip().replace(" ", ""),
+        "imap_host": str(config.get("imap_host") or "imap.gmail.com").strip() or "imap.gmail.com",
+        "imap_port": int(config.get("imap_port") or 993),
+        "mailbox": str(config.get("mailbox") or "INBOX").strip() or "INBOX",
+    }
+    TLDR_IMAP_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    TLDR_IMAP_CONFIG_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def _tldr_auth_status(request: Request | None = None) -> dict[str, Any]:
-    client_id, client_secret = _tldr_gmail_client_creds()
-    has_client_secret = TLDR_GMAIL_CLIENT_SECRET_FILE.exists() or bool(client_id and client_secret)
-    has_token = TLDR_GMAIL_TOKEN_FILE.exists()
-    profile = None
-    auth_error = None
-    if has_token:
-        try:
-            profile = gmail_profile(TLDR_GMAIL_TOKEN_FILE)
-        except Exception as exc:
-            auth_error = str(exc)
+def _tldr_imap_status() -> dict[str, Any]:
+    cfg = _load_tldr_imap_config()
+    has_password = bool(cfg.get("app_password"))
+    email = str(cfg.get("email") or "").strip()
     return {
-        "has_client_secret": has_client_secret,
-        "has_token": has_token,
-        "profile": profile,
-        "auth_error": auth_error,
+        "configured": bool(email and has_password),
+        "has_password": has_password,
+        "email": email,
+        "imap_host": str(cfg.get("imap_host") or "imap.gmail.com"),
+        "imap_port": int(cfg.get("imap_port") or 993),
+        "mailbox": str(cfg.get("mailbox") or "INBOX"),
+        "profile": {"emailAddress": email} if email else None,
         "summary": load_tldr_summary(TLDR_DB_FILE),
-        "oauth_redirect_uri": _tldr_auth_redirect_uri(request),
-        "return_url": _tldr_return_url(request),
-        "client_secret_path": str(TLDR_GMAIL_CLIENT_SECRET_FILE),
+        "config_path": str(TLDR_IMAP_CONFIG_FILE),
     }
 
 
-def _validate_tldr_client_secret_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def _validate_tldr_imap_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload, dict):
-        raise ValueError("OAuth client JSON must be an object.")
-    candidate = None
-    if isinstance(payload.get("installed"), dict):
-        candidate = payload["installed"]
-    elif isinstance(payload.get("web"), dict):
-        candidate = payload["web"]
-    else:
-        raise ValueError("Expected Google OAuth JSON with `installed` or `web` root.")
-    client_id = str(candidate.get("client_id") or "").strip()
-    client_secret = str(candidate.get("client_secret") or "").strip()
-    auth_uri = str(candidate.get("auth_uri") or "").strip()
-    token_uri = str(candidate.get("token_uri") or "").strip()
-    if not client_id or not client_secret:
-        raise ValueError("Google OAuth JSON is missing `client_id` or `client_secret`.")
-    if not auth_uri or not token_uri:
-        raise ValueError("Google OAuth JSON is missing Google auth/token URIs.")
-    return payload
+        raise ValueError("IMAP config payload must be an object.")
+    current = _load_tldr_imap_config()
+    email = str(payload.get("email") or current.get("email") or "").strip()
+    if not email or "@" not in email:
+        raise ValueError("A valid Gmail address is required.")
+    password_raw = str(payload.get("app_password") or "").strip().replace(" ", "")
+    password = password_raw or str(current.get("app_password") or "").strip().replace(" ", "")
+    if not password:
+        raise ValueError("A Gmail app password is required.")
+    imap_host = str(payload.get("imap_host") or current.get("imap_host") or "imap.gmail.com").strip() or "imap.gmail.com"
+    try:
+        imap_port = int(payload.get("imap_port") or current.get("imap_port") or 993)
+    except Exception:
+        imap_port = 993
+    mailbox = str(payload.get("mailbox") or current.get("mailbox") or "INBOX").strip() or "INBOX"
+    return {
+        "email": email,
+        "app_password": password,
+        "imap_host": imap_host,
+        "imap_port": imap_port,
+        "mailbox": mailbox,
+    }
 
 
-def _sync_tldr_from_gmail(*, max_results: int = 25, query: str | None = None) -> dict[str, Any]:
-    if not TLDR_GMAIL_TOKEN_FILE.exists():
-        raise RuntimeError("TLDR Gmail token missing. Connect Gmail first.")
-    actual_query = str(query or "subject:TLDR newer_than:180d").strip()
-    issues = fetch_tldr_messages(
-        TLDR_GMAIL_TOKEN_FILE,
+def _sync_tldr_from_imap(*, max_results: int = 25, query: str | None = None) -> dict[str, Any]:
+    cfg = _load_tldr_imap_config()
+    if not cfg.get("email") or not cfg.get("app_password"):
+        raise RuntimeError("TLDR IMAP config missing. Save your Gmail address and app password first.")
+    actual_query = str(query or "TLDR").strip() or "TLDR"
+    issues = fetch_tldr_messages_imap(
+        str(cfg.get("email") or ""),
+        str(cfg.get("app_password") or ""),
+        imap_host=str(cfg.get("imap_host") or "imap.gmail.com"),
+        imap_port=int(cfg.get("imap_port") or 993),
+        mailbox=str(cfg.get("mailbox") or "INBOX"),
         query=actual_query,
         max_results=max_results,
     )
@@ -5539,17 +5507,12 @@ def _sync_tldr_from_gmail(*, max_results: int = 25, query: str | None = None) ->
         upsert_tldr_issue(TLDR_DB_FILE, issue)
         slug = str(issue.get("newsletter_slug") or "unknown")
         newsletters[slug] = newsletters.get(slug, 0) + 1
-    profile = None
-    try:
-        profile = gmail_profile(TLDR_GMAIL_TOKEN_FILE)
-    except Exception:
-        profile = None
     return {
         "ok": True,
         "stored": len(issues),
         "query": actual_query,
         "newsletters": newsletters,
-        "profile": profile,
+        "profile": {"emailAddress": str(cfg.get("email") or "")},
         "summary": load_tldr_summary(TLDR_DB_FILE),
     }
 
@@ -6210,97 +6173,19 @@ def get_morning_digest(
 # ── TLDR mail ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/tldr/status")
-def get_tldr_status(request: Request):
-    return _tldr_auth_status(request)
+def get_tldr_status():
+    return _tldr_imap_status()
 
 
-@app.post("/api/tldr/auth/start")
-async def start_tldr_auth(request: Request):
-    payload: dict[str, Any] = {}
-    try:
-        body = await request.body()
-        if body:
-            payload = json.loads(body.decode("utf-8"))
-    except Exception:
-        payload = {}
-    client_id, client_secret = _tldr_gmail_client_creds()
-    try:
-        auth_url, state = build_gmail_auth_url(
-            TLDR_GMAIL_CLIENT_SECRET_FILE,
-            _tldr_auth_redirect_uri(request),
-            client_id=client_id or None,
-            client_secret=client_secret or None,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    _TLDR_GMAIL_AUTH_STATE.clear()
-    _TLDR_GMAIL_AUTH_STATE.update(
-        {
-            "state": state,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "return_url": _tldr_return_url(request, payload.get("return_url")),
-        }
-    )
-    return {"auth_url": auth_url, "state": state}
-
-
-@app.post("/api/tldr/auth/client-secret")
-async def upload_tldr_client_secret(request: Request):
+@app.post("/api/tldr/config")
+async def save_tldr_config(request: Request):
     try:
         payload = await request.json()
-        validated = _validate_tldr_client_secret_payload(payload)
+        validated = _validate_tldr_imap_payload(payload)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    TLDR_GMAIL_CLIENT_SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
-    TLDR_GMAIL_CLIENT_SECRET_FILE.write_text(
-        json.dumps(validated, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    return {"ok": True, "status": _tldr_auth_status(request)}
-
-
-@app.get("/api/tldr/auth/callback", response_class=HTMLResponse)
-def tldr_auth_callback(request: Request, state: str = "", code: str = ""):
-    expected_state = str(_TLDR_GMAIL_AUTH_STATE.get("state") or "").strip()
-    if not expected_state or state != expected_state:
-        raise HTTPException(status_code=400, detail="Invalid or expired Gmail OAuth state.")
-    if not code:
-        raise HTTPException(status_code=400, detail="Missing Gmail OAuth code.")
-    client_id, client_secret = _tldr_gmail_client_creds()
-    try:
-        exchange_gmail_auth_code(
-            TLDR_GMAIL_CLIENT_SECRET_FILE,
-            _tldr_auth_redirect_uri(request),
-            authorization_response=str(request.url),
-            state=state,
-            token_file=TLDR_GMAIL_TOKEN_FILE,
-            client_id=client_id or None,
-            client_secret=client_secret or None,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    return_url = _tldr_return_url(request, _TLDR_GMAIL_AUTH_STATE.get("return_url"))
-    _TLDR_GMAIL_AUTH_STATE.clear()
-    return HTMLResponse(
-        "<!doctype html><html><head><meta charset='utf-8'>"
-        f"<meta http-equiv='refresh' content='1; url={quote(return_url, safe=':/#?&=%')}'></head>"
-        "<body style='font-family:Arial,sans-serif;padding:24px;background:#0f172a;color:#e2e8f0'>"
-        "<h2>TLDR Gmail connected</h2>"
-        "<p>Returning to HolocronHub…</p>"
-        f"<p><a href='{quote(return_url, safe=':/#?&=%')}' style='color:#93c5fd'>Open HolocronHub</a></p>"
-        "<script>"
-        f"const target = {json.dumps(return_url)};"
-        "try {"
-        "  if (window.opener && !window.opener.closed) {"
-        "    window.opener.postMessage({ type: 'tldr-auth-complete', target }, '*');"
-        "    window.opener.location.href = target;"
-        "    window.close();"
-        "  }"
-        "} catch (e) {}"
-        "setTimeout(() => { window.location.replace(target); }, 250);"
-        "</script>"
-        "</body></html>"
-    )
+    _save_tldr_imap_config(validated)
+    return {"ok": True, "status": _tldr_imap_status()}
 
 
 @app.get("/api/tldr/issues")
@@ -6342,7 +6227,7 @@ def set_tldr_issue_read(issue_id: str, read: bool = True):
 @app.post("/api/tldr/sync")
 def sync_tldr_mail(max_results: int = 25, q: Optional[str] = None):
     try:
-        return _sync_tldr_from_gmail(max_results=max_results, query=q)
+        return _sync_tldr_from_imap(max_results=max_results, query=q)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

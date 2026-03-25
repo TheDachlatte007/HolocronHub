@@ -772,12 +772,12 @@
       <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <div>
           <h2>TLDR Reader</h2>
-          <div class="muted">Import TLDR newsletters directly from Gmail, store them locally, and read them here without opening your inbox.</div>
+          <div class="muted">Import TLDR newsletters directly from Gmail over IMAP, store them locally, and read them here without opening your inbox.</div>
         </div>
         <div class="row" style="justify-content:flex-end">
-          <input id="tldr-client-secret-file" type="file" accept=".json,application/json" style="display:none" />
-          <button class="sm" onclick="document.getElementById('tldr-client-secret-file').click()">Upload Google JSON</button>
-          <button class="sm" onclick="startTLDRAuth()">Connect Gmail</button>
+          <input id="tldr-email" type="email" placeholder="Gmail address" style="min-width:220px" />
+          <input id="tldr-app-password" type="password" placeholder="Google app password" style="min-width:220px" />
+          <button class="sm" onclick="saveTLDRConfig()">Save Gmail Login</button>
           <button class="primary" onclick="syncTLDR()">Sync TLDR</button>
         </div>
       </div>
@@ -2519,12 +2519,13 @@ function renderTLDRStatus() {
   if (!el) return;
   const status = _tldrStatus || {};
   const summary = status.summary || {};
-  const profileEmail = status.profile?.emailAddress || 'Not connected';
-  const needsAuth = !status.has_token;
-  const needsClient = !status.has_client_secret;
-  let hint = 'Upload your Google OAuth client JSON here, then add the shown redirect URI in Google before connecting Gmail.';
-  if (status.has_client_secret && !status.has_token) hint = 'OAuth client is ready. Click `Connect Gmail`, approve access, then run `Sync TLDR`.';
-  if (status.has_token) hint = 'Gmail is connected. Sync pulls your latest TLDR issues into the local reader.';
+  const profileEmail = status.profile?.emailAddress || status.email || 'Not configured';
+  const configured = !!status.configured;
+  let hint = 'Save your Gmail address and a Google App Password here, then sync the latest TLDR issues.';
+  if (status.email && !status.has_password) hint = 'Email saved. Add your Google App Password and save again before syncing.';
+  if (configured) hint = 'Gmail IMAP is configured. Sync pulls your latest TLDR issues into the local reader.';
+  const emailInput = document.getElementById('tldr-email');
+  if (emailInput && status.email && !String(emailInput.value || '').trim()) emailInput.value = status.email;
   el.innerHTML = `
     <div>
       <div style="font-size:.8rem;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em">TLDR Mail Bridge</div>
@@ -2532,19 +2533,19 @@ function renderTLDRStatus() {
     </div>
     <div class="tldr-status-grid">
       <div class="tldr-stat"><div class="label">Gmail</div><div class="value">${esc(profileEmail)}</div></div>
-      <div class="tldr-stat"><div class="label">OAuth</div><div class="value">${needsClient ? 'Client missing' : (needsAuth ? 'Awaiting connect' : 'Connected')}</div></div>
+      <div class="tldr-stat"><div class="label">IMAP</div><div class="value">${configured ? 'Configured' : (status.has_password ? 'Awaiting email save' : 'Needs app password')}</div></div>
       <div class="tldr-stat"><div class="label">Stored issues</div><div class="value">${summary.issue_count || 0}</div></div>
       <div class="tldr-stat"><div class="label">Unread</div><div class="value">${summary.unread_count || 0}</div></div>
     </div>
-    ${status.auth_error ? `<div class="warn-strip" style="margin-top:12px">Gmail auth issue: ${esc(status.auth_error)}</div>` : ''}
+    ${status.auth_error ? `<div class="warn-strip" style="margin-top:12px">Gmail issue: ${esc(status.auth_error)}</div>` : ''}
     <div class="tldr-upload-row">
-      <span class="muted">Redirect URI: <code>${esc(status.oauth_redirect_uri || '')}</code></span>
+      <span class="muted">IMAP server: <code>${esc(status.imap_host || 'imap.gmail.com')}:${esc(String(status.imap_port || 993))}</code></span>
     </div>
     <div class="tldr-upload-row">
-      <span class="muted">Return to hub: <code>${esc(status.return_url || '')}</code></span>
+      <span class="muted">Mailbox: <code>${esc(status.mailbox || 'INBOX')}</code></span>
     </div>
     <div class="tldr-upload-row">
-      <span class="muted">Server config file: <code>${esc(status.client_secret_path || '')}</code></span>
+      <span class="muted">Local config file: <code>${esc(status.config_path || '')}</code></span>
     </div>
   `;
 }
@@ -2668,50 +2669,30 @@ async function openTLDRIssue(issueId, options={}) {
   }
 }
 
-async function startTLDRAuth() {
+async function saveTLDRConfig() {
   try {
-    const returnUrl = `${window.location.origin}${window.location.pathname || '/'}#tldr`;
-    const data = await fetch(`${API}/tldr/auth/start`, {
+    const email = String(document.getElementById('tldr-email')?.value || '').trim();
+    const appPassword = String(document.getElementById('tldr-app-password')?.value || '').trim();
+    await fetch(`${API}/tldr/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ return_url: returnUrl }),
+      body: JSON.stringify({ email, app_password: appPassword }),
     }).then(async r => {
-      if (!r.ok) throw new Error((await r.json()).detail || 'Auth start failed');
-      return r.json();
-    });
-    window.open(data.auth_url, '_blank');
-    document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Google auth opened in a new tab. Approve access there, then come back and click `Sync TLDR`.</div>';
-  } catch (e) {
-    document.getElementById('tldr-reader').innerHTML = `<div class="tldr-empty">Gmail connect failed: ${esc(e.message)}</div>`;
-  }
-}
-
-async function uploadTLDRClientSecret(file) {
-  if (!file) return;
-  try {
-    const raw = await file.text();
-    const parsed = JSON.parse(raw);
-    await fetch(`${API}/tldr/auth/client-secret`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(parsed),
-    }).then(async r => {
-      if (!r.ok) throw new Error((await r.json()).detail || 'Upload failed');
+      if (!r.ok) throw new Error((await r.json()).detail || 'Save failed');
       return r.json();
     });
     await loadTLDRStatus();
-    document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Google OAuth JSON uploaded. Click `Connect Gmail` next.</div>';
+    document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Gmail IMAP saved. Click `Sync TLDR` to import your newsletters.</div>';
+    const pw = document.getElementById('tldr-app-password');
+    if (pw) pw.value = '';
   } catch (e) {
-    document.getElementById('tldr-reader').innerHTML = `<div class="tldr-empty">Google JSON upload failed: ${esc(e.message)}</div>`;
-  } finally {
-    const input = document.getElementById('tldr-client-secret-file');
-    if (input) input.value = '';
+    document.getElementById('tldr-reader').innerHTML = `<div class="tldr-empty">Could not save Gmail login: ${esc(e.message)}</div>`;
   }
 }
 
 async function syncTLDR() {
   try {
-    document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Syncing TLDR issues from Gmail…</div>';
+    document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Syncing TLDR issues from Gmail over IMAP…</div>';
     await fetch(`${API}/tldr/sync?max_results=40`, { method: 'POST' }).then(async r => {
       if (!r.ok) throw new Error((await r.json()).detail || 'Sync failed');
       return r.json();
@@ -6360,14 +6341,6 @@ document.getElementById('f1-season')?.addEventListener('keydown',e=>{if(e.key===
 document.getElementById('f1-history-q')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1History({ force: true });});
 document.getElementById('tldr-q')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadTLDR();});
 document.getElementById('tldr-unread')?.addEventListener('change',()=>loadTLDRIssues());
-document.getElementById('tldr-client-secret-file')?.addEventListener('change',e=>uploadTLDRClientSecret(e.target.files?.[0]));
-window.addEventListener('message',e=>{
-  if (e?.data?.type !== 'tldr-auth-complete') return;
-  loadTLDRStatus();
-  if (tabLoaded['tldr']) loadTLDRIssues();
-  const reader = document.getElementById('tldr-reader');
-  if (reader) reader.innerHTML = '<div class="tldr-empty">Gmail connected. Click `Sync TLDR` to import your latest issues.</div>';
-});
 document.addEventListener('keydown', handleToolHubShortcuts);
 
 // ══ settings page ═════════════════════════════════════════════

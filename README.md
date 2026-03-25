@@ -108,27 +108,29 @@ Morning Digest now supports a dedicated TLDR block that stays out of the main fe
 
 ## TLDR Gmail Reader
 
-HolocronHub can now import TLDR issues directly from Gmail and store them locally in SQLite.
+HolocronHub can now import TLDR issues directly from Gmail over IMAP and store them locally in SQLite.
 
 - Database file: `data/tldr_issues.db`
-- Token file: `data/tldr_gmail_token.json`
-- OAuth client file: `backend/google_client_secret.json`
+- Local IMAP config: `data/tldr_imap_config.json`
 - Status API: `GET /api/tldr/status`
-- Start auth: `POST /api/tldr/auth/start`
+- Save config: `POST /api/tldr/config`
 - Sync issues: `POST /api/tldr/sync`
 
 Recommended setup:
 
-1. Create a Google OAuth client and allow the redirect URI `http://127.0.0.1:8000/api/tldr/auth/callback`
-2. Save the downloaded client JSON as `backend/google_client_secret.json`
-3. Open the `TLDR` tab in HolocronHub, click `Connect Gmail`, then `Sync TLDR`
+1. Enable 2-Step Verification on your Google account
+2. Create a Google App Password for Mail
+3. Open the `TLDR` tab in HolocronHub
+4. Enter your Gmail address and the App Password
+5. Click `Save Gmail Login`, then `Sync TLDR`
 
-If you access HolocronHub over a LAN host like `http://192.168.x.x:8787`, use that exact host as the redirect URI instead. The TLDR tab now shows the redirect URI it expects.
+Optional environment variables:
 
-If you prefer environment variables instead of a client JSON file, set:
-
-- `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_OAUTH_CLIENT_SECRET`
+- `TLDR_GMAIL_ADDRESS`
+- `TLDR_GMAIL_APP_PASSWORD`
+- `TLDR_IMAP_HOST`
+- `TLDR_IMAP_PORT`
+- `TLDR_IMAP_MAILBOX`
 
 ## Portainer (GitHub)
 

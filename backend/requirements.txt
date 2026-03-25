@@ -7,5 +7,3 @@ requests==2.32.3
 beautifulsoup4==4.13.4
 apscheduler==3.10.4
 websocket-client==1.9.0
-google-auth==2.39.0
-google-auth-oauthlib==1.2.2

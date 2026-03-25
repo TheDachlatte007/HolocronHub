@@ -2541,6 +2541,9 @@ function renderTLDRStatus() {
       <span class="muted">Redirect URI: <code>${esc(status.oauth_redirect_uri || '')}</code></span>
     </div>
     <div class="tldr-upload-row">
+      <span class="muted">Return to hub: <code>${esc(status.return_url || '')}</code></span>
+    </div>
+    <div class="tldr-upload-row">
       <span class="muted">Server config file: <code>${esc(status.client_secret_path || '')}</code></span>
     </div>
   `;
@@ -2667,11 +2670,16 @@ async function openTLDRIssue(issueId, options={}) {
 
 async function startTLDRAuth() {
   try {
-    const data = await fetch(`${API}/tldr/auth/start`, { method: 'POST' }).then(async r => {
+    const returnUrl = `${window.location.origin}${window.location.pathname || '/'}#tldr`;
+    const data = await fetch(`${API}/tldr/auth/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ return_url: returnUrl }),
+    }).then(async r => {
       if (!r.ok) throw new Error((await r.json()).detail || 'Auth start failed');
       return r.json();
     });
-    window.open(data.auth_url, '_blank', 'noopener');
+    window.open(data.auth_url, '_blank');
     document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Google auth opened in a new tab. Approve access there, then come back and click `Sync TLDR`.</div>';
   } catch (e) {
     document.getElementById('tldr-reader').innerHTML = `<div class="tldr-empty">Gmail connect failed: ${esc(e.message)}</div>`;
@@ -6353,6 +6361,13 @@ document.getElementById('f1-history-q')?.addEventListener('keydown',e=>{if(e.key
 document.getElementById('tldr-q')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadTLDR();});
 document.getElementById('tldr-unread')?.addEventListener('change',()=>loadTLDRIssues());
 document.getElementById('tldr-client-secret-file')?.addEventListener('change',e=>uploadTLDRClientSecret(e.target.files?.[0]));
+window.addEventListener('message',e=>{
+  if (e?.data?.type !== 'tldr-auth-complete') return;
+  loadTLDRStatus();
+  if (tabLoaded['tldr']) loadTLDRIssues();
+  const reader = document.getElementById('tldr-reader');
+  if (reader) reader.innerHTML = '<div class="tldr-empty">Gmail connected. Click `Sync TLDR` to import your latest issues.</div>';
+});
 document.addEventListener('keydown', handleToolHubShortcuts);
 
 // ══ settings page ═════════════════════════════════════════════

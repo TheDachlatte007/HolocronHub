@@ -5441,6 +5441,46 @@ def _tldr_auth_redirect_uri(request: Request | None = None) -> str:
     return "http://localhost:8787/api/tldr/auth/callback"
 
 
+def _tldr_is_localish_host(host: str) -> bool:
+    value = str(host or "").strip().lower()
+    if not value:
+        return False
+    if value in {"localhost", "127.0.0.1", "0.0.0.0"}:
+        return True
+    try:
+        ip = ipaddress.ip_address(value)
+        return bool(ip.is_private or ip.is_loopback)
+    except Exception:
+        return False
+
+
+def _tldr_return_url(request: Request | None = None, candidate: str | None = None) -> str:
+    fallback = "http://localhost:8787/#tldr"
+    raw = str(candidate or "").strip()
+    if not raw and request is not None:
+        raw = str(request.headers.get("origin") or request.headers.get("referer") or "").strip()
+    if not raw and request is not None:
+        raw = str(request.base_url)
+    if not raw:
+        return fallback
+
+    parsed = urlparse(raw)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        return fallback
+
+    if not _tldr_is_localish_host(parsed.hostname):
+        origin_header = str(request.headers.get("origin") or "").strip() if request is not None else ""
+        origin_host = urlparse(origin_header).hostname if origin_header else ""
+        if not origin_host or parsed.hostname.lower() != origin_host.lower():
+            return fallback
+
+    netloc = parsed.netloc
+    path = parsed.path or "/"
+    if path == "/api/tldr/auth/callback":
+        path = "/"
+    return f"{parsed.scheme}://{netloc}{path}#tldr"
+
+
 def _tldr_auth_status(request: Request | None = None) -> dict[str, Any]:
     client_id, client_secret = _tldr_gmail_client_creds()
     has_client_secret = TLDR_GMAIL_CLIENT_SECRET_FILE.exists() or bool(client_id and client_secret)
@@ -5459,6 +5499,7 @@ def _tldr_auth_status(request: Request | None = None) -> dict[str, Any]:
         "auth_error": auth_error,
         "summary": load_tldr_summary(TLDR_DB_FILE),
         "oauth_redirect_uri": _tldr_auth_redirect_uri(request),
+        "return_url": _tldr_return_url(request),
         "client_secret_path": str(TLDR_GMAIL_CLIENT_SECRET_FILE),
     }
 
@@ -6174,7 +6215,14 @@ def get_tldr_status(request: Request):
 
 
 @app.post("/api/tldr/auth/start")
-def start_tldr_auth(request: Request):
+async def start_tldr_auth(request: Request):
+    payload: dict[str, Any] = {}
+    try:
+        body = await request.body()
+        if body:
+            payload = json.loads(body.decode("utf-8"))
+    except Exception:
+        payload = {}
     client_id, client_secret = _tldr_gmail_client_creds()
     try:
         auth_url, state = build_gmail_auth_url(
@@ -6190,6 +6238,7 @@ def start_tldr_auth(request: Request):
         {
             "state": state,
             "created_at": datetime.now(timezone.utc).isoformat(),
+            "return_url": _tldr_return_url(request, payload.get("return_url")),
         }
     )
     return {"auth_url": auth_url, "state": state}
@@ -6230,11 +6279,26 @@ def tldr_auth_callback(request: Request, state: str = "", code: str = ""):
         )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    return_url = _tldr_return_url(request, _TLDR_GMAIL_AUTH_STATE.get("return_url"))
     _TLDR_GMAIL_AUTH_STATE.clear()
     return HTMLResponse(
-        "<html><body style='font-family:Arial,sans-serif;padding:24px;background:#0f172a;color:#e2e8f0'>"
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        f"<meta http-equiv='refresh' content='1; url={quote(return_url, safe=':/#?&=%')}'></head>"
+        "<body style='font-family:Arial,sans-serif;padding:24px;background:#0f172a;color:#e2e8f0'>"
         "<h2>TLDR Gmail connected</h2>"
-        "<p>You can close this tab and return to HolocronHub.</p>"
+        "<p>Returning to HolocronHub…</p>"
+        f"<p><a href='{quote(return_url, safe=':/#?&=%')}' style='color:#93c5fd'>Open HolocronHub</a></p>"
+        "<script>"
+        f"const target = {json.dumps(return_url)};"
+        "try {"
+        "  if (window.opener && !window.opener.closed) {"
+        "    window.opener.postMessage({ type: 'tldr-auth-complete', target }, '*');"
+        "    window.opener.location.href = target;"
+        "    window.close();"
+        "  }"
+        "} catch (e) {}"
+        "setTimeout(() => { window.location.replace(target); }, 250);"
+        "</script>"
         "</body></html>"
     )
 

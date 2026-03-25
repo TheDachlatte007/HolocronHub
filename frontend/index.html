@@ -188,6 +188,31 @@
 .newsletter-item a{color:#e2e8f0;font-weight:600;text-decoration:none}
 .newsletter-item a:hover{text-decoration:underline}
 .newsletter-item p{margin:6px 0 0;color:#94a3b8;font-size:.82rem;line-height:1.45}
+.tldr-shell{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);gap:14px}
+.tldr-column{display:flex;flex-direction:column;gap:12px}
+.tldr-status-card,.tldr-list-card,.tldr-reader-card{border:1px solid #22304a;border-radius:18px;background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(10,15,28,.98));padding:14px}
+.tldr-status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px}
+.tldr-stat{border:1px solid #22304a;border-radius:14px;padding:12px;background:#0f172a}
+.tldr-stat .label{font-size:.72rem;color:#64748b;text-transform:uppercase;letter-spacing:.06em}
+.tldr-stat .value{margin-top:6px;color:#e2e8f0;font-weight:600}
+.tldr-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tldr-chip-row{display:flex;flex-wrap:wrap;gap:8px}
+.tldr-chip{padding:7px 10px;border-radius:999px;border:1px solid #294264;background:#0f172a;color:#93c5fd;font-size:.78rem;cursor:pointer}
+.tldr-chip.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
+.tldr-issue-list{display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 280px);overflow:auto;padding-right:4px}
+.tldr-issue-card{padding:12px;border:1px solid #22304a;border-radius:14px;background:#0f172a;cursor:pointer}
+.tldr-issue-card.active{border-color:#2563eb;box-shadow:0 0 0 1px rgba(37,99,235,.45) inset}
+.tldr-issue-card.unread{background:linear-gradient(180deg,rgba(23,37,84,.58),rgba(15,23,42,.96))}
+.tldr-issue-card h4{margin:0 0 6px;color:#e2e8f0;font-size:.95rem}
+.tldr-issue-meta{display:flex;flex-wrap:wrap;gap:8px;color:#64748b;font-size:.76rem;margin-bottom:8px}
+.tldr-issue-snippet{color:#94a3b8;font-size:.84rem;line-height:1.45}
+.tldr-reader-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.tldr-reader-title{margin:0;color:#f8fafc}
+.tldr-reader-sub{margin-top:6px;color:#94a3b8;font-size:.84rem}
+.tldr-reader-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tldr-reader-link{padding:6px 10px;border-radius:999px;border:1px solid #22304a;background:#0f172a;color:#93c5fd;text-decoration:none;font-size:.76rem}
+.tldr-reader-frame{width:100%;min-height:980px;border:1px solid #22304a;border-radius:16px;background:#fff}
+.tldr-empty{padding:26px;border:1px dashed #294264;border-radius:16px;color:#94a3b8;text-align:center}
     .finance-summary{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:14px;margin-bottom:16px}
     .finance-summary h3{font-size:.75rem;color:#6ee7b7;text-transform:uppercase;letter-spacing:.07em;margin:0 0 10px}
     .watchlist-item{padding:8px 0;border-bottom:1px solid #1e293b;display:flex;flex-direction:column;gap:3px}
@@ -547,6 +572,7 @@
     <button class="nav-tab active" onclick="showTab('tools',this)">Tool Hub</button>
     <button class="nav-tab" onclick="showTab('feed',this)">Feed</button>
     <button class="nav-tab" onclick="showTab('digest',this)">Morning Digest</button>
+    <button class="nav-tab" onclick="showTab('tldr',this)">TLDR</button>
     <button class="nav-tab" onclick="showTab('markets',this)">Markets</button>
     <button class="nav-tab" onclick="showTab('f1',this)">F1</button>
     <button class="nav-tab" onclick="showTab('warframe',this)">Warframe</button>
@@ -736,6 +762,43 @@
         <span id="digest-meta" class="muted" style="margin-left:8px"></span>
       </div>
       <div id="digest-content"><div class="empty">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TLDR ═══ -->
+  <div id="tab-tldr" style="display:none">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <h2>TLDR Reader</h2>
+          <div class="muted">Import TLDR newsletters directly from Gmail, store them locally, and read them here without opening your inbox.</div>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <button class="sm" onclick="startTLDRAuth()">Connect Gmail</button>
+          <button class="primary" onclick="syncTLDR()">Sync TLDR</button>
+        </div>
+      </div>
+      <div id="tldr-shell" class="tldr-shell">
+        <div class="tldr-column">
+          <div id="tldr-status" class="tldr-status-card">
+            <div class="tldr-empty">Loading TLDR status…</div>
+          </div>
+          <div class="tldr-list-card">
+            <div class="tldr-toolbar" style="margin-bottom:10px">
+              <input id="tldr-q" placeholder="Search issues…" style="flex:1;min-width:180px" />
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+                <input type="checkbox" id="tldr-unread" /> Unread only
+              </label>
+              <button class="sm" onclick="loadTLDR()">Apply</button>
+            </div>
+            <div id="tldr-filters" class="tldr-chip-row" style="margin-bottom:10px"></div>
+            <div id="tldr-list" class="tldr-issue-list"><div class="tldr-empty">No TLDR issues yet.</div></div>
+          </div>
+        </div>
+        <div class="tldr-reader-card">
+          <div id="tldr-reader"><div class="tldr-empty">Select an issue to read it here.</div></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1415,6 +1478,7 @@ function showTab(name, btn) {
         loadDigest();
       }
     }
+    if (name==='tldr') loadTLDR();
     if (name==='markets') loadMarkets();
     if (name==='f1') loadF1();
     if (name==='warframe') loadWarframe();
@@ -2407,6 +2471,226 @@ async function loadFeed() {
 }
 
 // ══ digest ═══════════════════════════════════════════════════
+let _tldrStatus = null;
+let _tldrIssues = [];
+let _tldrSelectedIssueId = '';
+let _tldrSelectedIssue = null;
+let _tldrFilter = 'all';
+
+function tldrLabel(slug) {
+  const map = {
+    all: 'All',
+    tech: 'Tech',
+    ai: 'AI',
+    dev: 'Dev',
+    founders: 'Founders',
+    infosec: 'InfoSec',
+    marketing: 'Marketing',
+    crypto: 'Crypto',
+    hardware: 'Hardware',
+  };
+  return map[String(slug || 'all').toLowerCase()] || String(slug || 'TLDR');
+}
+
+function renderTLDRFilters() {
+  const holder = document.getElementById('tldr-filters');
+  if (!holder) return;
+  const counts = { all: _tldrIssues.length };
+  _tldrIssues.forEach(issue => {
+    const slug = String(issue.newsletter_slug || 'tech').toLowerCase();
+    counts[slug] = (counts[slug] || 0) + 1;
+  });
+  const order = ['all','tech','ai','dev','founders','infosec','marketing','crypto','hardware'];
+  holder.innerHTML = '';
+  order.filter(slug => counts[slug]).forEach(slug => {
+    const btn = document.createElement('button');
+    btn.className = `tldr-chip${_tldrFilter===slug?' active':''}`;
+    btn.textContent = `${tldrLabel(slug)} ${counts[slug]}`;
+    btn.onclick = () => { _tldrFilter = slug; renderTLDRFilters(); renderTLDRIssueList(); };
+    holder.appendChild(btn);
+  });
+}
+
+function renderTLDRStatus() {
+  const el = document.getElementById('tldr-status');
+  if (!el) return;
+  const status = _tldrStatus || {};
+  const summary = status.summary || {};
+  const profileEmail = status.profile?.emailAddress || 'Not connected';
+  const needsAuth = !status.has_token;
+  const needsClient = !status.has_client_secret;
+  let hint = 'Drop your Google OAuth client JSON into `backend/google_client_secret.json`, then connect Gmail.';
+  if (status.has_client_secret && !status.has_token) hint = 'OAuth client is ready. Click `Connect Gmail`, approve access, then run `Sync TLDR`.';
+  if (status.has_token) hint = 'Gmail is connected. Sync pulls your latest TLDR issues into the local reader.';
+  el.innerHTML = `
+    <div>
+      <div style="font-size:.8rem;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em">TLDR Mail Bridge</div>
+      <div class="muted" style="margin-top:6px">${esc(hint)}</div>
+    </div>
+    <div class="tldr-status-grid">
+      <div class="tldr-stat"><div class="label">Gmail</div><div class="value">${esc(profileEmail)}</div></div>
+      <div class="tldr-stat"><div class="label">OAuth</div><div class="value">${needsClient ? 'Client missing' : (needsAuth ? 'Awaiting connect' : 'Connected')}</div></div>
+      <div class="tldr-stat"><div class="label">Stored issues</div><div class="value">${summary.issue_count || 0}</div></div>
+      <div class="tldr-stat"><div class="label">Unread</div><div class="value">${summary.unread_count || 0}</div></div>
+    </div>
+    ${status.auth_error ? `<div class="warn-strip" style="margin-top:12px">Gmail auth issue: ${esc(status.auth_error)}</div>` : ''}
+    ${needsClient ? `<div class="muted" style="margin-top:10px">Expected client secret path: <code>${esc(status.client_secret_path || '')}</code></div>` : ''}
+  `;
+}
+
+function renderTLDRIssueList() {
+  const listEl = document.getElementById('tldr-list');
+  if (!listEl) return;
+  const q = String(document.getElementById('tldr-q')?.value || '').trim().toLowerCase();
+  const unreadOnly = !!document.getElementById('tldr-unread')?.checked;
+  const issues = _tldrIssues.filter(issue => {
+    if (_tldrFilter !== 'all' && String(issue.newsletter_slug || '').toLowerCase() !== _tldrFilter) return false;
+    if (unreadOnly && !(issue.unread && !issue.local_read)) return false;
+    if (!q) return true;
+    return [issue.subject, issue.snippet, issue.newsletter_name].some(value => String(value || '').toLowerCase().includes(q));
+  });
+  listEl.innerHTML = '';
+  if (!issues.length) {
+    listEl.innerHTML = '<div class="tldr-empty">No TLDR issues match this filter yet.</div>';
+    return;
+  }
+  issues.forEach(issue => {
+    const card = document.createElement('div');
+    card.className = `tldr-issue-card${_tldrSelectedIssueId===issue.issue_id?' active':''}${issue.unread && !issue.local_read?' unread':''}`;
+    card.innerHTML = `
+      <h4>${esc(issue.subject || issue.newsletter_name || 'TLDR Issue')}</h4>
+      <div class="tldr-issue-meta">
+        <span>${esc(issue.newsletter_name || 'TLDR')}</span>
+        <span>${relTime(issue.received_at)}</span>
+        ${issue.starred ? '<span>starred</span>' : ''}
+      </div>
+      <div class="tldr-issue-snippet">${esc(issue.snippet || '')}</div>
+    `;
+    card.onclick = () => openTLDRIssue(issue.issue_id);
+    listEl.appendChild(card);
+  });
+}
+
+function renderTLDRReader(issue) {
+  const el = document.getElementById('tldr-reader');
+  if (!el) return;
+  if (!issue) {
+    el.innerHTML = '<div class="tldr-empty">Select an issue to read it here.</div>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="tldr-reader-head">
+      <div>
+        <h3 class="tldr-reader-title">${esc(issue.subject || issue.newsletter_name || 'TLDR Issue')}</h3>
+        <div class="tldr-reader-sub">${esc(issue.newsletter_name || 'TLDR')} | ${relTime(issue.received_at)} | ${esc(issue.sender || '')}</div>
+        <div class="tldr-reader-links" id="tldr-reader-links"></div>
+      </div>
+      <div class="tldr-chip-row">
+        ${issue.unread && !issue.local_read ? '<span class="tldr-chip active" style="cursor:default">Unread</span>' : ''}
+      </div>
+    </div>
+    <iframe id="tldr-reader-frame" class="tldr-reader-frame" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
+  `;
+  const linksEl = document.getElementById('tldr-reader-links');
+  (issue.items || []).slice(0, 8).forEach(item => {
+    const a = document.createElement('a');
+    a.className = 'tldr-reader-link';
+    a.href = item.url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = item.title || 'Link';
+    linksEl.appendChild(a);
+  });
+  const frame = document.getElementById('tldr-reader-frame');
+  if (frame) frame.srcdoc = issue.reader_html || '<html><body><p>No issue body available.</p></body></html>';
+}
+
+async function loadTLDRStatus() {
+  try {
+    _tldrStatus = await fetch(`${API}/tldr/status`).then(r => r.json());
+  } catch (e) {
+    _tldrStatus = { auth_error: e.message, summary: { issue_count: 0, unread_count: 0 } };
+  }
+  renderTLDRStatus();
+}
+
+async function loadTLDRIssues() {
+  try {
+    const params = new URLSearchParams({ limit: '80' });
+    if (_tldrFilter !== 'all') params.set('newsletter', _tldrFilter);
+    const q = String(document.getElementById('tldr-q')?.value || '').trim();
+    if (q) params.set('q', q);
+    if (document.getElementById('tldr-unread')?.checked) params.set('unread_only', 'true');
+    const data = await fetch(`${API}/tldr/issues?${params.toString()}`).then(r => r.json());
+    _tldrIssues = data.issues || [];
+    if (_tldrStatus) _tldrStatus.summary = data.summary || _tldrStatus.summary;
+    if (!_tldrSelectedIssueId && _tldrIssues.length) _tldrSelectedIssueId = _tldrIssues[0].issue_id;
+    renderTLDRFilters();
+    renderTLDRIssueList();
+    if (_tldrSelectedIssueId) {
+      const existing = _tldrIssues.find(issue => issue.issue_id === _tldrSelectedIssueId);
+      if (existing) await openTLDRIssue(_tldrSelectedIssueId, { silentList: true });
+    }
+  } catch (e) {
+    document.getElementById('tldr-list').innerHTML = `<div class="tldr-empty">TLDR load failed: ${esc(e.message)}</div>`;
+  }
+}
+
+async function openTLDRIssue(issueId, options={}) {
+  _tldrSelectedIssueId = issueId;
+  try {
+    _tldrSelectedIssue = await fetch(`${API}/tldr/issues/${encodeURIComponent(issueId)}`).then(r => r.json());
+    renderTLDRReader(_tldrSelectedIssue);
+    if (!options.silentList) renderTLDRIssueList();
+    if (_tldrSelectedIssue?.unread && !_tldrSelectedIssue?.local_read) {
+      const updated = await fetch(`${API}/tldr/issues/${encodeURIComponent(issueId)}/read?read=true`, { method: 'POST' }).then(r => r.json());
+      if (updated?.issue) {
+        _tldrSelectedIssue = updated.issue;
+        _tldrStatus = { ...(_tldrStatus || {}), summary: updated.summary || _tldrStatus?.summary };
+        _tldrIssues = _tldrIssues.map(issue => issue.issue_id === issueId ? updated.issue : issue);
+        renderTLDRStatus();
+        renderTLDRIssueList();
+      }
+    }
+  } catch (e) {
+    document.getElementById('tldr-reader').innerHTML = `<div class="tldr-empty">Could not open issue: ${esc(e.message)}</div>`;
+  }
+}
+
+async function startTLDRAuth() {
+  try {
+    const data = await fetch(`${API}/tldr/auth/start`, { method: 'POST' }).then(async r => {
+      if (!r.ok) throw new Error((await r.json()).detail || 'Auth start failed');
+      return r.json();
+    });
+    window.open(data.auth_url, '_blank', 'noopener');
+    document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Google auth opened in a new tab. Approve access there, then come back and click `Sync TLDR`.</div>';
+  } catch (e) {
+    document.getElementById('tldr-reader').innerHTML = `<div class="tldr-empty">Gmail connect failed: ${esc(e.message)}</div>`;
+  }
+}
+
+async function syncTLDR() {
+  try {
+    document.getElementById('tldr-reader').innerHTML = '<div class="tldr-empty">Syncing TLDR issues from Gmail…</div>';
+    await fetch(`${API}/tldr/sync?max_results=40`, { method: 'POST' }).then(async r => {
+      if (!r.ok) throw new Error((await r.json()).detail || 'Sync failed');
+      return r.json();
+    });
+    await loadTLDRStatus();
+    await loadTLDRIssues();
+    if (tabLoaded['digest']) loadDigest();
+  } catch (e) {
+    document.getElementById('tldr-reader').innerHTML = `<div class="tldr-empty">TLDR sync failed: ${esc(e.message)}</div>`;
+    await loadTLDRStatus();
+  }
+}
+
+async function loadTLDR() {
+  await loadTLDRStatus();
+  await loadTLDRIssues();
+}
+
 async function loadDigest() {
   const contentEl = document.getElementById('digest-content');
   contentEl.innerHTML='<div class="empty">Loading...</div>';
@@ -6035,6 +6319,8 @@ document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')l
 document.getElementById('feed-q').addEventListener('keydown',e=>{if(e.key==='Enter')loadFeed();});
 document.getElementById('f1-season')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1({ force: true });});
 document.getElementById('f1-history-q')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1History({ force: true });});
+document.getElementById('tldr-q')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadTLDR();});
+document.getElementById('tldr-unread')?.addEventListener('change',()=>loadTLDRIssues());
 document.addEventListener('keydown', handleToolHubShortcuts);
 
 // ══ settings page ═════════════════════════════════════════════

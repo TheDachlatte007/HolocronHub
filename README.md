@@ -106,6 +106,28 @@ Morning Digest now supports a dedicated TLDR block that stays out of the main fe
 - Last good newsletter snapshots are cached in `data/newsletter_cache/`
 - TLDR items are shown only inside `Morning Digest`, not the main `Feed`
 
+## TLDR Gmail Reader
+
+HolocronHub can now import TLDR issues directly from Gmail and store them locally in SQLite.
+
+- Database file: `data/tldr_issues.db`
+- Token file: `data/tldr_gmail_token.json`
+- OAuth client file: `backend/google_client_secret.json`
+- Status API: `GET /api/tldr/status`
+- Start auth: `POST /api/tldr/auth/start`
+- Sync issues: `POST /api/tldr/sync`
+
+Recommended setup:
+
+1. Create a Google OAuth client and allow the redirect URI `http://127.0.0.1:8000/api/tldr/auth/callback`
+2. Save the downloaded client JSON as `backend/google_client_secret.json`
+3. Open the `TLDR` tab in HolocronHub, click `Connect Gmail`, then `Sync TLDR`
+
+If you prefer environment variables instead of a client JSON file, set:
+
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`
+
 ## Portainer (GitHub)
 
 1. In Portainer: `Stacks` -> `Add stack` -> `Repository`.

@@ -20,7 +20,7 @@ from typing import Any, List, Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
 try:
@@ -40,6 +40,30 @@ except Exception:
         upsert_f1_history_session,
     )
 
+try:
+    from .tldr_store import (
+        ensure_tldr_db,
+        get_tldr_issue,
+        list_tldr_issues,
+        mark_tldr_issue_read,
+        tldr_summary as load_tldr_summary,
+        upsert_tldr_issue,
+    )
+except Exception:
+    from tldr_store import (
+        ensure_tldr_db,
+        get_tldr_issue,
+        list_tldr_issues,
+        mark_tldr_issue_read,
+        tldr_summary as load_tldr_summary,
+        upsert_tldr_issue,
+    )
+
+try:
+    from .tldr_gmail import build_gmail_auth_url, exchange_gmail_auth_code, fetch_tldr_messages, gmail_profile
+except Exception:
+    from tldr_gmail import build_gmail_auth_url, exchange_gmail_auth_code, fetch_tldr_messages, gmail_profile
+
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_FILE = BASE_DIR / "data" / "tools.json"
 SAMPLE_FILE = BASE_DIR / "data" / "tools.sample.json"
@@ -56,6 +80,9 @@ F1_SESSION_SNAPSHOTS_FILE = BASE_DIR / "data" / "f1_session_snapshots.json"
 F1_SECONDARY_INGEST_FILE = BASE_DIR / "data" / "f1_secondary_ingest.json"
 F1_SESSION_ARCHIVE_FILE = BASE_DIR / "data" / "f1_session_archive.json"
 F1_HISTORY_DB_FILE = BASE_DIR / "data" / "f1_history.db"
+TLDR_DB_FILE = BASE_DIR / "data" / "tldr_issues.db"
+TLDR_GMAIL_TOKEN_FILE = BASE_DIR / "data" / "tldr_gmail_token.json"
+TLDR_GMAIL_CLIENT_SECRET_FILE = BASE_DIR / "backend" / "google_client_secret.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
 
 
@@ -134,6 +161,7 @@ _PROVIDER_BREAKERS: dict[str, dict[str, Any]] = {
 _F1_SESSION_SNAPSHOTS: dict[str, list[dict[str, Any]]] = {}
 _F1_SECONDARY_INGEST: dict[str, dict[str, Any]] = {}
 _F1_SESSION_ARCHIVE: dict[str, dict[str, Any]] = {}
+_TLDR_GMAIL_AUTH_STATE: dict[str, Any] = {}
 
 app.add_middleware(
     CORSMiddleware,
@@ -5381,6 +5409,68 @@ def _settings_response(cfg: dict[str, Any]) -> dict[str, Any]:
     return {**cfg, "schedule": {**schedule_cfg, "next_run": next_run}}
 
 
+def _tldr_gmail_client_creds() -> tuple[str, str]:
+    return (
+        os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip(),
+        os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip(),
+    )
+
+
+def _tldr_auth_redirect_uri() -> str:
+    return "http://127.0.0.1:8000/api/tldr/auth/callback"
+
+
+def _tldr_auth_status() -> dict[str, Any]:
+    client_id, client_secret = _tldr_gmail_client_creds()
+    has_client_secret = TLDR_GMAIL_CLIENT_SECRET_FILE.exists() or bool(client_id and client_secret)
+    has_token = TLDR_GMAIL_TOKEN_FILE.exists()
+    profile = None
+    auth_error = None
+    if has_token:
+        try:
+            profile = gmail_profile(TLDR_GMAIL_TOKEN_FILE)
+        except Exception as exc:
+            auth_error = str(exc)
+    return {
+        "has_client_secret": has_client_secret,
+        "has_token": has_token,
+        "profile": profile,
+        "auth_error": auth_error,
+        "summary": load_tldr_summary(TLDR_DB_FILE),
+        "oauth_redirect_uri": _tldr_auth_redirect_uri(),
+        "client_secret_path": str(TLDR_GMAIL_CLIENT_SECRET_FILE),
+    }
+
+
+def _sync_tldr_from_gmail(*, max_results: int = 25, query: str | None = None) -> dict[str, Any]:
+    if not TLDR_GMAIL_TOKEN_FILE.exists():
+        raise RuntimeError("TLDR Gmail token missing. Connect Gmail first.")
+    actual_query = str(query or "subject:TLDR newer_than:180d").strip()
+    issues = fetch_tldr_messages(
+        TLDR_GMAIL_TOKEN_FILE,
+        query=actual_query,
+        max_results=max_results,
+    )
+    newsletters: dict[str, int] = {}
+    for issue in issues:
+        upsert_tldr_issue(TLDR_DB_FILE, issue)
+        slug = str(issue.get("newsletter_slug") or "unknown")
+        newsletters[slug] = newsletters.get(slug, 0) + 1
+    profile = None
+    try:
+        profile = gmail_profile(TLDR_GMAIL_TOKEN_FILE)
+    except Exception:
+        profile = None
+    return {
+        "ok": True,
+        "stored": len(issues),
+        "query": actual_query,
+        "newsletters": newsletters,
+        "profile": profile,
+        "summary": load_tldr_summary(TLDR_DB_FILE),
+    }
+
+
 # ── ingest core ───────────────────────────────────────────────────────────────
 
 def _build_cost_guard(selected_items: list[dict], total_limit: int) -> dict:
@@ -5594,6 +5684,7 @@ def _prewarm_provider_caches() -> None:
 @app.on_event("startup")
 def _startup() -> None:
     ensure_f1_history_db(F1_HISTORY_DB_FILE)
+    ensure_tldr_db(TLDR_DB_FILE)
     _boot_last_good_store()
     _boot_f1_session_snapshots()
     _boot_f1_secondary_ingest()
@@ -5976,15 +6067,34 @@ def get_morning_digest(
     coverage = {k: len(by_cat.get(k, [])) for k in categories}
     missing = [k for k, n in coverage.items() if n == 0]
 
-    tldr_sorted = sorted(
-        tldr_items,
-        key=lambda i: (
-            str(i.get("issue_date") or i.get("published_at") or ""),
-            float(i.get("daniel_score", 0.0)),
-            str(i.get("published_at", "")),
-        ),
-        reverse=True,
-    )
+    tldr_issue_rows = list_tldr_issues(TLDR_DB_FILE, limit=12)
+    if tldr_issue_rows:
+        tldr_sorted = []
+        for issue in tldr_issue_rows:
+            top_item = ((issue.get("items") or [None])[0] or {})
+            tldr_sorted.append(
+                {
+                    "title": top_item.get("title") or issue.get("subject") or issue.get("newsletter_name") or "TLDR Issue",
+                    "url": top_item.get("url") or "",
+                    "summary": issue.get("snippet") or issue.get("subject") or "",
+                    "issue_date": issue.get("received_at"),
+                    "published_at": issue.get("received_at"),
+                    "newsletter_label": issue.get("newsletter_name") or "TLDR",
+                    "source_name": issue.get("newsletter_name") or "TLDR",
+                    "reading_time": "mail issue",
+                    "stale": False,
+                }
+            )
+    else:
+        tldr_sorted = sorted(
+            tldr_items,
+            key=lambda i: (
+                str(i.get("issue_date") or i.get("published_at") or ""),
+                float(i.get("daniel_score", 0.0)),
+                str(i.get("published_at", "")),
+            ),
+            reverse=True,
+        )
     tldr_by_newsletter: dict[str, list[dict]] = {}
     for item in tldr_sorted:
         label = str(item.get("newsletter_label") or item.get("source_name") or "TLDR").strip()
@@ -6012,6 +6122,108 @@ def get_morning_digest(
         "tldr_count": tldr_total,
         "by_newsletter": tldr_by_newsletter,
     }
+
+
+# ── TLDR mail ─────────────────────────────────────────────────────────────────
+
+@app.get("/api/tldr/status")
+def get_tldr_status():
+    return _tldr_auth_status()
+
+
+@app.post("/api/tldr/auth/start")
+def start_tldr_auth():
+    client_id, client_secret = _tldr_gmail_client_creds()
+    try:
+        auth_url, state = build_gmail_auth_url(
+            TLDR_GMAIL_CLIENT_SECRET_FILE,
+            _tldr_auth_redirect_uri(),
+            client_id=client_id or None,
+            client_secret=client_secret or None,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    _TLDR_GMAIL_AUTH_STATE.clear()
+    _TLDR_GMAIL_AUTH_STATE.update(
+        {
+            "state": state,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    return {"auth_url": auth_url, "state": state}
+
+
+@app.get("/api/tldr/auth/callback", response_class=HTMLResponse)
+def tldr_auth_callback(request: Request, state: str = "", code: str = ""):
+    expected_state = str(_TLDR_GMAIL_AUTH_STATE.get("state") or "").strip()
+    if not expected_state or state != expected_state:
+        raise HTTPException(status_code=400, detail="Invalid or expired Gmail OAuth state.")
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing Gmail OAuth code.")
+    client_id, client_secret = _tldr_gmail_client_creds()
+    try:
+        exchange_gmail_auth_code(
+            TLDR_GMAIL_CLIENT_SECRET_FILE,
+            _tldr_auth_redirect_uri(),
+            authorization_response=str(request.url),
+            state=state,
+            token_file=TLDR_GMAIL_TOKEN_FILE,
+            client_id=client_id or None,
+            client_secret=client_secret or None,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    _TLDR_GMAIL_AUTH_STATE.clear()
+    return HTMLResponse(
+        "<html><body style='font-family:Arial,sans-serif;padding:24px;background:#0f172a;color:#e2e8f0'>"
+        "<h2>TLDR Gmail connected</h2>"
+        "<p>You can close this tab and return to HolocronHub.</p>"
+        "</body></html>"
+    )
+
+
+@app.get("/api/tldr/issues")
+def get_tldr_issues(
+    newsletter: Optional[str] = None,
+    q: Optional[str] = None,
+    unread_only: bool = False,
+    limit: int = 50,
+):
+    return {
+        "summary": load_tldr_summary(TLDR_DB_FILE),
+        "issues": list_tldr_issues(
+            TLDR_DB_FILE,
+            newsletter=newsletter,
+            q=q,
+            unread_only=bool(unread_only),
+            limit=limit,
+        ),
+    }
+
+
+@app.get("/api/tldr/issues/{issue_id:path}")
+def get_tldr_issue_detail(issue_id: str):
+    issue = get_tldr_issue(TLDR_DB_FILE, issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    return issue
+
+
+@app.post("/api/tldr/issues/{issue_id:path}/read")
+def set_tldr_issue_read(issue_id: str, read: bool = True):
+    ok = mark_tldr_issue_read(TLDR_DB_FILE, issue_id, read=bool(read))
+    if not ok:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    issue = get_tldr_issue(TLDR_DB_FILE, issue_id)
+    return {"ok": True, "issue": issue, "summary": load_tldr_summary(TLDR_DB_FILE)}
+
+
+@app.post("/api/tldr/sync")
+def sync_tldr_mail(max_results: int = 25, q: Optional[str] = None):
+    try:
+        return _sync_tldr_from_gmail(max_results=max_results, query=q)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 # ── settings ──────────────────────────────────────────────────────────────────

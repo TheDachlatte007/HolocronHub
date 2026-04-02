@@ -1412,7 +1412,10 @@ def _http_get_json(
         try:
             r = requests.get(url, params=params, headers=merged_headers, timeout=timeout)
             r.raise_for_status()
-            payload = r.json()
+            try:
+                payload = r.json()
+            except ValueError:
+                return None, "invalid_json_response"
             if provider_name:
                 _provider_breaker_success(provider_name)
             return payload, None
@@ -2101,141 +2104,32 @@ def _fetch_market_history_alpha(symbol: str, *, range_key: str = "1mo") -> tuple
 
 
 def _fetch_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
-    errors: list[str] = []
-
-    payload_data, req_err = _http_get_json(
-        "https://query1.finance.yahoo.com/v7/finance/quote",
-        params={"symbols": ",".join(symbols)},
-        timeout=12,
-    )
-
-    # If query1 returns 401/error, retry against query2 before falling back
-    if req_err:
-        payload_data2, req_err2 = _http_get_json(
-            "https://query2.finance.yahoo.com/v7/finance/quote",
-            params={"symbols": ",".join(symbols)},
-            timeout=12,
-        )
-        if not req_err2 and payload_data2:
-            payload_data, req_err = payload_data2, None
-        else:
-            fb_quotes, fb_errors = _fallback_market_quotes(symbols)
-            if fb_quotes:
-                return fb_quotes, [f"quote_primary:{req_err}", *fb_errors[:20]]
-            return [], [str(req_err)]
-
-    payload = _dig(payload_data, "quoteResponse", "result") or []
-    if not isinstance(payload, list):
-        payload = []
-
-    out: list[dict[str, Any]] = []
-    found = {str(q.get("symbol", "")).upper() for q in payload if isinstance(q, dict)}
-    for sym in symbols:
-        q = next((x for x in payload if isinstance(x, dict) and str(x.get("symbol", "")).upper() == sym.upper()), None)
-        if not q:
-            errors.append(f"symbol_not_found:{sym}")
-            continue
-
-        out.append(
-            {
-                "symbol": q.get("symbol", sym),
-                "name": q.get("shortName") or q.get("longName") or q.get("symbol", sym),
-                "price": q.get("regularMarketPrice"),
-                "change": q.get("regularMarketChange"),
-                "change_pct": q.get("regularMarketChangePercent"),
-                "currency": q.get("currency"),
-                "market_state": q.get("marketState"),
-                "updated_at": q.get("regularMarketTime"),
-            }
-        )
-
-    missing = [s for s in symbols if s.upper() not in found]
-    if missing:
-        fb_quotes, fb_errors = _fallback_market_quotes(missing)
-        out.extend(fb_quotes)
-        errors.extend(fb_errors)
-
-    return out, errors
+    return _fallback_market_quotes(symbols)
 
 
 def _fetch_market_history(symbol: str, *, range_key: str = "1mo", interval: str = "1d") -> tuple[list[dict[str, Any]], Optional[str]]:
-    safe_symbol = quote(symbol, safe="")
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{safe_symbol}"
-    data, err = _http_get_json(url, params={"range": range_key, "interval": interval}, timeout=15)
-    if err:
-        td_series, td_err = _fetch_market_history_twelvedata(symbol, range_key=range_key, interval=interval)
-        if td_series:
-            return td_series, f"yahoo:{err}"
-        alpha_series, alpha_err = _fetch_market_history_alpha(symbol, range_key=range_key)
-        if alpha_series:
-            suffix = f" | {td_err}" if td_err else ""
-            return alpha_series, f"yahoo:{err}{suffix}"
-        combined = []
-        combined.append(str(err))
-        if td_err:
-            combined.append(td_err)
-        if alpha_err:
-            combined.append(alpha_err)
-        return [], " | ".join(combined)
-
-    result = _dig(data, "chart", "result") or []
-    if not isinstance(result, list) or not result:
-        td_series, td_err = _fetch_market_history_twelvedata(symbol, range_key=range_key, interval=interval)
-        if td_series:
-            return td_series, "yahoo:empty_chart_result"
-        alpha_series, alpha_err = _fetch_market_history_alpha(symbol, range_key=range_key)
-        if alpha_series:
-            suffix = f" | {td_err}" if td_err else ""
-            return alpha_series, f"yahoo:empty_chart_result{suffix}"
-        combined = ["empty_chart_result"]
-        if td_err:
-            combined.append(td_err)
-        if alpha_err:
-            combined.append(alpha_err)
-        return [], " | ".join(combined)
-
-    r0 = result[0] if isinstance(result[0], dict) else {}
-    timestamps = r0.get("timestamp") or []
-    closes = _dig(r0, "indicators", "quote") or []
-    q0 = closes[0] if isinstance(closes, list) and closes else {}
-    close_list = q0.get("close") if isinstance(q0, dict) else []
-
-    points: list[dict[str, Any]] = []
-    for idx, ts in enumerate(timestamps):
-        try:
-            ts_int = int(ts)
-        except Exception:
-            continue
-        close_val = close_list[idx] if isinstance(close_list, list) and idx < len(close_list) else None
-        if close_val is None:
-            continue
-        try:
-            close_float = float(close_val)
-        except Exception:
-            continue
-        points.append(
-            {
-                "datetime": datetime.fromtimestamp(ts_int, timezone.utc).isoformat(),
-                "close": close_float,
-            }
-        )
-
-    if points:
-        return points, None
+    cache_key = f"markets:history:{str(symbol or '').upper()}:{range_key}:{interval}"
+    cached = _cache_get(cache_key, ttl_seconds=15 * 60)
+    if isinstance(cached, dict):
+        return list(cached.get("series") or []), cached.get("warning")
 
     td_series, td_err = _fetch_market_history_twelvedata(symbol, range_key=range_key, interval=interval)
     if td_series:
-        return td_series, "yahoo:empty_points"
+        _cache_set(cache_key, {"series": td_series, "warning": None})
+        return td_series, None
+
     alpha_series, alpha_err = _fetch_market_history_alpha(symbol, range_key=range_key)
     if alpha_series:
-        suffix = f" | {td_err}" if td_err else ""
-        return alpha_series, f"yahoo:empty_points{suffix}"
-    combined = ["empty_points"]
+        warning = td_err if td_err else None
+        _cache_set(cache_key, {"series": alpha_series, "warning": warning})
+        return alpha_series, warning
+
+    combined = []
     if td_err:
         combined.append(td_err)
     if alpha_err:
         combined.append(alpha_err)
-    return [], " | ".join(combined)
+    return [], " | ".join(combined) if combined else "market_history_unavailable"
 
 
 def _fetch_markets_history(
@@ -6287,7 +6181,7 @@ def markets_overview(symbols: Optional[str] = None, history_range: str = "1mo", 
         interval_key = "1d"
 
     cache_key = f"markets:{','.join(symbol_list)}:{range_key}:{interval_key}"
-    cached = _cache_get(cache_key, ttl_seconds=180)
+    cached = _cache_get(cache_key, ttl_seconds=5 * 60)
     if isinstance(cached, dict):
         duration_ms = int((time.perf_counter() - started) * 1000)
         _record_provider_health(

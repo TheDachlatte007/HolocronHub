@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 
 _NEWSLETTER_PATTERNS: list[tuple[str, str, re.Pattern[str]]] = [
     ("ai", "TLDR AI", re.compile(r"\btldr\s+ai\b", re.I)),
+    ("data", "TLDR Data", re.compile(r"\btldr\s+data\b", re.I)),
     ("founders", "TLDR Founders", re.compile(r"\btldr\s+founders?\b", re.I)),
     ("marketing", "TLDR Marketing", re.compile(r"\btldr\s+marketing\b", re.I)),
     ("infosec", "TLDR InfoSec", re.compile(r"\btldr\s+(?:infosec|security)\b", re.I)),
@@ -21,6 +22,23 @@ _NEWSLETTER_PATTERNS: list[tuple[str, str, re.Pattern[str]]] = [
     ("hardware", "TLDR Hardware", re.compile(r"\btldr\s+hardware\b", re.I)),
     ("dev", "TLDR Dev", re.compile(r"\btldr\s+(?:web\s*dev|dev(?:elopment)?|programming)\b", re.I)),
     ("tech", "TLDR Tech", re.compile(r"\btldr(?:\s+tech)?\b", re.I)),
+]
+
+_TLDR_SENDER_PATTERN = re.compile(r"(?:^|[@<\s])(?:hi|team|hello|updates?)@(?:mail\.)?tldrnewsletter\.com\b|tldrnewsletter", re.I)
+_TLDR_QUERY_PATTERN = re.compile(r"\btldr\b", re.I)
+_ADMIN_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"\bplease follow these instructions\b", re.I),
+    re.compile(r"\bwelcome to tldr\b", re.I),
+    re.compile(r"\breply ['\"]?ok['\"]?\b", re.I),
+    re.compile(r"\bmove it to your primary inbox\b", re.I),
+    re.compile(r"\bhit the 3 dots\b", re.I),
+    re.compile(r"\bdrag and drop\b", re.I),
+    re.compile(r"\btook you off our list\b", re.I),
+    re.compile(r"\bremoved? you from our list\b", re.I),
+    re.compile(r"\bclick here to resubscribe\b", re.I),
+    re.compile(r"\botherwise you will not receive\b", re.I),
+    re.compile(r"\bavoid filling up your inbox\b", re.I),
+    re.compile(r"\bunsubscribe\b", re.I),
 ]
 
 
@@ -71,6 +89,33 @@ def _detect_newsletter(subject: str, html: str, text: str) -> tuple[str, str]:
         if pattern.search(corpus):
             return slug, label
     return "tech", "TLDR Tech"
+
+
+def _is_tldr_candidate(subject: str, sender: str, html: str, text: str, query: str) -> bool:
+    corpus = f"{subject}\n{sender}\n{text[:2000]}\n{html[:3000]}"
+    if _TLDR_SENDER_PATTERN.search(sender):
+        return True
+    if query and query.strip():
+        if re.search(re.escape(query.strip()), corpus, re.I):
+            return True
+    if _TLDR_QUERY_PATTERN.search(corpus):
+        return True
+    return any(pattern.search(corpus) for _, _, pattern in _NEWSLETTER_PATTERNS)
+
+
+def _looks_like_news_issue(subject: str, sender: str, html: str, text: str) -> bool:
+    corpus = f"{subject}\n{sender}\n{text[:5000]}\n{html[:8000]}"
+    if any(pattern.search(corpus) for pattern in _ADMIN_PATTERNS):
+        return False
+    if not any(pattern.search(corpus) for _, _, pattern in _NEWSLETTER_PATTERNS):
+        return False
+    items = _extract_issue_items(BeautifulSoup(html, "html.parser")) if html else []
+    if len(items) >= 2:
+        return True
+    long_text = " ".join(str(text or "").split())
+    if len(long_text) >= 900:
+        return True
+    return False
 
 
 def _extract_issue_items(soup: BeautifulSoup, max_items: int = 40) -> list[dict[str, Any]]:
@@ -209,7 +254,7 @@ def fetch_tldr_messages_imap(
     host = str(imap_host or "imap.gmail.com").strip()
     port = int(imap_port or 993)
     folder = str(mailbox or "INBOX").strip() or "INBOX"
-    search_subject = str(query or "TLDR").strip() or "TLDR"
+    search_query = str(query or "TLDR").strip() or "TLDR"
     password = str(app_password or "").replace(" ", "").strip()
     if not email_address or not password:
         raise RuntimeError("Gmail address and app password are required.")
@@ -220,13 +265,15 @@ def fetch_tldr_messages_imap(
         status, _ = conn.select(folder, readonly=True)
         if status != "OK":
             raise RuntimeError(f"Could not open mailbox `{folder}`.")
-        status, data = conn.uid("search", None, "SUBJECT", f'"{search_subject}"')
+        status, data = conn.uid("search", None, "ALL")
         if status != "OK":
             raise RuntimeError("IMAP search failed.")
         uids = [uid for uid in (data[0] or b"").split() if uid]
         if not uids:
             return []
-        selected = list(reversed(uids[-max(1, min(int(max_results or 25), 100)):]))
+        safe_max_results = max(1, min(int(max_results or 25), 100))
+        scan_limit = min(max(safe_max_results * 8, 120), 320)
+        selected = list(reversed(uids[-scan_limit:]))
         issues: list[dict[str, Any]] = []
         for uid in selected:
             status, parts = conn.uid("fetch", uid, "(BODY.PEEK[] FLAGS)")
@@ -245,7 +292,16 @@ def fetch_tldr_messages_imap(
             if not raw_message:
                 continue
             message = BytesParser(policy=policy.default).parsebytes(raw_message)
+            subject = str(message.get("Subject") or "").strip()
+            sender = str(message.get("From") or "").strip()
+            html_body, text_body = _extract_message_bodies(message)
+            if not _is_tldr_candidate(subject, sender, html_body, text_body, search_query):
+                continue
+            if not _looks_like_news_issue(subject, sender, html_body, text_body):
+                continue
             issues.append(_message_to_issue(uid.decode("utf-8", errors="ignore"), message, flags_blob))
+            if len(issues) >= safe_max_results:
+                break
         return issues
     except imaplib.IMAP4.error as exc:
         raise RuntimeError(f"Gmail IMAP login failed: {exc}") from exc

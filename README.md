@@ -1,16 +1,16 @@
-# HolocronHub (MVP v1.1)
+# HolocronHub
 
-HolocronHub is a local single-user dashboard for curated AI tools, home network services, and a unified feed.
+HolocronHub is a local single-user dashboard for curated AI tools, home lab services, news, markets, F1, Warframe, and TLDR digests.
 
-## Features (v1.1)
-- Tool catalog with search + category filter
-- Clickable tool links
-- Quick Add Tool panel (seed editor)
-- Source management + ingest scheduling
-- Full Settings page (General, Feed, Ingest, API keys)
-- Feed + Morning Digest + Saved items
-- JSON-based local data store
-- FastAPI backend API
+## Features
+- Tool Hub with quick launch, AI task curation, and Home Lab shortcuts
+- Feed, Morning Digest, and saved items with local ingest scheduling
+- Markets watchlist and overview with local fallback history
+- F1 weekend, live timing, and local history views
+- Warframe market, world state, planner, and watchlist views
+- TLDR Gmail reader with local SQLite-backed issue storage
+- Settings for ingest, API keys, Gmail bridge, and local runtime behavior
+- FastAPI backend with local JSON/SQLite data storage
 
 ## Status
 - Work in progress
@@ -149,6 +149,9 @@ Notes:
 - Tools file: `data/tools.json` (auto-created from the bundled seed file, with missing defaults synced on load)
 - Sources file: `data/sources.json`
 - Feed snapshot: `data/feed_items.json`
+- F1 history DB: `data/f1_history.db`
+- Market history DB: `data/markets_history.db`
+- TLDR issue DB: `data/tldr_issues.db`
 
 ## Next (v2)
 - n8n integration

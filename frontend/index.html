@@ -347,10 +347,10 @@
     .stat-card{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
     .rank-pill{font-size:10px;padding:2px 7px;border-radius:999px;background:#1e3a5f;color:#bfdbfe;width:max-content}
     .small-list{display:flex;flex-direction:column;gap:8px}
-    .small-row{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px;min-width:0}
+    .small-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;font-size:13px;min-width:0}
     .small-row > span:first-child{min-width:0}
-    .wf-row-main{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .wf-row-meta{flex-shrink:0;text-align:right;white-space:nowrap}
+    .wf-row-main{min-width:0;flex:1;overflow-wrap:anywhere;line-height:1.35}
+    .wf-row-meta{flex:0 0 auto;text-align:right;white-space:normal;line-height:1.35;max-width:42%}
 
     .tool-minor{font-size:12px;color:#94a3b8}
     .tool-summary{font-size:13px;line-height:1.45;color:#cbd5e1;min-height:36px}
@@ -1395,9 +1395,12 @@ function formatTimeish(value, fallback='') {
 function friendlyProviderError(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
+  if (raw.includes('fallback:') && raw.includes('invalid_json_response')) return 'some market feeds returned malformed data; using best available fallback';
   if (raw.includes('invalid_json_response')) return 'one source returned invalid data';
   if (raw.includes('orders:403_forbidden')) return 'live order book restricted; using trade stats instead';
   if (raw.includes('statistics:invalid_json_response')) return 'market statistics temporarily returned invalid data';
+  if (raw.includes('alphavantage:no_series') || raw.includes('yahoo:no_series')) return 'one market source had no price history for this symbol';
+  if (raw.includes('local_history_cache')) return 'using locally cached market history while live feeds recover';
   return raw;
 }
 
@@ -2506,6 +2509,7 @@ function tldrLabel(slug) {
     all: 'All',
     tech: 'Tech',
     ai: 'AI',
+    data: 'Data',
     dev: 'Dev',
     founders: 'Founders',
     infosec: 'InfoSec',
@@ -2524,7 +2528,7 @@ function renderTLDRFilters() {
     const slug = String(issue.newsletter_slug || 'tech').toLowerCase();
     counts[slug] = (counts[slug] || 0) + 1;
   });
-  const order = ['all','tech','ai','dev','founders','infosec','marketing','crypto','hardware'];
+  const order = ['all','tech','ai','data','dev','founders','infosec','marketing','crypto','hardware'];
   holder.innerHTML = '';
   order.filter(slug => counts[slug]).forEach(slug => {
     const btn = document.createElement('button');
@@ -2540,6 +2544,8 @@ function renderTLDRStatus() {
   if (!el) return;
   const status = _tldrStatus || {};
   const summary = status.summary || {};
+  const lastIssueAt = summary.last_issue_at || summary.latest_issue?.received_at || null;
+  const lastIssueNewsletter = summary.last_issue_newsletter || summary.latest_issue?.newsletter_name || '';
   const profileEmail = status.profile?.emailAddress || status.email || 'Not configured';
   const configured = !!status.configured;
   let hint = 'Save your Gmail address and a Google App Password here, then sync the latest TLDR issues.';
@@ -2557,6 +2563,8 @@ function renderTLDRStatus() {
       <div class="tldr-stat"><div class="label">IMAP</div><div class="value">${configured ? 'Configured' : (status.has_password ? 'Awaiting email save' : 'Needs app password')}</div></div>
       <div class="tldr-stat"><div class="label">Stored issues</div><div class="value">${summary.issue_count || 0}</div></div>
       <div class="tldr-stat"><div class="label">Unread</div><div class="value">${summary.unread_count || 0}</div></div>
+      <div class="tldr-stat"><div class="label">Newsletters</div><div class="value">${summary.newsletter_count || 0}</div></div>
+      <div class="tldr-stat"><div class="label">Latest issue</div><div class="value">${lastIssueAt ? `${esc(relTime(lastIssueAt))}${lastIssueNewsletter ? ` | ${esc(lastIssueNewsletter)}` : ''}` : 'No sync yet'}</div></div>
     </div>
     ${status.auth_error ? `<div class="warn-strip" style="margin-top:12px">Gmail issue: ${esc(status.auth_error)}</div>` : ''}
     <div class="tldr-upload-row">
@@ -2845,6 +2853,11 @@ function assetName(symbol, fallbackName) {
 // Default watchlist symbols
 const WL_DEFAULT = ['EUNL.DE','NVDA','MSFT','AAPL','^GSPC','BTC-USD','GC=F'];
 const WL_STORAGE_KEY = 'holocronhub.markets.watchlist.v2';
+const MARKETS_OVERVIEW_CACHE_KEY = 'holocronhub.markets.overview.v1';
+const MARKETS_OVERVIEW_FRESH_MS = 2 * 60 * 1000;
+const MARKETS_OVERVIEW_STALE_MS = 12 * 60 * 60 * 1000;
+const MARKETS_FINANCE_CACHE_KEY = 'holocronhub.markets.finance.v1';
+const MARKETS_FINANCE_FRESH_MS = 10 * 60 * 1000;
 
 // Market overview sections (static symbol groups)
 const MKT_OVERVIEW_SECTIONS = [
@@ -2860,6 +2873,8 @@ let _marketDecorated = [];
 let _marketFocusSymbol = '';
 let _mktDetailSymbol = '';
 let _mktDetailRange = '1mo';
+let _marketsOverviewCache = { key: '', ts: 0, data: null };
+let _marketFinanceCache = { ts: 0, items: [] };
 
 const MARKET_CORE_PRESETS = [
   { symbol: 'EUNL.DE', label: 'MSCI World ETF' },
@@ -3019,6 +3034,101 @@ function fmtPrice(v) {
 
 function getMarketDecoratedEntry(symbol) {
   return _marketDecorated.find(item => String(item.q?.symbol || '').toUpperCase() === String(symbol || '').toUpperCase()) || null;
+}
+
+function normalizeMarketNeedle(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function marketNewsMatches(item, sym, name) {
+  const rawHaystack = [
+    item?.title || '',
+    item?.summary || '',
+    item?.source_name || '',
+    JSON.stringify(item?.drivers || []),
+    JSON.stringify(item?.themes || []),
+  ].join(' ');
+  const haystack = normalizeMarketNeedle(rawHaystack);
+  const symbolNeedle = normalizeMarketNeedle(sym);
+  if (symbolNeedle && haystack.includes(symbolNeedle)) return true;
+  const nameWords = normalizeMarketNeedle(name).split(' ').filter(word => word.length > 3).slice(0, 3);
+  return nameWords.some(word => haystack.includes(word));
+}
+
+function makeMarketsOverviewCacheKey(symbols, rangeKey='1mo', interval='1d') {
+  return `${symbols.map(sym => String(sym || '').trim().toUpperCase()).filter(Boolean).join(',')}::${rangeKey}::${interval}`;
+}
+
+function readMarketsOverviewCache(cacheKey) {
+  if (_marketsOverviewCache.key === cacheKey && _marketsOverviewCache.data) return _marketsOverviewCache;
+  const store = safeLocalGet(MARKETS_OVERVIEW_CACHE_KEY, {});
+  const entry = store?.[cacheKey];
+  if (!entry || !entry.data) return null;
+  _marketsOverviewCache = { key: cacheKey, ts: Number(entry.ts || 0), data: entry.data };
+  return _marketsOverviewCache;
+}
+
+function writeMarketsOverviewCache(cacheKey, data) {
+  const store = safeLocalGet(MARKETS_OVERVIEW_CACHE_KEY, {});
+  store[cacheKey] = { ts: Date.now(), data };
+  const keys = Object.keys(store).sort((a, b) => Number(store[b]?.ts || 0) - Number(store[a]?.ts || 0)).slice(0, 8);
+  const trimmed = {};
+  keys.forEach(key => { trimmed[key] = store[key]; });
+  safeLocalSet(MARKETS_OVERVIEW_CACHE_KEY, trimmed);
+  _marketsOverviewCache = { key: cacheKey, ts: Number(trimmed[cacheKey]?.ts || Date.now()), data };
+}
+
+async function getMarketFinanceItems(options = {}) {
+  const force = !!options.force;
+  const now = Date.now();
+  if (!force && Array.isArray(_marketFinanceCache.items) && _marketFinanceCache.items.length && (now - _marketFinanceCache.ts) <= MARKETS_FINANCE_FRESH_MS) {
+    return _marketFinanceCache.items;
+  }
+  const stored = safeLocalGet(MARKETS_FINANCE_CACHE_KEY, null);
+  if (!force && stored && Array.isArray(stored.items) && stored.items.length && (now - Number(stored.ts || 0)) <= MARKETS_FINANCE_FRESH_MS) {
+    _marketFinanceCache = { ts: Number(stored.ts || now), items: stored.items };
+    return stored.items;
+  }
+  const digest = await fetch(`${API}/digest/morning?total_limit=30&per_category=10`).then(r => r.json());
+  const items = Array.isArray(digest?.by_category?.Finance) ? digest.by_category.Finance : [];
+  _marketFinanceCache = { ts: now, items };
+  safeLocalSet(MARKETS_FINANCE_CACHE_KEY, { ts: now, items });
+  return items;
+}
+
+function applyMarketsOverviewData(data, options = {}) {
+  const metaEl = document.getElementById('market-meta');
+  const errEl = document.getElementById('market-errors');
+  if (!data || typeof data !== 'object') return;
+
+  if (metaEl) {
+    const stale = data.stale ? ` · stale ${Math.round((data.stale_age_seconds || 0) / 60)}m` : '';
+    const warn = (data.errors?.length || 0) + (data.history_errors?.length || 0);
+    const localCache = options.fromClientCache ? ' · local cache' : '';
+    metaEl.textContent = `Updated ${relTime(data.generated_at)}${localCache}${stale}${warn ? ' · ' + warn + ' warnings' : ''}`;
+  }
+  if (errEl) {
+    const allErrs = [...(data.errors || []), ...(data.history_errors || [])].map(friendlyProviderError).filter(Boolean).slice(0, 4);
+    errEl.innerHTML = allErrs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
+  }
+
+  const quotes = data.quotes || [];
+  const history = data.history || {};
+  _marketDecorated = quotes.map(q => {
+    const series = (history[q.symbol] || []).map(p => Number(p.close)).filter(v => Number.isFinite(v));
+    const pct = Number(q.change_pct || 0);
+    const ch = Number(q.change || 0);
+    const max = series.length ? Math.max(...series) : null;
+    const min = series.length ? Math.min(...series) : null;
+    const volPct = (min && max && min > 0) ? ((max - min) / min) * 100 : null;
+    const trendPct = pctChangeFromSeries(series);
+    return { q, series, pct, ch, max, min, volPct, trendPct };
+  });
+
+  renderWatchlist();
+  renderMarketOverview();
+  renderHotRightNow();
+  renderWhyItMoves();
 }
 
 // ── Watchlist persistence ─────────────────────────────────────
@@ -3195,8 +3305,7 @@ async function renderWhyItMoves() {
   // Fetch finance news from digest
   let financeItems = [];
   try {
-    const digest = await fetch(`${API}/digest/morning?total_limit=30&per_category=10`).then(r => r.json());
-    financeItems = (digest?.by_category?.Finance || []);
+    financeItems = await getMarketFinanceItems();
   } catch(_) {}
 
   const rendered = movers.map(entry => {
@@ -3206,11 +3315,7 @@ async function renderWhyItMoves() {
     const cls = pct > 0 ? 'up' : 'down';
 
     // Match news: look for symbol or name in title/summary/drivers
-    const matched = financeItems.filter(item => {
-      const haystack = ((item.title || '') + ' ' + (item.summary || '') + ' ' + JSON.stringify(item.drivers || [])).toLowerCase();
-      return haystack.includes(sym.toLowerCase().replace(/[^a-z0-9]/g, ''))
-        || name.toLowerCase().split(' ').slice(0, 2).some(word => word.length > 3 && haystack.includes(word));
-    }).slice(0, 2);
+    const matched = financeItems.filter(item => marketNewsMatches(item, sym, name)).slice(0, 2);
 
     const sign = pct >= 0 ? '+' : '';
     const newsHtml = matched.length ? matched.map(item => `
@@ -3318,12 +3423,7 @@ async function loadMktDetailNews(sym, name) {
   const el = document.getElementById('mkt-detail-news-section');
   if (!el) return;
   try {
-    const digest = await fetch(`${API}/digest/morning?total_limit=30&per_category=10`).then(r => r.json());
-    const items = (digest?.by_category?.Finance || []).filter(item => {
-      const h = ((item.title || '') + ' ' + (item.summary || '') + ' ' + JSON.stringify(item.drivers || [])).toLowerCase();
-      return h.includes(sym.toLowerCase().replace(/[^a-z0-9]/g, ''))
-        || name.toLowerCase().split(' ').slice(0, 2).some(w => w.length > 3 && h.includes(w));
-    }).slice(0, 4);
+    const items = (await getMarketFinanceItems()).filter(item => marketNewsMatches(item, sym, name)).slice(0, 4);
     if (!items.length) {
       el.innerHTML = '';
       return;
@@ -3379,6 +3479,7 @@ async function loadMarkets() {
     ...MKT_OVERVIEW_SECTIONS.flatMap(s => s.symbols),
   ])];
   const allSymbols = _allSymbolsFull.slice(0, 30);
+  const cacheKey = makeMarketsOverviewCacheKey(allSymbols, '1mo', '1d');
   if (_allSymbolsFull.length > 30 && errEl) {
     const dropped = _allSymbolsFull.slice(30);
     errEl.innerHTML += `<span class="warn-item">Symbol limit: ${dropped.join(', ')} not loaded (max 30)</span>`;
@@ -3386,7 +3487,19 @@ async function loadMarkets() {
 
   // Show loading states
   const wlEl = document.getElementById('wl-grid');
-  if (wlEl) wlEl.innerHTML = '<div class="wl-empty">Loading…</div>';
+  const cached = readMarketsOverviewCache(cacheKey);
+  const now = Date.now();
+  const cacheAge = cached ? now - Number(cached.ts || 0) : Number.POSITIVE_INFINITY;
+  const hasFreshCache = !!(cached?.data && cacheAge <= MARKETS_OVERVIEW_FRESH_MS);
+  const hasStaleCache = !!(cached?.data && cacheAge <= MARKETS_OVERVIEW_STALE_MS);
+  if (hasFreshCache || hasStaleCache) {
+    applyMarketsOverviewData(cached.data, { fromClientCache: true });
+    if (errEl && hasStaleCache && !hasFreshCache) {
+      errEl.innerHTML = `<span class="warn-item">showing local cache while live data refreshes</span>${errEl.innerHTML || ''}`;
+    }
+  } else if (wlEl) {
+    wlEl.innerHTML = '<div class="wl-empty">Loading…</div>';
+  }
 
   try {
     const params = new URLSearchParams({
@@ -3395,38 +3508,20 @@ async function loadMarkets() {
       history_interval: '1d',
     });
     const data = await fetch(`${API}/markets/overview?${params}`).then(r => r.json());
-
-    // Meta bar
-    if (metaEl) {
-      const stale = data.stale ? ` · stale ${Math.round((data.stale_age_seconds || 0) / 60)}m` : '';
-      const warn = (data.errors?.length || 0) + (data.history_errors?.length || 0);
-      metaEl.textContent = `Updated ${relTime(data.generated_at)}${stale}${warn ? ' · ' + warn + ' warnings' : ''}`;
-    }
-    if (errEl) {
-      const allErrs = [...(data.errors || []), ...(data.history_errors || [])].map(friendlyProviderError).filter(Boolean).slice(0, 4);
-      errEl.innerHTML = allErrs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
-    }
-
-    // Decorate all quotes
-    const quotes = data.quotes || [];
-    const history = data.history || {};
-    _marketDecorated = quotes.map(q => {
-      const series = (history[q.symbol] || []).map(p => Number(p.close)).filter(v => Number.isFinite(v));
-      const pct = Number(q.change_pct || 0);
-      const ch = Number(q.change || 0);
-      const max = series.length ? Math.max(...series) : null;
-      const min = series.length ? Math.min(...series) : null;
-      const volPct = (min && max && min > 0) ? ((max - min) / min) * 100 : null;
-      const trendPct = pctChangeFromSeries(series);
-      return { q, series, pct, ch, max, min, volPct, trendPct };
-    });
-
-    renderWatchlist();
-    renderMarketOverview();
-    renderHotRightNow();
-    renderWhyItMoves(); // async, non-blocking
+    writeMarketsOverviewCache(cacheKey, data);
+    applyMarketsOverviewData(data);
 
   } catch (e) {
+    if (hasFreshCache || hasStaleCache) {
+      if (errEl) {
+        const prev = errEl.innerHTML || '';
+        errEl.innerHTML = `<span class="warn-item">live refresh failed; keeping local market cache</span>${prev}`;
+      }
+      if (metaEl && cached?.data?.generated_at) {
+        metaEl.textContent = `Updated ${relTime(cached.data.generated_at)} · local cache`;
+      }
+      return;
+    }
     _marketDecorated = [];
     if (wlEl) wlEl.innerHTML = `<div class="wl-empty">Could not load market data: ${esc(e.message)}</div>`;
     if (metaEl) metaEl.textContent = 'Market data unavailable';
@@ -5308,6 +5403,8 @@ function renderWarframeOverview(data, item, platform, options = {}) {
   const localSamples = Number(localHistory.samples || 0);
   const localChange = Number(localHistory.change_pct_24h);
   const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
+  const liveOrderSummary = (m.sell_count_live || m.buy_count_live) ? `S${esc(m.sell_count_live ?? 0)} / B${esc(m.buy_count_live ?? 0)}` : 'n/a';
+  const allOrderSummary = (m.sell_count_total || m.buy_count_total) ? `all S${esc(m.sell_count_total ?? 0)} / B${esc(m.buy_count_total ?? 0)}` : '';
   marketEl.innerHTML = `
     <div class="small-row"><span>Item</span><strong>${esc(m.canonical_name || m.item || item)}</strong></div>
     <div class="small-row"><span>${sellLabel}</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
@@ -5317,9 +5414,9 @@ function renderWarframeOverview(data, item, platform, options = {}) {
     <div class="small-row"><span>Trend</span><span class="market-change ${trendClass}">${Number.isFinite(trendValue) ? `${trendValue >= 0 ? '+' : ''}${fmtMarketNum(trendValue,1)}%` : 'n/a'}</span></div>
     <div class="small-row"><span>Rank</span><strong>${selectedRank}</strong></div>
     <div class="small-row"><span>Source</span><strong>${sourceLabel}</strong></div>
-    <div class="small-row"><span>Local Hist</span><strong>${localSamples ? `${localSamples} snaps` : 'warming up'}</strong></div>
+    <div class="small-row"><span>Local Hist</span><strong>${localSamples ? `${localSamples} cached` : 'warming up'}</strong></div>
     <div class="small-row"><span>24h Local</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
-    <div class="small-row"><span>Orders (Live/All)</span><strong>${esc(m.sell_count_live ?? 0)}/${esc(m.buy_count_live ?? 0)} | ${esc(m.sell_count_total ?? 0)}/${esc(m.buy_count_total ?? 0)}</strong></div>
+    <div class="small-row"><span>Live Orders</span><span class="muted wf-row-meta">${liveOrderSummary}${allOrderSummary ? ` | ${allOrderSummary}` : ''}</span></div>
     <a href="https://warframe.market/items/${esc(m.slug || '')}" target="_blank" rel="noopener">Open on warframe.market</a>
   `;
 
@@ -5354,7 +5451,8 @@ function renderWarframeOverview(data, item, platform, options = {}) {
     alerts.slice(0, 8).forEach(a => {
       const row = document.createElement('div');
       row.className = 'small-row';
-      row.innerHTML = `<span class="wf-row-main">${esc(a.type || a.node || 'Alert')}</span><span class="muted wf-row-meta">${esc(a.reward || formatTimeish(a.eta) || '')}</span>`;
+      const metaBits = [a.type, a.node, formatTimeish(a.eta)].map(v => String(v || '').trim()).filter(Boolean).join(' | ');
+      row.innerHTML = `<span class="wf-row-main">${esc(a.reward || a.type || a.node || 'Alert')}</span><span class="muted wf-row-meta">${esc(metaBits)}</span>`;
       alertsEl.appendChild(row);
     });
   }
@@ -5367,7 +5465,9 @@ function renderWarframeOverview(data, item, platform, options = {}) {
     fissures.slice(0, 8).forEach(f => {
       const row = document.createElement('div');
       row.className = 'small-row';
-      row.innerHTML = `<span class="wf-row-main">${esc(f.tier || 'Fissure')} | ${esc(f.mission_type || '-')}</span><span class="muted wf-row-meta">${esc(formatTimeish(f.eta))}</span>`;
+      const main = [f.tier || 'Fissure', f.mission_type || '-'].filter(Boolean).join(' | ');
+      const metaBits = [f.node, formatTimeish(f.eta)].map(v => String(v || '').trim()).filter(Boolean).join(' | ');
+      row.innerHTML = `<span class="wf-row-main">${esc(main)}</span><span class="muted wf-row-meta">${esc(metaBits)}</span>`;
       fissuresEl.appendChild(row);
     });
   }
@@ -5381,7 +5481,10 @@ function renderWarframeOverview(data, item, platform, options = {}) {
     invasions.slice(0, 5).forEach(i => {
       const row = document.createElement('div');
       row.className = 'small-row';
-      row.innerHTML = `<span class="wf-row-main">${esc(i.node || 'Node')} (${esc(i.attacker || '?')} vs ${esc(i.defender || '?')})</span><span class="muted wf-row-meta">${esc(formatTimeish(i.eta))}</span>`;
+      const matchup = [i.attacker || '?', i.defender || '?'].filter(Boolean).join(' vs ');
+      const rewards = [i.attacker_reward, i.defender_reward].map(v => String(v || '').trim()).filter(Boolean).slice(0, 2).join(' | ');
+      const metaBits = [matchup, rewards, formatTimeish(i.eta)].filter(Boolean).join(' | ');
+      row.innerHTML = `<span class="wf-row-main">${esc(i.node || 'Node')}</span><span class="muted wf-row-meta">${esc(metaBits)}</span>`;
       invasionsEl.appendChild(row);
     });
     events.slice(0, 3).forEach(ev => {

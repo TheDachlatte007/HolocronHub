@@ -41,3 +41,35 @@
 - ✅ Kategorien API vorhanden
 - ✅ Feed backbone aktiv (ingest + normalize + feed endpoint)
 - ⏭️ Nächster Schritt: UI Feed Views (AI/Finance/Gaming/Warframe) anbinden
+
+## 2026-04-05 23:25
+- Projektstatus von MVP auf `hardening + reliability + polish` aktualisiert
+- Tool Hub stark kuratiert:
+  - launcher-first Oberfläche
+  - task-first AI-Verzeichnis
+  - Home-Lab-Schnellzugriff mit Reachability-Checks
+- Markets erweitert:
+  - Watchlist + Market Overview + Hot Right Now
+  - Yahoo-Chart-Fallback ergänzt
+  - lokaler SQLite-Store für Market-History eingebaut
+- F1 deutlich ausgebaut:
+  - Weekend-/Live-/History-Layer
+  - sekundärer Ingest + lokaler History-Store
+- Warframe deutlich ausgebaut:
+  - Market Snapshot
+  - Worldstate
+  - Planner / Watchlist / Pulse / Radar
+  - Fallbacks und UI-Dichte mehrfach geglättet
+- TLDR/Gmail Reader aktiv:
+  - IMAP-Bridge
+  - lokale SQLite-Speicherung
+  - Reader-Ansicht im Hub
+
+## Current State
+- ✅ Tool Hub alltagstauglich und deutlich kuratierter
+- ✅ Feed / Digest / Saved produktiv nutzbar
+- ✅ Markets funktional, mit Fokus auf Reliability und Ladezeiten
+- ✅ F1 auf gutem Stand mit lokalem History-Layer
+- ✅ Warframe auf gutem Stand, aber weiter UI-/fallback-sensibel
+- ✅ TLDR Mail Bridge aktiv, mit lokalem Reader
+- ⏭️ Nächster Fokus: Live-QA nach Deploy, letzte UI-Kanten und Performance-Feinschliff

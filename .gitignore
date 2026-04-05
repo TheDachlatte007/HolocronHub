@@ -7,6 +7,13 @@ data/saved_items.json
 data/schedule.json
 data/warframe_watchlist.json
 data/warframe_market_history.json
+data/tldr_imap_config.json
+data/last_good_cache.json
+data/f1_session_snapshots.json
+data/f1_secondary_ingest.json
+data/f1_session_archive.json
+data/*.db
+data/newsletter_cache/
 __pycache__/
 backend/__pycache__/
 *.log
@@ -17,3 +24,4 @@ frontend/dist/
 Thumbs.db
 .playwright-cli/
 .claude/
+.gitnexus

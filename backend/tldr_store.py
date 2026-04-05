@@ -138,6 +138,7 @@ def list_tldr_issues(
     unread_only: bool = False,
     limit: int = 50,
 ) -> list[dict[str, Any]]:
+    ensure_tldr_db(db_path)
     sql = """
         SELECT *
         FROM tldr_issues
@@ -161,6 +162,7 @@ def list_tldr_issues(
 
 
 def get_tldr_issue(db_path: Path, issue_id: str) -> dict[str, Any] | None:
+    ensure_tldr_db(db_path)
     with _connect(db_path) as conn:
         row = conn.execute(
             "SELECT * FROM tldr_issues WHERE issue_id = ?",
@@ -172,6 +174,7 @@ def get_tldr_issue(db_path: Path, issue_id: str) -> dict[str, Any] | None:
 
 
 def mark_tldr_issue_read(db_path: Path, issue_id: str, *, read: bool = True) -> bool:
+    ensure_tldr_db(db_path)
     with _connect(db_path) as conn:
         cur = conn.execute(
             "UPDATE tldr_issues SET local_read = ? WHERE issue_id = ?",
@@ -181,6 +184,7 @@ def mark_tldr_issue_read(db_path: Path, issue_id: str, *, read: bool = True) -> 
 
 
 def tldr_summary(db_path: Path) -> dict[str, Any]:
+    ensure_tldr_db(db_path)
     with _connect(db_path) as conn:
         total = int(conn.execute("SELECT COUNT(*) FROM tldr_issues").fetchone()[0])
         unread = int(
@@ -201,6 +205,9 @@ def tldr_summary(db_path: Path) -> dict[str, Any]:
     return {
         "issue_count": total,
         "unread_count": unread,
+        "newsletter_count": len(newsletters),
+        "last_issue_at": latest["received_at"] if latest else None,
+        "last_issue_newsletter": latest["newsletter_name"] if latest else None,
         "latest_issue": dict(latest) if latest else None,
         "newsletters": [dict(row) for row in newsletters],
     }

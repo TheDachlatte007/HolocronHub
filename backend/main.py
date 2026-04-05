@@ -41,6 +41,19 @@ except Exception:
     )
 
 try:
+    from .market_history_store import (
+        ensure_market_history_db,
+        get_market_history,
+        upsert_market_history,
+    )
+except Exception:
+    from market_history_store import (
+        ensure_market_history_db,
+        get_market_history,
+        upsert_market_history,
+    )
+
+try:
     from .tldr_store import (
         ensure_tldr_db,
         get_tldr_issue,
@@ -80,7 +93,9 @@ F1_SESSION_SNAPSHOTS_FILE = BASE_DIR / "data" / "f1_session_snapshots.json"
 F1_SECONDARY_INGEST_FILE = BASE_DIR / "data" / "f1_secondary_ingest.json"
 F1_SESSION_ARCHIVE_FILE = BASE_DIR / "data" / "f1_session_archive.json"
 F1_HISTORY_DB_FILE = BASE_DIR / "data" / "f1_history.db"
+MARKETS_HISTORY_DB_FILE = BASE_DIR / "data" / "markets_history.db"
 TLDR_DB_FILE = BASE_DIR / "data" / "tldr_issues.db"
+TLDR_DB_LEGACY_FILE = BASE_DIR / "data" / "tldr.db"
 TLDR_IMAP_CONFIG_FILE = BASE_DIR / "data" / "tldr_imap_config.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
 
@@ -181,6 +196,17 @@ def _ensure_data_file() -> None:
     if not DATA_FILE.exists():
         src = _tool_seed_file() if _tool_seed_file().exists() else None
         DATA_FILE.write_text(src.read_text(encoding="utf-8") if src else "[]", encoding="utf-8")
+
+
+def _ensure_tldr_db_path() -> None:
+    TLDR_DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if TLDR_DB_FILE.exists():
+        return
+    if TLDR_DB_LEGACY_FILE.exists():
+        try:
+            shutil.move(str(TLDR_DB_LEGACY_FILE), str(TLDR_DB_FILE))
+        except Exception:
+            pass
 
 
 def _parse_tool_host_port(link: str) -> tuple[str, Optional[int]]:
@@ -2103,32 +2129,162 @@ def _fetch_market_history_alpha(symbol: str, *, range_key: str = "1mo") -> tuple
     return out, None
 
 
+def _fetch_market_history_yahoo(symbol: str, *, range_key: str = "1mo", interval: str = "1d") -> tuple[list[dict[str, Any]], Optional[str]]:
+    sym = str(symbol or "").strip()
+    if not sym:
+        return [], "yahoo:invalid_symbol"
+
+    range_map = {"5d": "5d", "1mo": "1mo", "3mo": "3mo", "6mo": "6mo", "1y": "1y"}
+    interval_map = {"15m": "15m", "30m": "30m", "1h": "60m", "1d": "1d", "1wk": "1wk"}
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(sym, safe='')}"
+    data, err = _http_get_json(
+        url,
+        params={
+            "range": range_map.get(str(range_key or "1mo").lower(), "1mo"),
+            "interval": interval_map.get(str(interval or "1d").lower(), "1d"),
+            "includePrePost": "false",
+            "events": "div,splits",
+        },
+        timeout=12,
+    )
+    if err:
+        return [], f"yahoo:{err}"
+    if not isinstance(data, dict):
+        return [], "yahoo:invalid_payload"
+
+    chart = data.get("chart") or {}
+    if not isinstance(chart, dict):
+        return [], "yahoo:invalid_chart"
+    chart_error = chart.get("error") or {}
+    if isinstance(chart_error, dict) and chart_error.get("description"):
+        return [], f"yahoo:{chart_error.get('description')}"
+
+    result = chart.get("result") or []
+    if not isinstance(result, list) or not result or not isinstance(result[0], dict):
+        return [], "yahoo:no_series"
+
+    first = result[0]
+    timestamps = first.get("timestamp") or []
+    indicators = first.get("indicators") or {}
+    quote_rows = indicators.get("quote") or []
+    quote_row = quote_rows[0] if isinstance(quote_rows, list) and quote_rows and isinstance(quote_rows[0], dict) else {}
+    closes = quote_row.get("close") or []
+    if not closes:
+        adj_rows = indicators.get("adjclose") or []
+        adj_row = adj_rows[0] if isinstance(adj_rows, list) and adj_rows and isinstance(adj_rows[0], dict) else {}
+        closes = adj_row.get("adjclose") or []
+
+    out: list[dict[str, Any]] = []
+    for ts_raw, close_raw in zip(timestamps, closes):
+        if close_raw in (None, ""):
+            continue
+        try:
+            ts_val = int(ts_raw)
+            close_val = float(close_raw)
+        except Exception:
+            continue
+        out.append(
+            {
+                "datetime": datetime.fromtimestamp(ts_val, tz=timezone.utc).isoformat(),
+                "close": close_val,
+            }
+        )
+
+    if not out:
+        return [], "yahoo:no_points"
+    return out, None
+
+
 def _fetch_market_quotes(symbols: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
     return _fallback_market_quotes(symbols)
 
 
 def _fetch_market_history(symbol: str, *, range_key: str = "1mo", interval: str = "1d") -> tuple[list[dict[str, Any]], Optional[str]]:
-    cache_key = f"markets:history:{str(symbol or '').upper()}:{range_key}:{interval}"
+    symbol_key = str(symbol or "").strip().upper()
+    cache_key = f"markets:history:{symbol_key}:{range_key}:{interval}"
     cached = _cache_get(cache_key, ttl_seconds=15 * 60)
     if isinstance(cached, dict):
         return list(cached.get("series") or []), cached.get("warning")
 
+    stored = get_market_history(
+        MARKETS_HISTORY_DB_FILE,
+        symbol=symbol_key,
+        range_key=range_key,
+        interval_key=interval,
+    )
+    if isinstance(stored, dict):
+        series = list(stored.get("series") or [])
+        fetched_dt = _parse_dt(stored.get("fetched_at"))
+        age_seconds = None
+        if fetched_dt is not None:
+            try:
+                age_seconds = max(0, int((datetime.now(timezone.utc) - fetched_dt.astimezone(timezone.utc)).total_seconds()))
+            except Exception:
+                age_seconds = None
+        if series and age_seconds is not None and age_seconds <= 4 * 3600:
+            _cache_set(cache_key, {"series": series, "warning": None})
+            return series, None
+
     td_series, td_err = _fetch_market_history_twelvedata(symbol, range_key=range_key, interval=interval)
     if td_series:
+        upsert_market_history(
+            MARKETS_HISTORY_DB_FILE,
+            symbol=symbol_key,
+            range_key=range_key,
+            interval_key=interval,
+            provider="twelvedata",
+            series=td_series,
+            warning=None,
+            fetched_at=datetime.now(timezone.utc).isoformat(),
+        )
         _cache_set(cache_key, {"series": td_series, "warning": None})
         return td_series, None
 
     alpha_series, alpha_err = _fetch_market_history_alpha(symbol, range_key=range_key)
     if alpha_series:
-        warning = td_err if td_err else None
-        _cache_set(cache_key, {"series": alpha_series, "warning": warning})
-        return alpha_series, warning
+        upsert_market_history(
+            MARKETS_HISTORY_DB_FILE,
+            symbol=symbol_key,
+            range_key=range_key,
+            interval_key=interval,
+            provider="alphavantage",
+            series=alpha_series,
+            warning=None,
+            fetched_at=datetime.now(timezone.utc).isoformat(),
+        )
+        _cache_set(cache_key, {"series": alpha_series, "warning": None})
+        return alpha_series, None
+
+    yahoo_series, yahoo_err = _fetch_market_history_yahoo(symbol, range_key=range_key, interval=interval)
+    if yahoo_series:
+        upsert_market_history(
+            MARKETS_HISTORY_DB_FILE,
+            symbol=symbol_key,
+            range_key=range_key,
+            interval_key=interval,
+            provider="yahoo_chart",
+            series=yahoo_series,
+            warning=None,
+            fetched_at=datetime.now(timezone.utc).isoformat(),
+        )
+        _cache_set(cache_key, {"series": yahoo_series, "warning": None})
+        return yahoo_series, None
+
+    if isinstance(stored, dict):
+        series = list(stored.get("series") or [])
+        if series:
+            warning_bits = [bit for bit in [td_err, alpha_err, yahoo_err, "local_history_cache"] if bit]
+            warning = " | ".join(warning_bits[:4])
+            _cache_set(cache_key, {"series": series, "warning": warning})
+            return series, warning
 
     combined = []
     if td_err:
         combined.append(td_err)
     if alpha_err:
         combined.append(alpha_err)
+    if yahoo_err:
+        combined.append(yahoo_err)
     return [], " | ".join(combined) if combined else "market_history_unavailable"
 
 
@@ -4549,6 +4705,64 @@ def _parse_official_warframe_worldstate(data: dict[str, Any], platform: str) -> 
     }
 
 
+def _fetch_warframe_stat_worldstate(platform_key: str, headers: dict[str, str]) -> tuple[Optional[dict[str, Any]], list[str]]:
+    errors: list[str] = []
+    candidates = [
+        (f"https://api.warframestat.us/{platform_key}", None),
+        (f"https://api.warframestat.us/{platform_key}", {"language": "en"}),
+        (f"https://api.warframestat.us/{platform_key}/", {"language": "en"}),
+    ]
+    for url, params in candidates:
+        raw, err = _http_get_json(url, params=params, headers=headers, timeout=8)
+        if err:
+            errors.append(err)
+            continue
+        if isinstance(raw, dict):
+            return _parse_warframe_worldstate(raw, platform_key), errors
+        errors.append("invalid_worldstate_payload")
+    return None, errors
+
+
+def _fetch_official_warframe_worldstate(platform_key: str, headers: dict[str, str]) -> tuple[Optional[dict[str, Any]], Optional[str]]:
+    raw, err = _http_get_json("https://content.warframe.com/dynamic/worldState.php", headers=headers, timeout=10)
+    if isinstance(raw, dict):
+        return _parse_official_warframe_worldstate(raw, platform_key), None
+    if err:
+        return None, err
+    return None, "invalid_payload"
+
+
+def _merge_warframe_worldstate(base: dict[str, Any], extra: Optional[dict[str, Any]]) -> dict[str, Any]:
+    if not isinstance(base, dict):
+        return deepcopy(extra) if isinstance(extra, dict) else {}
+    if not isinstance(extra, dict):
+        return deepcopy(base)
+
+    merged = deepcopy(base)
+    for key in ["news", "alerts", "fissures", "invasions", "events"]:
+        if len(merged.get(key) or []) == 0 and len(extra.get(key) or []) > 0:
+            merged[key] = deepcopy(extra.get(key) or [])
+
+    for key in ["sortie", "nightwave", "arbitration", "steel_path"]:
+        if not isinstance(merged.get(key), dict) or not merged.get(key):
+            if isinstance(extra.get(key), dict) and extra.get(key):
+                merged[key] = deepcopy(extra.get(key))
+
+    merged_cycles = merged.get("world_cycles") if isinstance(merged.get("world_cycles"), dict) else {}
+    extra_cycles = extra.get("world_cycles") if isinstance(extra.get("world_cycles"), dict) else {}
+    for cycle_name in ["cetus", "vallis", "cambion"]:
+        base_cycle = merged_cycles.get(cycle_name) if isinstance(merged_cycles.get(cycle_name), dict) else {}
+        extra_cycle = extra_cycles.get(cycle_name) if isinstance(extra_cycles.get(cycle_name), dict) else {}
+        if extra_cycle and (not base_cycle or not any(base_cycle.get(k) for k in ["state", "eta", "active", "is_day", "is_warm"])):
+            merged_cycles[cycle_name] = deepcopy(extra_cycle)
+    if merged_cycles:
+        merged["world_cycles"] = merged_cycles
+
+    if not merged.get("timestamp") and extra.get("timestamp"):
+        merged["timestamp"] = extra.get("timestamp")
+    return merged
+
+
 def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]]:
     platform_key = str(platform or "pc").strip().lower()
     cache_key = f"warframe:worldstate:{platform_key}"
@@ -4558,32 +4772,23 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
 
     errors: list[str] = []
     headers = {"Accept": "application/json"}
-    candidates = [
-        (f"https://api.warframestat.us/{platform_key}", None),
-        (f"https://api.warframestat.us/{platform_key}", {"language": "en"}),
-        (f"https://api.warframestat.us/{platform_key}/", {"language": "en"}),
-    ]
+    stale_payload, age = _get_last_good(cache_key, max_age_seconds=6 * 3600)
 
-    data: Optional[dict[str, Any]] = None
-    for url, params in candidates:
-        raw, err = _http_get_json(url, params=params, headers=headers, timeout=15)
-        if err:
-            errors.append(err)
-            continue
-        if isinstance(raw, dict):
-            data = raw
-            break
-        errors.append("invalid_worldstate_payload")
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        stat_future = pool.submit(_fetch_warframe_stat_worldstate, platform_key, headers)
+        official_future = pool.submit(_fetch_official_warframe_worldstate, platform_key, headers)
+        stat_parsed, stat_errors = stat_future.result()
+        official_parsed, official_err = official_future.result()
+
+    errors.extend(stat_errors)
+    if official_err:
+        errors.append(f"official:{official_err}")
 
     parsed_candidates: list[dict[str, Any]] = []
-    if isinstance(data, dict):
-        parsed_candidates.append(_parse_warframe_worldstate(data, platform_key))
-
-    official_raw, official_err = _http_get_json("https://content.warframe.com/dynamic/worldState.php", headers=headers, timeout=20)
-    if isinstance(official_raw, dict):
-        parsed_candidates.append(_parse_official_warframe_worldstate(official_raw, platform_key))
-    elif official_err:
-        errors.append(f"official:{official_err}")
+    if isinstance(stat_parsed, dict):
+        parsed_candidates.append(_merge_warframe_worldstate(stat_parsed, official_parsed or stale_payload))
+    if isinstance(official_parsed, dict):
+        parsed_candidates.append(_merge_warframe_worldstate(official_parsed, stat_parsed or stale_payload))
 
     for parsed in parsed_candidates:
         if _warframe_worldstate_has_data(parsed):
@@ -4603,41 +4808,51 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
         "vallis_cycle": "vallisCycle",
         "cambion_cycle": "cambionCycle",
     }
-    for seg in list_segments:
-        raw, err = _http_get_json(f"https://api.warframestat.us/{platform_key}/{seg}", params={"language": "en"}, headers=headers, timeout=15)
-        if err:
-            errors.append(f"{seg}:{err}")
-            segment_payload[seg] = []
-            continue
-        if isinstance(raw, list):
-            segment_payload[seg] = raw
-            if segment_payload.get("timestamp") is None and raw:
-                first = raw[0] if isinstance(raw[0], dict) else {}
-                segment_payload["timestamp"] = first.get("date") or first.get("activation") or first.get("expiry")
-        else:
-            segment_payload[seg] = []
-            errors.append(f"{seg}:invalid_payload")
+    with ThreadPoolExecutor(max_workers=min(8, len(list_segments) + len(object_segments))) as pool:
+        futures: dict[Any, tuple[str, str, bool]] = {}
+        for seg in list_segments:
+            futures[pool.submit(_http_get_json, f"https://api.warframestat.us/{platform_key}/{seg}", params={"language": "en"}, headers=headers, timeout=8)] = (seg, seg, True)
+        for endpoint, target_key in object_segments.items():
+            futures[pool.submit(_http_get_json, f"https://api.warframestat.us/{platform_key}/{endpoint}", params={"language": "en"}, headers=headers, timeout=8)] = (endpoint, target_key, False)
 
-    for endpoint, target_key in object_segments.items():
-        raw, err = _http_get_json(f"https://api.warframestat.us/{platform_key}/{endpoint}", params={"language": "en"}, headers=headers, timeout=15)
-        if err:
-            errors.append(f"{endpoint}:{err}")
-            continue
-        if isinstance(raw, dict):
-            segment_payload[target_key] = raw
-            if segment_payload.get("timestamp") is None:
-                segment_payload["timestamp"] = raw.get("expiry") or raw.get("activation") or raw.get("date")
-        else:
-            errors.append(f"{endpoint}:invalid_payload")
+        for future in as_completed(futures):
+            endpoint, target_key, is_list = futures[future]
+            try:
+                raw, err = future.result()
+            except Exception as exc:
+                errors.append(f"{endpoint}:{exc}")
+                if is_list:
+                    segment_payload[target_key] = []
+                continue
+            if err:
+                errors.append(f"{endpoint}:{err}")
+                if is_list:
+                    segment_payload[target_key] = []
+                continue
+            if is_list:
+                if isinstance(raw, list):
+                    segment_payload[target_key] = raw
+                    if segment_payload.get("timestamp") is None and raw:
+                        first = raw[0] if isinstance(raw[0], dict) else {}
+                        segment_payload["timestamp"] = first.get("date") or first.get("activation") or first.get("expiry")
+                else:
+                    segment_payload[target_key] = []
+                    errors.append(f"{endpoint}:invalid_payload")
+            else:
+                if isinstance(raw, dict):
+                    segment_payload[target_key] = raw
+                    if segment_payload.get("timestamp") is None:
+                        segment_payload["timestamp"] = raw.get("expiry") or raw.get("activation") or raw.get("date")
+                else:
+                    errors.append(f"{endpoint}:invalid_payload")
 
-    parsed = _parse_warframe_worldstate(segment_payload, platform_key)
+    parsed = _merge_warframe_worldstate(_parse_warframe_worldstate(segment_payload, platform_key), stale_payload)
     if _warframe_worldstate_has_data(parsed):
         payload = {**parsed, "errors": errors[:20]}
         _cache_set(cache_key, payload)
         _set_last_good(cache_key, payload)
         return payload, errors[:20]
 
-    stale_payload, age = _get_last_good(cache_key, max_age_seconds=6 * 3600)
     if isinstance(stale_payload, dict):
         fallback_errors = list(errors or []) + [f"fallback:last_good:worldstate:{age}s"]
         stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
@@ -5624,6 +5839,8 @@ def _prewarm_provider_caches() -> None:
 @app.on_event("startup")
 def _startup() -> None:
     ensure_f1_history_db(F1_HISTORY_DB_FILE)
+    ensure_market_history_db(MARKETS_HISTORY_DB_FILE)
+    _ensure_tldr_db_path()
     ensure_tldr_db(TLDR_DB_FILE)
     _boot_last_good_store()
     _boot_f1_session_snapshots()

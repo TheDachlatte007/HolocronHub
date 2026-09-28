@@ -5506,8 +5506,10 @@ function renderWarframeOverview(data, item, platform, options = {}) {
   const cacheTag = data.cached ? ' | cache' : '';
   const staleTag = data.stale ? ` | stale (${Math.max(0, Math.round((data.stale_age_seconds || 0) / 60))}m)` : '';
   const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
+  const worldStateAsOf = data.worldstate?.timestamp || '';
+  const worldStateTag = worldStateAsOf ? ` | world ${relTime(worldStateAsOf)}` : '';
   const clientCacheTag = options.fromClientCache ? ' | local cache' : '';
-  metaEl.textContent = `${String(data.platform || platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${cacheTag}${clientCacheTag}${staleTag}${asOfTag}${errInfo}`;
+  metaEl.textContent = `${String(data.platform || platform || 'pc').toUpperCase()} | updated ${relTime(data.generated_at)}${cacheTag}${clientCacheTag}${staleTag}${asOfTag}${worldStateTag}${errInfo}`;
   if (errEl) {
     const errs = [...new Set((data.errors || []).map(friendlyProviderError).filter(Boolean))].slice(0, 6);
     errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
@@ -5627,6 +5629,7 @@ function renderWarframeOverview(data, item, platform, options = {}) {
   `;
 
   const news = Array.isArray(data.worldstate?.news) ? data.worldstate.news : [];
+  const newsUnavailable = (data.errors || []).some(error => /news|worldstate|warframestat|official/i.test(String(error)));
   const highlightFeed = [];
   alerts.slice(0, 2).forEach(a => {
     const parts = [a.reward, a.type, a.node].map(v => String(v || '').trim()).filter(Boolean);
@@ -5639,7 +5642,7 @@ function renderWarframeOverview(data, item, platform, options = {}) {
   const newsFeed = [...highlightFeed, ...news].slice(0, 8);
   newsEl.innerHTML = '';
   if (!newsFeed.length) {
-    newsEl.innerHTML = '<div class="muted">No news or live highlights right now.</div>';
+    newsEl.innerHTML = `<div class="muted">${newsUnavailable ? 'Warframe news is unavailable from the current sources.' : 'No current news or live highlights.'}</div>`;
   } else {
     newsFeed.forEach(n => {
       const row = document.createElement('div');

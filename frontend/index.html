@@ -1070,6 +1070,7 @@
         </div>
         <div>
           <h3 class="wf-section-title">Farm Right Now</h3>
+          <div class="tool-minor" style="margin:-4px 0 10px">Opportunity score combines demand, liquidity, volume and trend. It is not a guaranteed platinum-per-hour estimate.</div>
           <div id="wf-farm-now" class="wf-farm-grid"><div class="muted">Recommendations will appear after the market pulse scan finishes.</div></div>
         </div>
         <div class="wf-grid-stack">
@@ -5774,14 +5775,14 @@ async function loadWarframePulse() {
     const demand = Array.isArray(data.demand_leaders) ? data.demand_leaders : [];
     const liquidity = Array.isArray(data.liquidity_leaders) ? data.liquidity_leaders : [];
     const signals = Array.isArray(data.watch_signals) ? data.watch_signals : [];
-    if (metaEl) metaEl.textContent = `${data.coverage_count || 0} items scanned | ${data.tracked_count || 0} tracked signals | ${data.history_ready_count || 0} history-ready`;
+    if (metaEl) metaEl.textContent = `${data.coverage_count || 0} items scanned | ${data.tracked_count || 0} tracked signals | ${data.history_ready_count || 0} history-ready | opportunity ranking`;
 
-    const recoMap = new Map();
+    const fallbackMap = new Map();
     [...demand, ...liquidity].forEach(item => {
       const key = String(item.name || '').trim();
       if (!key) return;
-      const existing = recoMap.get(key) || {};
-      recoMap.set(key, {
+      const existing = fallbackMap.get(key) || {};
+      fallbackMap.set(key, {
         ...existing,
         ...item,
         demand_score: Math.max(Number(existing.demand_score || 0), Number(item.demand_score || 0)),
@@ -5789,16 +5790,19 @@ async function loadWarframePulse() {
         volume_total: Math.max(Number(existing.volume_total || 0), Number(item.volume_total || 0)),
       });
     });
-    const scoredItems = [...recoMap.values()].map(item => {
-        const demandScore = Number(item.demand_score || 0);
-        const liqScore = Number(item.liquidity_score || 0);
-        const move = Number(item.price_change_pct || 0);
-        const score = (demandScore * 1.35) + (liqScore * 1.05) + Math.max(move, -8) + Math.min(Number(item.volume_total || 0) / 12, 40);
-        return { ...item, farm_score: score };
-      });
-    const dumpItems = scoredItems.filter(item => String(item.signal || 'watch') === 'dump');
+    const fallbackItems = [...fallbackMap.values()].map(item => {
+      const score = (Number(item.demand_score || 0) * 1.35)
+        + (Number(item.liquidity_score || 0) * 1.05)
+        + Math.max(Number(item.price_change_pct || 0), -8)
+        + Math.min(Number(item.volume_total || 0) / 12, 40);
+      return { ...item, farm_score: score, farm_action: item.signal === 'dump' ? 'avoid' : 'watch', farm_reasons: ['legacy client fallback'] };
+    });
+    const scoredItems = Array.isArray(data.farm_recommendations) ? data.farm_recommendations : fallbackItems;
+    const dumpItems = [...scoredItems, ...fallbackItems.filter(item => String(item.signal || 'watch') === 'dump')]
+      .filter((item, index, all) => all.findIndex(other => String(other.name || '') === String(item.name || '')) === index)
+      .filter(item => String(item.farm_action || '') === 'avoid' || String(item.signal || 'watch') === 'dump');
     const recos = scoredItems
-      .filter(item => String(item.signal || 'watch') !== 'dump')
+      .filter(item => String(item.farm_action || '') !== 'avoid' && String(item.signal || 'watch') !== 'dump')
       .sort((a, b) => Number(b.farm_score || 0) - Number(a.farm_score || 0))
       .slice(0, 4);
 
@@ -5809,14 +5813,16 @@ async function loadWarframePulse() {
         <div class="wf-reco-card">
           <div class="diag-head">
             <strong>${esc(item.name || 'Target')}</strong>
-            <span class="wf-reco-score">Farm score ${fmtMarketNum(item.farm_score || 0, 0)}</span>
+            <span class="wf-reco-score">Opportunity ${fmtMarketNum(item.farm_score || 0, 0)}</span>
           </div>
           <div class="market-chip-row">
             ${warframeSignalChip(item.signal)}
             <span class="market-chip ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}% trend` : 'trend n/a'}</span>
             <span class="market-chip">Demand ${fmtMarketNum(item.demand_score || 0,0)}</span>
             <span class="market-chip">Liq ${fmtMarketNum(item.liquidity_score || 0,0)}</span>
+            ${item.farm_confidence ? `<span class="market-chip">${esc(item.farm_confidence)} confidence</span>` : ''}
           </div>
+          <div class="tool-minor" style="margin:8px 0 2px">Why: ${esc(Array.isArray(item.farm_reasons) && item.farm_reasons.length ? item.farm_reasons.join(' · ') : 'market signal')}</div>
           <div class="small-row"><span>48h volume</span><strong>${fmtMarketNum(item.volume_total || 0,0)}</strong></div>
           <div class="small-row"><span>Current price</span><strong>${item.price != null ? fmtMarketNum(item.price,0) + 'p' : '-'}</strong></div>
           <div class="actions">

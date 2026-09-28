@@ -5278,6 +5278,76 @@ def _build_warframe_market_signal(market: dict[str, Any], *, tracked: bool = Fal
     }
 
 
+def _build_warframe_farm_opportunity(item: dict[str, Any]) -> dict[str, Any]:
+    """Build a transparent market opportunity signal, not a plat-per-hour promise."""
+    def number(value: Any, default: float = 0.0) -> float:
+        try:
+            return float(value) if value is not None else default
+        except (TypeError, ValueError):
+            return default
+
+    demand = number(item.get("demand_score"))
+    liquidity = number(item.get("liquidity_score"))
+    volume = number(item.get("volume_total"))
+    trend = number(item.get("price_change_pct"))
+    local_history = item.get("local_history") if isinstance(item.get("local_history"), dict) else {}
+    local_trend = number(local_history.get("change_pct_24h"), trend)
+    history_samples = int(number(local_history.get("samples_24h") or local_history.get("samples")))
+
+    score = (
+        demand * 1.35
+        + liquidity * 1.05
+        + max(trend, -8.0)
+        + min(volume / 12.0, 40.0)
+        + max(min(local_trend, 8.0), -8.0) * 0.5
+    )
+    score = round(max(0.0, min(220.0, score)), 1)
+
+    reasons: list[str] = []
+    if demand >= 68:
+        reasons.append("strong demand")
+    elif demand >= 52:
+        reasons.append("active demand")
+    if liquidity >= 65:
+        reasons.append("liquid market")
+    elif liquidity >= 52:
+        reasons.append("healthy liquidity")
+    if volume >= 120:
+        reasons.append("high trade volume")
+    elif volume >= 40:
+        reasons.append("steady trade volume")
+    if trend >= 4:
+        reasons.append("positive price trend")
+    elif local_trend >= 4 and history_samples >= 2:
+        reasons.append("local history rising")
+    if not reasons:
+        reasons.append("limited market signal")
+
+    signal = str(item.get("signal") or "watch")
+    if signal == "dump":
+        action = "avoid"
+    elif score >= 150 and demand >= 52 and liquidity >= 45:
+        action = "farm_now"
+    elif score >= 105:
+        action = "watch"
+    else:
+        action = "low_signal"
+
+    if history_samples >= 2 and item.get("price") is not None and volume > 0:
+        confidence = "high"
+    elif item.get("price") is not None or volume > 0:
+        confidence = "medium"
+    else:
+        confidence = "low"
+
+    return {
+        "farm_score": score,
+        "farm_action": action,
+        "farm_reasons": reasons[:3],
+        "farm_confidence": confidence,
+    }
+
+
 def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
     platform_key = str(platform or "pc").strip().lower()
     if platform_key not in {"pc", "ps4", "xb1", "swi"}:
@@ -5306,7 +5376,7 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
         if market.get("best_sell") is None and not market.get("volume_total"):
             return None, market_errors
         metrics = _build_warframe_market_signal(market, tracked=name.casefold() in tracked_set)
-        return {
+        payload = {
             "name": market.get("canonical_name") or name,
             "slug": market.get("slug"),
             "thumb": market.get("thumb"),
@@ -5320,7 +5390,8 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
             "history": market.get("history") or [],
             "local_history": market.get("local_history") or {},
             **metrics,
-        }, market_errors
+        }
+        return {**payload, **_build_warframe_farm_opportunity(payload)}, market_errors
 
     with ThreadPoolExecutor(max_workers=min(8, max(1, len(seed_names)))) as pool:
         futures = [pool.submit(load_item, name) for name in seed_names]
@@ -5362,6 +5433,15 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
             -float(item.get("liquidity_score") or 0.0),
         ),
     )[:12]
+    farm_recommendations = sorted(
+        [item for item in cards if item.get("farm_action") != "avoid"],
+        key=lambda item: (
+            float(item.get("farm_score") or 0.0),
+            float(item.get("demand_score") or 0.0),
+            float(item.get("liquidity_score") or 0.0),
+        ),
+        reverse=True,
+    )[:8]
 
     history_ready_count = sum(1 for item in cards if int(((item.get("local_history") or {}).get("samples") or 0)) >= 2)
     payload = {
@@ -5370,6 +5450,7 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
         "demand_leaders": demand_board,
         "liquidity_leaders": liquidity_board,
         "watch_signals": tracked_signals,
+        "farm_recommendations": farm_recommendations,
         "coverage_count": len(cards),
         "tracked_count": len(tracked_signals),
         "history_ready_count": history_ready_count,

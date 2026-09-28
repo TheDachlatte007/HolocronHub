@@ -188,9 +188,14 @@
 .newsletter-item a{color:#e2e8f0;font-weight:600;text-decoration:none}
 .newsletter-item a:hover{text-decoration:underline}
 .newsletter-item p{margin:6px 0 0;color:#94a3b8;font-size:.82rem;line-height:1.45}
-.tldr-shell{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);gap:14px}
+.tldr-shell{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:14px}
 .tldr-column{display:flex;flex-direction:column;gap:12px}
 .tldr-status-card,.tldr-list-card,.tldr-reader-card{border:1px solid #22304a;border-radius:18px;background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(10,15,28,.98));padding:14px}
+.tldr-setup{margin:0 0 14px;border:1px solid #22304a;border-radius:14px;background:#0b1220}
+.tldr-setup summary{cursor:pointer;list-style:none;padding:11px 12px;color:#cbd5e1;font-size:13px;font-weight:600;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.tldr-setup summary::-webkit-details-marker{display:none}
+.tldr-setup[open] summary{border-bottom:1px solid #22304a}
+.tldr-setup-body{padding:12px}
 .tldr-status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px}
 .tldr-stat{border:1px solid #22304a;border-radius:14px;padding:12px;background:#0f172a}
 .tldr-stat .label{font-size:.72rem;color:#64748b;text-transform:uppercase;letter-spacing:.06em}
@@ -199,7 +204,7 @@
 .tldr-chip-row{display:flex;flex-wrap:wrap;gap:8px}
 .tldr-chip{padding:7px 10px;border-radius:999px;border:1px solid #294264;background:#0f172a;color:#93c5fd;font-size:.78rem;cursor:pointer}
 .tldr-chip.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
-.tldr-issue-list{display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 280px);overflow:auto;padding-right:4px}
+.tldr-issue-list{display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 340px);overflow:auto;padding-right:4px}
 .tldr-issue-card{padding:12px;border:1px solid #22304a;border-radius:14px;background:#0f172a;cursor:pointer}
 .tldr-issue-card.active{border-color:#2563eb;box-shadow:0 0 0 1px rgba(37,99,235,.45) inset}
 .tldr-issue-card.unread{background:linear-gradient(180deg,rgba(23,37,84,.58),rgba(15,23,42,.96))}
@@ -211,7 +216,7 @@
 .tldr-reader-sub{margin-top:6px;color:#94a3b8;font-size:.84rem}
 .tldr-reader-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .tldr-reader-link{padding:6px 10px;border-radius:999px;border:1px solid #22304a;background:#0f172a;color:#93c5fd;text-decoration:none;font-size:.76rem}
-.tldr-reader-frame{width:100%;min-height:980px;border:1px solid #22304a;border-radius:16px;background:#fff}
+.tldr-reader-frame{width:100%;height:min(72vh,780px);min-height:520px;border:1px solid #22304a;border-radius:16px;background:#fff}
 .tldr-empty{padding:26px;border:1px dashed #294264;border-radius:16px;color:#94a3b8;text-align:center}
 .tldr-upload-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
     .finance-summary{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:14px;margin-bottom:16px}
@@ -513,6 +518,17 @@
     .wf-section-title{margin:0 0 8px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8}
     .wf-tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+    .hub-subnav{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}
+    .hub-subnav button{padding:6px 11px;border-radius:999px;font-size:12px}
+    .wf-workspace-pane[hidden]{display:none !important}
+    .wf-optional-panel{margin:0 0 10px;border:1px solid #334155;border-radius:12px;background:#0b1220;padding:0 12px}
+    .wf-optional-panel summary{cursor:pointer;list-style:none;padding:12px 0;color:#e2e8f0;font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .wf-optional-panel summary::-webkit-details-marker{display:none}
+    .wf-optional-body{padding:0 0 12px}
+    .hub-secondary{margin:0 0 10px;border:1px solid #334155;border-radius:12px;background:#172033;padding:0 14px}
+    .hub-secondary summary{cursor:pointer;list-style:none;padding:12px 0;color:#e2e8f0;font-size:13px;font-weight:700}
+    .hub-secondary summary::-webkit-details-marker{display:none}
+    .hub-secondary-body{padding:0 0 14px}
 
     .warn-strip{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
     .warn-item{font-size:11px;padding:2px 8px;border-radius:999px;background:#3b1f1f;color:#fca5a5;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -548,15 +564,19 @@
       .nav{overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;padding-bottom:6px;gap:6px}
       .nav-tab{flex:0 0 auto;border:1px solid #334155;border-radius:8px;margin-bottom:0}
       .nav-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
-      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-group-grid,.ai-layout,.market-layout,.ai-task-grid{grid-template-columns:1fr}
+      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-group-grid,.ai-layout,.market-layout,.ai-task-grid,.tldr-shell{grid-template-columns:1fr}
+      .tldr-issue-list{max-height:none;overflow:visible;padding-right:0}
+      .tldr-reader-frame{height:68vh;min-height:460px}
       .row>input,.row>select,.row>button{flex:1 1 100%;min-width:0 !important;width:100%}
       input,select,textarea,button{font-size:14px}
     }
 
     @media (max-width: 640px){
-      .wl-row{grid-template-columns:minmax(0,1.6fr) minmax(60px,.8fr) minmax(60px,.8fr) 64px}
+      .wl-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;padding:12px}
+      .wl-row > :first-child{grid-column:1/-1}
       .mkt-sections{grid-template-columns:1fr}
-      .hot-grid{grid-template-columns:1fr 1fr}
+      .hot-grid{grid-template-columns:1fr}
+      .tldr-reader-frame{height:62vh;min-height:380px}
       h1{font-size:1.15rem}
       .small-row{font-size:12px;gap:6px}
       .pill{font-size:10px}
@@ -564,6 +584,11 @@
       .tool-summary{min-height:0}
       .tool-detail-grid{grid-template-columns:1fr}
       .f1-board-row{grid-template-columns:1fr}
+    }
+
+    @media (min-width: 901px){
+      #tool-search-panel[hidden]{display:flex !important}
+      #tool-search-trigger{display:none}
     }
 
   </style>
@@ -775,15 +800,22 @@
       <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <div>
           <h2>TLDR Reader</h2>
-          <div class="muted">Import TLDR newsletters directly from Gmail over IMAP, store them locally, and read them here without opening your inbox.</div>
+          <div class="muted">Your local place to catch up on TLDR issues without opening Gmail.</div>
         </div>
         <div class="row" style="justify-content:flex-end">
-          <input id="tldr-email" type="email" placeholder="Gmail address" style="min-width:220px" />
-          <input id="tldr-app-password" type="password" placeholder="Google app password" style="min-width:220px" />
-          <button class="sm" onclick="saveTLDRConfig()">Save Gmail Login</button>
-          <button class="primary" onclick="syncTLDR()">Sync TLDR</button>
+          <button class="primary" onclick="syncTLDR()">Sync latest issues</button>
         </div>
       </div>
+      <details id="tldr-setup" class="tldr-setup">
+        <summary><span>Gmail connection</span><span class="muted">Set up or update IMAP access</span></summary>
+        <div class="tldr-setup-body">
+          <div class="row" style="margin:0">
+            <input id="tldr-email" type="email" placeholder="Gmail address" style="flex:1;min-width:220px" />
+            <input id="tldr-app-password" type="password" placeholder="Google app password" style="flex:1;min-width:220px" />
+            <button class="sm" onclick="saveTLDRConfig()">Save connection</button>
+          </div>
+        </div>
+      </details>
       <div id="tldr-shell" class="tldr-shell">
         <div class="tldr-column">
           <div id="tldr-status" class="tldr-status-card">
@@ -795,7 +827,7 @@
               <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
                 <input type="checkbox" id="tldr-unread" /> Unread only
               </label>
-              <button class="sm" onclick="loadTLDR()">Apply</button>
+              <button class="sm" onclick="loadTLDR()">Filter</button>
             </div>
             <div id="tldr-filters" class="tldr-chip-row" style="margin-bottom:10px"></div>
             <div id="tldr-list" class="tldr-issue-list"><div class="tldr-empty">No TLDR issues yet.</div></div>
@@ -924,28 +956,33 @@
           </div>
         </div>
       </div>
-      <div class="stat-card f1-history-panel" style="margin-bottom:10px">
-        <div class="diag-head">
-          <h2 style="margin:0">History Vault</h2>
-          <span id="f1-history-meta" class="tool-minor">Persistent F1 session store</span>
+      <details class="hub-secondary">
+        <summary>Season archive, drivers and circuits</summary>
+        <div class="hub-secondary-body">
+          <div class="stat-card f1-history-panel" style="margin-bottom:10px">
+            <div class="diag-head">
+              <h2 style="margin:0">Session Archive</h2>
+              <span id="f1-history-meta" class="tool-minor">Stored F1 sessions</span>
+            </div>
+            <div class="row" style="margin-bottom:8px">
+              <input id="f1-history-q" placeholder="Search sessions, e.g. australia 2025 quali" style="flex:1;min-width:240px" />
+              <button class="primary" onclick="loadF1History({ force: true })">Search archive</button>
+              <button onclick="openF1CurrentHistoryQuery()">Use current weekend</button>
+            </div>
+            <div id="f1-history-summary" class="f1-history-summary"></div>
+            <div id="f1-history-results" class="f1-history-results" style="margin-top:10px"></div>
+          </div>
+          <div class="f1-driver-panels" style="margin-bottom:10px">
+            <div id="f1-driver-detail" class="stat-card"></div>
+            <div>
+              <h2 style="margin:0 0 8px">Drivers</h2>
+              <div id="f1-standings" class="f1-driver-cards"><div class="empty">Loading.</div></div>
+            </div>
+          </div>
+          <h2 style="margin:0 0 8px">Circuits On Deck</h2>
+          <div id="f1-tracks" class="overview-grid"><div class="empty">Loading track guide...</div></div>
         </div>
-        <div class="row" style="margin-bottom:8px">
-          <input id="f1-history-q" placeholder="Search stored sessions, e.g. australia 2025 quali" style="flex:1;min-width:240px" />
-          <button class="primary" onclick="loadF1History({ force: true })">Search</button>
-          <button onclick="openF1CurrentHistoryQuery()">Use top query</button>
-        </div>
-        <div id="f1-history-summary" class="f1-history-summary"></div>
-        <div id="f1-history-results" class="f1-history-results" style="margin-top:10px"></div>
-      </div>
-      <div class="f1-driver-panels" style="margin-bottom:10px">
-        <div id="f1-driver-detail" class="stat-card"></div>
-        <div>
-          <h2 style="margin:0 0 8px">Driver Radar</h2>
-          <div id="f1-standings" class="f1-driver-cards"><div class="empty">Loading.</div></div>
-        </div>
-      </div>
-      <h2 style="margin:0 0 8px">Circuits On Deck</h2>
-      <div id="f1-tracks" class="overview-grid"><div class="empty">Loading track guide...</div></div>
+      </details>
     </div>
   </div>
 
@@ -978,6 +1015,12 @@
       <div class="tool-minor" style="margin:-2px 0 10px">Priority only affects your personal watchlist order and how farm targets are ranked for you.</div>
       <div id="wf-meta" class="muted" style="margin-bottom:4px"></div>
       <div id="wf-errors" class="warn-strip"></div>
+      <div class="hub-subnav" role="tablist" aria-label="Warframe workspace">
+        <button class="active" data-wf-tab="overview" onclick="setWarframeWorkspace('overview', this)">Overview</button>
+        <button data-wf-tab="planner" onclick="setWarframeWorkspace('planner', this)">Farm & trade</button>
+        <button data-wf-tab="personal" onclick="setWarframeWorkspace('personal', this)">My collection</button>
+      </div>
+      <section class="wf-workspace-pane" data-wf-workspace="overview">
       <div class="wf-grid-3" style="margin-bottom:10px">
         <div class="stat-card">
           <h2 style="margin:0 0 6px">Market Snapshot</h2>
@@ -1017,6 +1060,8 @@
         </div>
         <div id="wf-hot" class="wf-top-grid"></div>
       </div>
+      </section>
+      <section class="wf-workspace-pane" data-wf-workspace="planner" hidden>
       <div class="stat-card">
         <div class="diag-head">
           <h2 style="margin:0">Market Pulse</h2>
@@ -1077,6 +1122,8 @@
         </div>
         <div id="wf-plan" class="wf-plan-grid"></div>
       </div>
+      </section>
+      <section class="wf-workspace-pane" data-wf-workspace="personal" hidden>
       <div class="stat-card">
         <div class="diag-head">
           <h2 style="margin:0">Personal Watchlist</h2>
@@ -1093,26 +1140,31 @@
         </div>
         <div id="wf-watchlist" class="wf-plan-grid"></div>
       </div>
-      <div class="stat-card">
-        <div class="diag-head">
-          <h2 style="margin:0">AlecaFrame Sync</h2>
-          <div class="row" style="margin:0">
-            <span id="wf-aleca-meta" class="tool-minor">Personal stats, trades and relic inventory from AlecaFrame.</span>
-            <button class="sm" onclick="loadWarframeAleca(true)">Refresh</button>
+      <details id="wf-personal-data" class="wf-optional-panel" ontoggle="if(this.open) loadWarframePersonalData()">
+        <summary><span>Connected AlecaFrame data</span><span class="muted">Optional</span></summary>
+        <div class="wf-optional-body">
+          <div class="stat-card">
+            <div class="diag-head">
+              <h2 style="margin:0">AlecaFrame Sync</h2>
+              <div class="row" style="margin:0">
+                <span id="wf-aleca-meta" class="tool-minor">Personal stats, trades and relic inventory.</span>
+                <button class="sm" onclick="loadWarframeAleca(true)">Refresh data</button>
+              </div>
+            </div>
+            <div id="wf-aleca" class="wf-plan-grid"><div class="muted">Open this section after connecting AlecaFrame in Settings.</div></div>
+          </div>
+          <div class="stat-card" style="margin-top:10px">
+            <div class="diag-head">
+              <h2 style="margin:0">Personal Opportunities</h2>
+              <div class="row" style="margin:0">
+                <span id="wf-opps-meta" class="tool-minor">Your history combined with current market pressure.</span>
+                <button class="sm" onclick="loadWarframeOpportunities(true)">Refresh data</button>
+              </div>
+            </div>
+            <div id="wf-opps" class="wf-plan-grid"><div class="muted">Open this section after connecting AlecaFrame in Settings.</div></div>
           </div>
         </div>
-        <div id="wf-aleca" class="wf-plan-grid"><div class="muted">Configure AlecaFrame tokens in Settings to unlock personal Warframe stats.</div></div>
-      </div>
-      <div class="stat-card">
-        <div class="diag-head">
-          <h2 style="margin:0">Personal Opportunities</h2>
-          <div class="row" style="margin:0">
-            <span id="wf-opps-meta" class="tool-minor">Combines your AlecaFrame history with live market pressure.</span>
-            <button class="sm" onclick="loadWarframeOpportunities(true)">Refresh</button>
-          </div>
-        </div>
-        <div id="wf-opps" class="wf-plan-grid"><div class="muted">Opportunities will show up once AlecaFrame and market data are both available.</div></div>
-      </div>
+      </details>
       <div class="stat-card">
         <div class="diag-head">
           <h2 style="margin:0">Arsenal Explorer</h2>
@@ -1131,6 +1183,7 @@
         </div>
         <div id="wf-tools" class="wf-tool-grid"></div>
       </div>
+      </section>
     </div>
   </div>
   <div id="tab-saved" style="display:none">
@@ -2552,7 +2605,9 @@ function renderTLDRStatus() {
   if (status.email && !status.has_password) hint = 'Email saved. Add your Google App Password and save again before syncing.';
   if (configured) hint = 'Gmail IMAP is configured. Sync pulls your latest TLDR issues into the local reader.';
   const emailInput = document.getElementById('tldr-email');
+  const setupEl = document.getElementById('tldr-setup');
   if (emailInput && status.email && !String(emailInput.value || '').trim()) emailInput.value = status.email;
+  if (setupEl && (!configured || status.auth_error)) setupEl.open = true;
   el.innerHTML = `
     <div>
       <div style="font-size:.8rem;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em">TLDR Mail Bridge</div>
@@ -3566,6 +3621,7 @@ const WARFRAME_OVERVIEW_STALE_MS = 10 * 60 * 1000;
 const WARFRAME_AUTO_REFRESH_MS = 10 * 60 * 1000;
 let _warframeOverviewCache = { key: '', ts: 0, data: null };
 let _warframeAutoRefreshTimer = null;
+const WARFRAME_WORKSPACE_KEY = 'holocronhub.warframe.workspace.v1';
 
 function clearF1SessionPolling() {
   if (_f1SessionTimer) {
@@ -3596,9 +3652,29 @@ function applyWarframeAutoRefresh() {
     loadWarframe({ background: true });
     loadWarframePulse();
     loadWarframeRadar();
-    loadWarframeAleca();
-    loadWarframeOpportunities();
   }, WARFRAME_AUTO_REFRESH_MS);
+}
+
+function setWarframeWorkspace(workspace, btn) {
+  const target = ['overview', 'planner', 'personal'].includes(workspace) ? workspace : 'overview';
+  document.querySelectorAll('[data-wf-workspace]').forEach(pane => {
+    pane.hidden = pane.dataset.wfWorkspace !== target;
+  });
+  document.querySelectorAll('[data-wf-tab]').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.wfTab === target);
+  });
+  if (btn) btn.classList.add('active');
+  safeLocalSet(WARFRAME_WORKSPACE_KEY, target);
+}
+
+function restoreWarframeWorkspace() {
+  const workspace = safeLocalGet(WARFRAME_WORKSPACE_KEY, 'overview');
+  setWarframeWorkspace(workspace);
+}
+
+function loadWarframePersonalData() {
+  void loadWarframeAleca();
+  void loadWarframeOpportunities();
 }
 
 function makeF1OverviewCacheKey(season) {
@@ -5565,8 +5641,6 @@ async function loadWarframe(options = {}) {
   const hasWatchlistContent = !!document.getElementById('wf-watchlist')?.children.length;
   const hasPulseContent = !!document.getElementById('wf-demand')?.children.length;
   const hasRadarContent = !!document.getElementById('wf-profit')?.children.length;
-  const hasAlecaContent = !!document.getElementById('wf-aleca')?.children.length;
-  const hasOppsContent = !!document.getElementById('wf-opps')?.children.length;
 
   renderWarframeTools();
   if (arsenalEl) arsenalEl.innerHTML = '<div class="muted">Search a frame to inspect stats and abilities.</div>';
@@ -5578,8 +5652,6 @@ async function loadWarframe(options = {}) {
       void loadWarframePlanner(item);
       if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
       if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
-      if (!hasAlecaContent) void loadWarframeAleca();
-      if (!hasOppsContent) void loadWarframeOpportunities();
       return;
     }
     if (!background && metaEl) metaEl.textContent += ' | refreshing';
@@ -5600,9 +5672,6 @@ async function loadWarframe(options = {}) {
   void loadWarframePlanner(item);
   if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
   if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
-  if (!hasAlecaContent || force) void loadWarframeAleca(force);
-  if (!hasOppsContent || force) void loadWarframeOpportunities(force);
-
   try {
     const params = new URLSearchParams({ item, platform });
     const data = await fetchJson(`${API}/warframe/overview?${params}`);
@@ -6772,6 +6841,7 @@ async function saveSettingsApi() {
 
 // ══ init ═════════════════════════════════════════════════════
 fetchSettings().catch(()=>{}).finally(() => {
+  restoreWarframeWorkspace();
   loadCategories().then(()=>loadTools());
 });
 </script>

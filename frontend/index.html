@@ -1427,9 +1427,17 @@ function catClass(cat) {
 }
 function relTime(iso) {
   if (!iso) return '';
-  const d = new Date(iso);
+  const d = iso instanceof Date ? iso : new Date(iso);
   if (isNaN(d)) return '';
   const diff = Date.now() - d;
+  if (diff < 0) {
+    const future = Math.abs(diff);
+    const minutes = Math.ceil(future / 60000);
+    if (minutes < 60) return `in ${Math.max(1, minutes)}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `in ${hours}h`;
+    return `in ${Math.floor(hours / 24)}d`;
+  }
   const h = Math.floor(diff / 3600000);
   if (h < 1) return `${Math.max(0,Math.floor(diff/60000))}m ago`;
   if (h < 24) return `${h}h ago`;
@@ -1437,9 +1445,17 @@ function relTime(iso) {
 }
 
 function formatTimeish(value, fallback='') {
-  const raw = String(value || '').trim();
+  if (value === null || value === undefined || value === '') return fallback;
+  if (typeof value === 'number' || /^\d+(?:\.\d+)?$/.test(String(value).trim())) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      const timestamp = numeric < 1e12 ? numeric * 1000 : numeric;
+      return relTime(new Date(timestamp)) || fallback;
+    }
+  }
+  const raw = String(value).trim();
   if (!raw) return fallback;
-  if (/^\d{4}-\d{2}-\d{2}(?:[tT ]\d{2}:\d{2})/.test(raw)) {
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
     return relTime(raw) || raw;
   }
   return raw;
@@ -3622,6 +3638,8 @@ const WARFRAME_AUTO_REFRESH_MS = 10 * 60 * 1000;
 let _warframeOverviewCache = { key: '', ts: 0, data: null };
 let _warframeAutoRefreshTimer = null;
 const WARFRAME_WORKSPACE_KEY = 'holocronhub.warframe.workspace.v1';
+let _warframeWorkspace = 'overview';
+let _warframeWorkspaceLoads = {};
 
 function clearF1SessionPolling() {
   if (_f1SessionTimer) {
@@ -3657,6 +3675,7 @@ function applyWarframeAutoRefresh() {
 
 function setWarframeWorkspace(workspace, btn) {
   const target = ['overview', 'planner', 'personal'].includes(workspace) ? workspace : 'overview';
+  _warframeWorkspace = target;
   document.querySelectorAll('[data-wf-workspace]').forEach(pane => {
     pane.hidden = pane.dataset.wfWorkspace !== target;
   });
@@ -3665,6 +3684,7 @@ function setWarframeWorkspace(workspace, btn) {
   });
   if (btn) btn.classList.add('active');
   safeLocalSet(WARFRAME_WORKSPACE_KEY, target);
+  if (target !== 'overview') void loadWarframeWorkspaceData(target);
 }
 
 function restoreWarframeWorkspace() {
@@ -3675,6 +3695,32 @@ function restoreWarframeWorkspace() {
 function loadWarframePersonalData() {
   void loadWarframeAleca();
   void loadWarframeOpportunities();
+}
+
+function resetWarframeWorkspaceLoads() {
+  _warframeWorkspaceLoads = {};
+}
+
+async function loadWarframeWorkspaceData(workspace, options = {}) {
+  const target = ['planner', 'personal'].includes(workspace) ? workspace : 'overview';
+  const platform = document.getElementById('wf-platform')?.value || 'pc';
+  const key = `${platform}:${target}`;
+  if (!options.force && _warframeWorkspaceLoads[key]) return;
+  _warframeWorkspaceLoads[key] = true;
+
+  if (target === 'planner') {
+    const item = document.getElementById('wf-item')?.value?.trim() || 'arcane energize';
+    await Promise.allSettled([
+      loadWarframePulse(),
+      loadWarframeRadar(),
+      loadWarframePlanner(item),
+    ]);
+    return;
+  }
+
+  if (target === 'personal') {
+    await loadWarframeWatchlist();
+  }
 }
 
 function makeF1OverviewCacheKey(season) {
@@ -5628,6 +5674,7 @@ async function loadWarframe(options = {}) {
   const arsenalMetaEl = document.getElementById('wf-arsenal-meta');
   if (!itemInput || !platformSel || !metaEl || !marketEl || !alertsEl || !newsEl || !fissuresEl || !invasionsEl || !worldEl || !hotEl) return;
   if (errEl) errEl.innerHTML = '';
+  if (force) resetWarframeWorkspaceLoads();
 
   if (!itemInput.value.trim()) itemInput.value = 'arcane energize';
   const item = itemInput.value.trim();
@@ -5638,9 +5685,6 @@ async function loadWarframe(options = {}) {
   const canUseClientCache = !!(cachedOverview?.data && cachedAge <= WARFRAME_OVERVIEW_STALE_MS);
   const cachedPlatform = _warframeStaticCache.platform || 'pc';
   const samePlatformContext = cachedPlatform === platform && (_warframeStaticCache.worldstate || (_warframeStaticCache.top_sells || []).length);
-  const hasWatchlistContent = !!document.getElementById('wf-watchlist')?.children.length;
-  const hasPulseContent = !!document.getElementById('wf-demand')?.children.length;
-  const hasRadarContent = !!document.getElementById('wf-profit')?.children.length;
 
   renderWarframeTools();
   if (arsenalEl) arsenalEl.innerHTML = '<div class="muted">Search a frame to inspect stats and abilities.</div>';
@@ -5648,10 +5692,7 @@ async function loadWarframe(options = {}) {
   if (canUseClientCache) {
     renderWarframeOverview(cachedOverview.data, item, platform, { fromClientCache: true });
     if (cachedAge <= WARFRAME_OVERVIEW_FRESH_MS && !force) {
-      if (!hasWatchlistContent) void loadWarframeWatchlist();
-      void loadWarframePlanner(item);
-      if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
-      if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
+      if (_warframeWorkspace !== 'overview') void loadWarframeWorkspaceData(_warframeWorkspace);
       return;
     }
     if (!background && metaEl) metaEl.textContent += ' | refreshing';
@@ -5668,10 +5709,7 @@ async function loadWarframe(options = {}) {
     }
   }
 
-  if (!hasWatchlistContent) void loadWarframeWatchlist();
-  void loadWarframePlanner(item);
-  if (!hasPulseContent || !samePlatformContext) void loadWarframePulse();
-  if (!hasRadarContent || !samePlatformContext) void loadWarframeRadar();
+  if (_warframeWorkspace !== 'overview') void loadWarframeWorkspaceData(_warframeWorkspace, { force });
   try {
     const params = new URLSearchParams({ item, platform });
     const data = await fetchJson(`${API}/warframe/overview?${params}`);

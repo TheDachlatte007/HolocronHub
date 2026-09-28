@@ -4648,6 +4648,32 @@ def _build_warframe_watchlist_payload(platform: str = "pc", sort_by: str = "prio
     return out, trimmed_errors
 
 
+def _normalize_warframe_timestamp(value: Any) -> Optional[str]:
+    """Normalize numeric/ISO worldstate dates while preserving human ETA strings."""
+    if value in (None, ""):
+        return None
+    if isinstance(value, dict):
+        value = _dig(value, "$date", "$numberLong") or value.get("$date") or value.get("sec")
+    try:
+        numeric = float(value)
+        if numeric > 0:
+            if numeric > 10_000_000_000:
+                numeric /= 1000
+            return datetime.fromtimestamp(numeric, tz=timezone.utc).isoformat()
+    except (TypeError, ValueError, OverflowError, OSError):
+        pass
+    raw = str(value).strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc).isoformat()
+    except ValueError:
+        return raw
+
+
 def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str, Any]:
     news_out: list[dict[str, Any]] = []
     for n in (data.get("news") or [])[:10]:
@@ -4658,8 +4684,8 @@ def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str,
             {
                 "title": title,
                 "url": n.get("link") or n.get("url"),
-                "published_at": n.get("date") or n.get("eta"),
-                "eta": n.get("eta"),
+                "published_at": _normalize_warframe_timestamp(n.get("date") or n.get("eta")),
+                "eta": _normalize_warframe_timestamp(n.get("eta")),
                 "importance": n.get("priority"),
             }
         )
@@ -4683,7 +4709,7 @@ def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str,
                 "faction": mission.get("faction"),
                 "type": mission.get("type"),
                 "reward": reward_name,
-                "eta": a.get("eta"),
+                "eta": _normalize_warframe_timestamp(a.get("eta")),
             }
         )
 
@@ -4700,7 +4726,7 @@ def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str,
                 "node": f.get("node"),
                 "is_storm": f.get("isStorm"),
                 "is_hard": f.get("isHard"),
-                "eta": f.get("eta"),
+                "eta": _normalize_warframe_timestamp(f.get("eta")),
             }
         )
 
@@ -4717,7 +4743,7 @@ def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str,
                 "defender": defender.get("faction"),
                 "attacker_reward": _dig(attacker, "reward", "asString") or _dig(attacker, "reward", "itemString"),
                 "defender_reward": _dig(defender, "reward", "asString") or _dig(defender, "reward", "itemString"),
-                "eta": inv.get("eta"),
+                "eta": _normalize_warframe_timestamp(inv.get("eta")),
             }
         )
 
@@ -4731,7 +4757,7 @@ def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str,
             {
                 "id": ev.get("id"),
                 "description": ev.get("description") or ev.get("tooltip"),
-                "eta": ev.get("eta"),
+                "eta": _normalize_warframe_timestamp(ev.get("eta")),
                 "progress": ev.get("progress"),
             }
         )
@@ -4744,7 +4770,7 @@ def _parse_warframe_worldstate(data: dict[str, Any], platform: str) -> dict[str,
 
     return {
         "platform": platform,
-        "timestamp": data.get("timestamp"),
+        "timestamp": _normalize_warframe_timestamp(data.get("timestamp")),
         "news": news_out,
         "alerts": alerts_out,
         "fissures": fissures_out,

@@ -518,6 +518,7 @@
     .wf-section-title{margin:0 0 8px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8}
     .wf-tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+    .wf-value-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
     .hub-subnav{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}
     .hub-subnav button{padding:6px 11px;border-radius:999px;font-size:12px}
     .wf-workspace-pane[hidden]{display:none !important}
@@ -1119,8 +1120,16 @@
         <div class="row">
           <input id="wf-plan-query" placeholder="Search farm targets, e.g. dante prime systems, target acquired, revenant prime chassis" style="flex:1;min-width:220px" />
           <button onclick="loadWarframePlanner()">Plan Farm</button>
+          <button class="sm" onclick="loadWarframeValueLab()">Analyze value</button>
         </div>
         <div id="wf-plan" class="wf-plan-grid"></div>
+      </div>
+      <div class="stat-card">
+        <div class="diag-head">
+          <h2 style="margin:0">Value Lab</h2>
+          <span id="wf-value-lab-meta" class="tool-minor">Set-vs-parts and ducat efficiency</span>
+        </div>
+        <div id="wf-value-lab"><div class="muted">Value analysis will appear when the Farm & trade workspace loads.</div></div>
       </div>
       </section>
       <section class="wf-workspace-pane" data-wf-workspace="personal" hidden>
@@ -3716,6 +3725,7 @@ async function loadWarframeWorkspaceData(workspace, options = {}) {
       loadWarframePulse(),
       loadWarframeRadar(),
       loadWarframePlanner(item),
+      loadWarframeValueLab(item),
     ]);
     return;
   }
@@ -5952,6 +5962,81 @@ async function loadWarframePlanner(seedQuery = '') {
   } catch (e) {
     gridEl.innerHTML = `<div class="err-msg">Farm planner failed: ${esc(e.message)}</div>`;
     if (metaEl) metaEl.textContent = 'planner unavailable';
+  }
+}
+
+function renderWarframeValueLab(data) {
+  const metaEl = document.getElementById('wf-value-lab-meta');
+  const gridEl = document.getElementById('wf-value-lab');
+  if (!gridEl) return;
+  const set = data?.set;
+  const parts = Array.isArray(data?.parts) ? data.parts : [];
+  const leaders = Array.isArray(data?.ducat_leaders) ? data.ducat_leaders : [];
+  if (metaEl) metaEl.textContent = set ? `${esc(data.platform || 'PC')} | ${esc(data.decision || 'analysis')}` : 'No set match found';
+  if (!set || !parts.length) {
+    gridEl.innerHTML = `<div class="muted">No complete set/parts comparison is available for this target yet.</div>`;
+    return;
+  }
+  const setPrice = Number(set.price);
+  const partsTotal = Number(data.parts_total);
+  const premium = Number(data.premium_vs_parts);
+  const decisionLabels = {
+    buy_parts_sell_set: 'Parts total is below the set price',
+    buy_set_sell_parts: 'Set price is below the parts total',
+    roughly_equal: 'Set and parts are roughly equal',
+    insufficient_data: 'Not enough price data for a reliable decision',
+  };
+  const decision = decisionLabels[data.decision] || 'Compare live prices before trading';
+  const comparison = Number.isFinite(premium)
+    ? `${premium >= 0 ? '+' : ''}${fmtMarketNum(premium, 1)}p set premium`
+    : 'comparison unavailable';
+  const partRows = parts.map(part => `
+    <div class="small-row">
+      <span>${esc(part.name || 'Part')}</span>
+      <span class="muted">${part.price != null ? `${fmtMarketNum(part.price, 1)}p` : 'n/a'}${part.ducats != null ? ` | ${fmtMarketNum(part.ducats, 0)} Ducats` : ''}</span>
+    </div>`).join('');
+  const leaderRows = leaders.length
+    ? leaders.slice(0, 4).map(part => `<div class="small-row"><span>${esc(part.name || 'Part')}</span><span class="muted">${fmtMarketNum(part.ducats_per_plat || 0, 2)} Ducats/p</span></div>`).join('')
+    : '<div class="muted">Ducat metadata is not available for these parts.</div>';
+  gridEl.innerHTML = `
+    <div class="wf-value-grid">
+      <div class="market-card">
+        <div class="diag-head"><strong>${esc(set.name || 'Set')}</strong><span class="rank-pill">${esc(decision)}</span></div>
+        <div class="small-row"><span>Set price</span><strong>${Number.isFinite(setPrice) ? `${fmtMarketNum(setPrice, 1)}p` : 'n/a'}</strong></div>
+        <div class="small-row"><span>Parts total</span><strong>${Number.isFinite(partsTotal) ? `${fmtMarketNum(partsTotal, 1)}p` : 'n/a'}</strong></div>
+        <div class="small-row"><span>Difference</span><span class="market-change ${Number.isFinite(premium) ? (premium >= 0 ? 'up' : 'down') : 'flat'}">${esc(comparison)}</span></div>
+        <div class="tool-summary">${esc(decision)}. Confirm the current order book before trading.</div>
+        ${set.slug ? `<a href="https://warframe.market/items/${esc(set.slug)}" target="_blank" rel="noopener">Open set market page</a>` : ''}
+      </div>
+      <div class="market-card">
+        <div class="diag-head"><strong>Parts and Ducats</strong><span class="rank-pill">${parts.length} parts</span></div>
+        <div class="small-list">${partRows}</div>
+        <div class="tool-summary" style="margin-top:10px">Best Ducats per Platinum</div>
+        <div class="small-list">${leaderRows}</div>
+      </div>
+    </div>`;
+}
+
+async function loadWarframeValueLab(seedQuery = '') {
+  const inputEl = document.getElementById('wf-item');
+  const metaEl = document.getElementById('wf-value-lab-meta');
+  const gridEl = document.getElementById('wf-value-lab');
+  if (!gridEl) return;
+  const q = (seedQuery || inputEl?.value || '').trim();
+  if (!q) {
+    gridEl.innerHTML = '<div class="muted">Enter a Prime target to compare its set and parts.</div>';
+    return;
+  }
+  gridEl.innerHTML = '<div class="muted">Comparing set, parts and Ducat value...</div>';
+  if (metaEl) metaEl.textContent = `analyzing ${q}`;
+  try {
+    const platform = document.getElementById('wf-platform')?.value || 'pc';
+    const params = new URLSearchParams({ q, platform });
+    const data = await fetchJson(`${API}/warframe/value-lab?${params}`);
+    renderWarframeValueLab(data);
+  } catch (e) {
+    gridEl.innerHTML = `<div class="err-msg">Value analysis failed: ${esc(e.message)}</div>`;
+    if (metaEl) metaEl.textContent = 'value lab unavailable';
   }
 }
 

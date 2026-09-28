@@ -4094,6 +4094,174 @@ def _fetch_warframe_value_snapshot(item: str, platform: str = "pc", *, catalog: 
     return payload, errors[:8]
 
 
+def _fetch_warframe_items_dataset() -> tuple[list[dict[str, Any]], list[str]]:
+    cache_key = "warframe:items:dataset:v1"
+    cached = _cache_get(cache_key, ttl_seconds=24 * 3600)
+    if isinstance(cached, dict):
+        return list(cached.get("items") or []), list(cached.get("errors") or [])
+
+    raw, err = _http_get_json(
+        "https://raw.githubusercontent.com/WFCD/warframe-items/master/data/json/Items.json",
+        timeout=20,
+    )
+    if err:
+        return [], [f"items_dataset:{err}"]
+    if not isinstance(raw, list):
+        return [], ["items_dataset:invalid_payload"]
+
+    items = [item for item in raw if isinstance(item, dict) and str(item.get("name") or "").strip()]
+    _cache_set(cache_key, {"items": items, "errors": []})
+    return items, []
+
+
+def _warframe_value_item_key(value: Any) -> str:
+    return _normalize_warframe_item_name(str(value or "").replace(" Blueprint", ""))
+
+
+def _find_warframe_value_set(catalog: list[dict[str, Any]], query: str) -> Optional[dict[str, Any]]:
+    q_norm = _warframe_value_item_key(query)
+    if not q_norm:
+        return None
+    exact = [item for item in catalog if _warframe_value_item_key(item.get("name")) == q_norm and str(item.get("name") or "").casefold().endswith(" set")]
+    if exact:
+        return exact[0]
+
+    candidates = [item for item in catalog if str(item.get("name") or "").casefold().endswith(" set")]
+    for item in candidates:
+        set_name = str(item.get("name") or "")
+        base = _warframe_value_item_key(set_name[:-4].strip())
+        if base == q_norm or base in q_norm or q_norm in base:
+            return item
+
+    suffixes = [" blueprint", " chassis", " neuroptics", " systems", " barrel", " receiver", " stock", " blade", " handle", " link", " ornament", " lower limb", " upper limb", " grip"]
+    base_query = q_norm
+    for suffix in suffixes:
+        if base_query.endswith(_normalize_warframe_item_name(suffix)):
+            base_query = base_query[: -len(_normalize_warframe_item_name(suffix))].strip()
+            break
+    for item in candidates:
+        set_name = str(item.get("name") or "")
+        base = _warframe_value_item_key(set_name[:-4].strip())
+        if base == base_query or base in base_query or base_query in base:
+            return item
+    return None
+
+
+def _build_warframe_value_lab(item: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
+    platform_key = str(platform or "pc").strip().lower()
+    cache_key = f"warframe:value_lab:{platform_key}:{_warframe_value_item_key(item)}"
+    cached = _cache_get(cache_key, ttl_seconds=15 * 60)
+    if isinstance(cached, dict):
+        return cached, list(cached.get("errors") or [])
+
+    catalog, catalog_errors = _fetch_warframe_market_catalog()
+    dataset, dataset_errors = _fetch_warframe_items_dataset()
+    errors = list(catalog_errors[:4]) + list(dataset_errors[:4])
+    set_item = _find_warframe_value_set(catalog, item)
+    if not set_item:
+        payload = {"query": item, "platform": platform_key, "set": None, "parts": [], "ducat_leaders": [], "decision": "not_found", "errors": [*errors, "set_not_found"]}
+        _cache_set(cache_key, payload)
+        return payload, list(payload["errors"])
+
+    set_name = str(set_item.get("name") or item).strip()
+    base_norm = _warframe_value_item_key(set_name[:-4].strip())
+    suffixes = ("blueprint", "chassis", "neuroptics", "systems", "barrel", "receiver", "stock", "blade", "handle", "link", "ornament", "lower_limb", "upper_limb", "grip")
+    parts_meta: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for candidate in catalog:
+        name = str(candidate.get("name") or "").strip()
+        norm = _warframe_value_item_key(name)
+        if not norm or norm == _warframe_value_item_key(set_name) or not norm.startswith(base_norm):
+            continue
+        if not norm.endswith(suffixes) or norm in seen:
+            continue
+        seen.add(norm)
+        parts_meta.append(candidate)
+
+    if not parts_meta:
+        payload = {"query": item, "platform": platform_key, "set": {"name": set_name, "slug": set_item.get("slug")}, "parts": [], "ducat_leaders": [], "decision": "parts_not_found", "errors": [*errors, "parts_not_found"]}
+        _cache_set(cache_key, payload)
+        return payload, list(payload["errors"])
+
+    dataset_by_name: dict[str, dict[str, Any]] = {}
+    for entry in dataset:
+        key = _warframe_value_item_key(entry.get("name"))
+        if key and key not in dataset_by_name:
+            dataset_by_name[key] = entry
+
+    def load_part(meta: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+        name = str(meta.get("name") or "")
+        value, value_errors = _fetch_warframe_value_snapshot(name, platform_key, catalog=catalog)
+        dataset_entry = dataset_by_name.get(_warframe_value_item_key(name)) or {}
+        ducats = dataset_entry.get("ducatCount")
+        try:
+            ducats = int(ducats) if ducats is not None else None
+        except Exception:
+            ducats = None
+        price = value.get("last_avg_price")
+        try:
+            ducat_ratio = round(float(ducats) / float(price), 2) if ducats is not None and float(price or 0) > 0 else None
+        except Exception:
+            ducat_ratio = None
+        return {
+            "name": value.get("canonical_name") or name,
+            "slug": value.get("slug") or meta.get("slug"),
+            "price": price,
+            "volume": value.get("volume_total") or 0,
+            "ducats": ducats,
+            "ducats_per_plat": ducat_ratio,
+        }, value_errors
+
+    part_rows: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(parts_meta)))) as pool:
+        futures = [pool.submit(load_part, meta) for meta in parts_meta]
+        for future in as_completed(futures):
+            try:
+                row, row_errors = future.result()
+            except Exception as exc:
+                errors.append(f"value_lab:part_worker:{exc}")
+                continue
+            part_rows.append(row)
+            errors.extend((row_errors or [])[:2])
+
+    set_value, set_value_errors = _fetch_warframe_value_snapshot(set_name, platform_key, catalog=catalog)
+    errors.extend(set_value_errors[:3])
+    priced_parts = [part for part in part_rows if part.get("price") is not None]
+    parts_total = round(sum(float(part.get("price") or 0) for part in priced_parts), 2)
+    set_price = set_value.get("last_avg_price")
+    premium = round(float(set_price) - parts_total, 2) if set_price is not None and priced_parts else None
+    if premium is None:
+        decision = "insufficient_data"
+    elif premium > max(5.0, parts_total * 0.05):
+        decision = "buy_parts_sell_set"
+    elif premium < -max(5.0, parts_total * 0.05):
+        decision = "buy_set_sell_parts"
+    else:
+        decision = "roughly_equal"
+
+    ducat_leaders = sorted(
+        [part for part in part_rows if part.get("ducats_per_plat") is not None],
+        key=lambda part: (float(part.get("ducats_per_plat") or 0), float(part.get("volume") or 0)),
+        reverse=True,
+    )[:6]
+    payload = {
+        "query": item,
+        "platform": platform_key,
+        "set": {"name": set_value.get("canonical_name") or set_name, "slug": set_value.get("slug"), "price": set_price, "volume": set_value.get("volume_total") or 0},
+        "parts": sorted(part_rows, key=lambda part: str(part.get("name") or "")),
+        "parts_total": parts_total if priced_parts else None,
+        "premium_vs_parts": premium,
+        "decision": decision,
+        "ducat_leaders": ducat_leaders,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "errors": errors[:24],
+    }
+    if set_price is not None or part_rows:
+        _cache_set(cache_key, payload)
+        _set_last_good(cache_key, payload)
+    return payload, errors[:24]
+
+
 def _compute_relic_value_profiles(relic_names: list[str], *, platform: str = "pc", target_item: str = "") -> tuple[dict[str, dict[str, Any]], list[str]]:
     target_set = {str(name or "").strip() for name in relic_names if str(name or "").strip()}
     if not target_set:
@@ -6682,6 +6850,12 @@ def warframe_arsenal(q: str = ""):
 @app.get("/api/warframe/planner")
 def warframe_planner(q: str = "", platform: str = "pc"):
     payload, errors = _build_warframe_farm_plan(q, platform=platform)
+    return {**payload, "errors": errors}
+
+
+@app.get("/api/warframe/value-lab")
+def warframe_value_lab(q: str = "", platform: str = "pc"):
+    payload, errors = _build_warframe_value_lab(q or "arcane energize", platform=platform)
     return {**payload, "errors": errors}
 
 

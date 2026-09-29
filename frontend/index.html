@@ -1140,8 +1140,11 @@
         <div class="row">
           <input id="wf-riven-query" placeholder="Check a Riven weapon, e.g. Torid or Bo" style="flex:1;min-width:220px" />
           <button class="sm" onclick="loadWarframeRivenDemand()">Check demand</button>
+          <label class="sm" style="cursor:pointer">Import AlecaFrame JSON<input id="wf-riven-import" type="file" accept=".json,application/json" hidden onchange="importWarframeRivens(event)" /></label>
+          <button class="sm" onclick="clearWarframeRivens()">Clear import</button>
         </div>
         <div id="wf-riven-demand" class="wf-plan-grid"><div class="muted">Riven demand will appear when the Farm & trade workspace loads.</div></div>
+        <div id="wf-riven-personal" class="wf-plan-grid" style="margin-top:10px"></div>
       </div>
       </section>
       <section class="wf-workspace-pane" data-wf-workspace="personal" hidden>
@@ -6058,6 +6061,109 @@ async function loadWarframeValueLab(seedQuery = '') {
   }
 }
 
+const WARFRAME_RIVEN_IMPORT_KEY = 'holocronhub.warframe.rivens.v1';
+
+function readImportedWarframeRivens() {
+  const rows = safeLocalGet(WARFRAME_RIVEN_IMPORT_KEY, []);
+  return Array.isArray(rows) ? rows : [];
+}
+
+function rivenStatText(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (Array.isArray(value)) return value.map(rivenStatText).filter(Boolean).join(', ');
+  if (typeof value === 'object') {
+    const label = value.name || value.stat || value.attribute || value.key || value.modifier;
+    const amount = value.value ?? value.percent ?? value.amount;
+    if (label && amount !== undefined) return `${label} ${amount}`;
+    return label ? String(label) : '';
+  }
+  return '';
+}
+
+function extractWarframeRivens(value, output = []) {
+  if (Array.isArray(value)) {
+    value.forEach(entry => extractWarframeRivens(entry, output));
+    return output;
+  }
+  if (!value || typeof value !== 'object') return output;
+  const weapon = value.weaponName || value.weapon || value.compatibility || value.weaponDisplayName;
+  const signalKeys = ['riven', 'disposition', 'rerolls', 'rerollCount', 'stats', 'attributes', 'positiveStats', 'negativeStats'];
+  const looksLikeRiven = signalKeys.some(key => Object.prototype.hasOwnProperty.call(value, key));
+  if (weapon && looksLikeRiven) {
+    const weaponName = String(weapon).replace(/\s+riven\s+mod$/i, '').trim();
+    if (weaponName && !/^(riven|mod)$/i.test(weaponName)) {
+      const stats = value.stats || value.attributes || [value.positiveStats, value.negativeStats].filter(Boolean);
+      output.push({
+        id: `${weaponName.toLowerCase()}::${rivenStatText(stats)}::${value.rerolls ?? value.rerollCount ?? ''}`,
+        weapon: weaponName,
+        stats: rivenStatText(stats),
+        disposition: value.disposition ?? value.weaponDisposition ?? null,
+        rerolls: value.rerolls ?? value.rerollCount ?? value.rolls ?? null,
+        source: 'AlecaFrame import',
+      });
+    }
+  }
+  Object.values(value).forEach(child => extractWarframeRivens(child, output));
+  return output;
+}
+
+async function renderPersonalWarframeRivens(platform) {
+  const gridEl = document.getElementById('wf-riven-personal');
+  if (!gridEl) return;
+  const imported = readImportedWarframeRivens();
+  if (!imported.length) {
+    gridEl.innerHTML = '';
+    return;
+  }
+  gridEl.innerHTML = '<div class="muted">Matching imported Rivens with current weapon demand...</div>';
+  const uniqueWeapons = [...new Set(imported.map(item => item.weapon).filter(Boolean))].slice(0, 16);
+  const matches = await Promise.all(uniqueWeapons.map(async weapon => {
+    try {
+      const params = new URLSearchParams({ platform, q: weapon });
+      const data = await fetchJson(`${API}/warframe/rivens/demand?${params}`);
+      return [normalizeTextKey(weapon), Array.isArray(data.items) ? data.items[0] : null];
+    } catch {
+      return [normalizeTextKey(weapon), null];
+    }
+  }));
+  const demandByWeapon = new Map(matches);
+  gridEl.innerHTML = `
+    <div class="tool-minor" style="margin-bottom:4px">Imported Rivens matched against current weapon demand. Stats still need a separate quality/price check.</div>
+    ${imported.slice(0, 16).map(item => {
+      const demand = demandByWeapon.get(normalizeTextKey(item.weapon));
+      return `<div class="market-card">
+        <div class="diag-head"><strong>${esc(item.weapon || 'Riven')}</strong><span class="rank-pill">${esc(demand?.demand_label || 'no match')}</span></div>
+        <div class="small-row"><span>Market samples</span><strong>${demand ? fmtMarketNum(demand.market_samples || 0, 0) : 'n/a'}</strong></div>
+        <div class="small-row"><span>Median price</span><strong>${demand?.median_price != null ? `${fmtMarketNum(demand.median_price, 0)}p` : 'n/a'}</strong></div>
+        <div class="tool-minor">${esc(item.stats || 'Stats not found in import')}${item.rerolls != null ? ` | ${esc(String(item.rerolls))} rerolls` : ''}</div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+async function importWarframeRivens(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    const rivens = extractWarframeRivens(parsed).filter((item, index, all) => all.findIndex(other => other.id === item.id) === index).slice(0, 100);
+    safeLocalSet(WARFRAME_RIVEN_IMPORT_KEY, rivens);
+    await renderPersonalWarframeRivens(document.getElementById('wf-platform')?.value || 'pc');
+  } catch (e) {
+    const gridEl = document.getElementById('wf-riven-personal');
+    if (gridEl) gridEl.innerHTML = `<div class="err-msg">Riven import failed: ${esc(e.message)}</div>`;
+  } finally {
+    if (event?.target) event.target.value = '';
+  }
+}
+
+function clearWarframeRivens() {
+  safeLocalSet(WARFRAME_RIVEN_IMPORT_KEY, []);
+  const gridEl = document.getElementById('wf-riven-personal');
+  if (gridEl) gridEl.innerHTML = '';
+}
+
 function renderWarframeRivenDemand(data, query = '') {
   const metaEl = document.getElementById('wf-riven-demand-meta');
   const gridEl = document.getElementById('wf-riven-demand');
@@ -6094,6 +6200,7 @@ async function loadWarframeRivenDemand() {
     const platform = document.getElementById('wf-platform')?.value || 'pc';
     const data = await fetchJson(`${API}/warframe/rivens/demand?${new URLSearchParams({ platform, q: query })}`);
     renderWarframeRivenDemand(data, query);
+    await renderPersonalWarframeRivens(platform);
   } catch (e) {
     gridEl.innerHTML = `<div class="err-msg">Riven demand scan failed: ${esc(e.message)}</div>`;
     if (metaEl) metaEl.textContent = 'Riven demand unavailable';

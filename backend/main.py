@@ -4968,21 +4968,16 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
     headers = {"Accept": "application/json"}
     stale_payload, age = _get_last_good(cache_key, max_age_seconds=6 * 3600)
 
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        stat_future = pool.submit(_fetch_warframe_stat_worldstate, platform_key, headers)
-        official_future = pool.submit(_fetch_official_warframe_worldstate, platform_key, headers)
-        stat_parsed, stat_errors = stat_future.result()
-        official_parsed, official_err = official_future.result()
+    # The complete warframestat.us payload is the supported live source. The
+    # former official worldState.php endpoint now returns 404 in production,
+    # so do not call it on every refresh or surface a permanent warning.
+    stat_parsed, stat_errors = _fetch_warframe_stat_worldstate(platform_key, headers)
 
     errors.extend(stat_errors)
-    if official_err:
-        errors.append(f"official:{official_err}")
 
     parsed_candidates: list[dict[str, Any]] = []
     if isinstance(stat_parsed, dict):
-        parsed_candidates.append(_merge_warframe_worldstate(stat_parsed, official_parsed or stale_payload))
-    if isinstance(official_parsed, dict):
-        parsed_candidates.append(_merge_warframe_worldstate(official_parsed, stat_parsed or stale_payload))
+        parsed_candidates.append(_merge_warframe_worldstate(stat_parsed, stale_payload))
 
     for parsed in parsed_candidates:
         if _warframe_worldstate_has_data(parsed):
@@ -4997,10 +4992,10 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
         "sortie": "sortie",
         "nightwave": "nightwave",
         "arbitration": "arbitration",
-        "steel_path": "steelPath",
-        "cetus_cycle": "cetusCycle",
-        "vallis_cycle": "vallisCycle",
-        "cambion_cycle": "cambionCycle",
+        "steelPath": "steelPath",
+        "cetusCycle": "cetusCycle",
+        "vallisCycle": "vallisCycle",
+        "cambionCycle": "cambionCycle",
     }
     with ThreadPoolExecutor(max_workers=min(8, len(list_segments) + len(object_segments))) as pool:
         futures: dict[Any, tuple[str, str, bool]] = {}

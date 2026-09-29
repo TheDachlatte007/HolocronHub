@@ -5698,6 +5698,96 @@ def _build_warframe_personal_opportunities(platform: str = "pc") -> tuple[dict[s
     return payload, errors[:24]
 
 
+def _fetch_warframe_riven_demand(platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
+    """Summarize Riven market activity by weapon from WarframeStatus statistics."""
+    platform_key = str(platform or "pc").strip().lower()
+    if platform_key not in {"pc", "ps4", "xb1", "swi"}:
+        platform_key = "pc"
+    cache_key = f"warframe:riven_demand:v1:{platform_key}"
+    cached = _cache_get(cache_key, ttl_seconds=30 * 60)
+    if isinstance(cached, dict):
+        return cached, list(cached.get("errors") or [])
+
+    raw, err = _http_get_json(f"https://api.warframestat.us/{platform_key}/rivens", timeout=20)
+    if err:
+        payload = {"platform": platform_key, "items": [], "generated_at": datetime.now().isoformat(timespec="seconds"), "errors": [f"riven_demand:{err}"]}
+        stale_payload, age = _get_last_good(cache_key, max_age_seconds=24 * 3600)
+        if isinstance(stale_payload, dict):
+            fallback_errors = [f"riven_demand:{err}", f"fallback:last_good:riven_demand:{age}s"]
+            stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
+            stale_payload["errors"] = fallback_errors
+            _cache_set(cache_key, stale_payload)
+            return stale_payload, fallback_errors
+        _cache_set(cache_key, payload)
+        return payload, payload["errors"]
+
+    rows: list[dict[str, Any]] = []
+    if isinstance(raw, dict):
+        for riven_type, weapons in raw.items():
+            if not isinstance(weapons, dict):
+                continue
+            for weapon, variants in weapons.items():
+                if not isinstance(variants, dict):
+                    continue
+                variant_rows: dict[str, dict[str, Any]] = {}
+                sample_count = 0
+                weighted_avg = 0.0
+                median_values: list[float] = []
+                for variant_name, stats in variants.items():
+                    if not isinstance(stats, dict):
+                        continue
+                    try:
+                        population = max(0, int(stats.get("pop") or 0))
+                    except (TypeError, ValueError):
+                        population = 0
+                    if population <= 0:
+                        continue
+                    try:
+                        avg = float(stats.get("avg")) if stats.get("avg") is not None else None
+                    except (TypeError, ValueError):
+                        avg = None
+                    try:
+                        median = float(stats.get("median")) if stats.get("median") is not None else None
+                    except (TypeError, ValueError):
+                        median = None
+                    sample_count += population
+                    if avg is not None:
+                        weighted_avg += avg * population
+                    if median is not None:
+                        median_values.append(median)
+                    variant_rows[str(variant_name)] = {"samples": population, "avg": avg, "median": median}
+                if sample_count <= 0:
+                    continue
+                avg_price = round(weighted_avg / sample_count, 1) if weighted_avg else None
+                median_price = round(sum(median_values) / len(median_values), 1) if median_values else None
+                demand_label = "high activity" if sample_count >= 40 else ("active" if sample_count >= 15 else "niche")
+                rows.append(
+                    {
+                        "weapon": str(weapon),
+                        "riven_type": str(riven_type),
+                        "market_samples": sample_count,
+                        "avg_price": avg_price,
+                        "median_price": median_price,
+                        "demand_label": demand_label,
+                        "variants": variant_rows,
+                    }
+                )
+
+    rows.sort(key=lambda row: (int(row.get("market_samples") or 0), float(row.get("median_price") or 0.0), str(row.get("weapon") or "")), reverse=True)
+    payload = {
+        "platform": platform_key,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "source": "warframestat_riven_statistics",
+        "items": rows[:24],
+        "coverage_count": len(rows),
+        "errors": [],
+    }
+    if rows:
+        _cache_set(cache_key, payload)
+        _set_last_good(cache_key, payload)
+    return payload, []
+
+
 def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
     cfg = deepcopy(_DEFAULT_SETTINGS)
     if not isinstance(raw, dict):
@@ -7005,6 +7095,12 @@ def warframe_aleca():
 @app.get("/api/warframe/opportunities")
 def warframe_opportunities(platform: str = "pc"):
     payload, errors = _build_warframe_personal_opportunities(platform)
+    return {**payload, "errors": errors}
+
+
+@app.get("/api/warframe/rivens/demand")
+def warframe_riven_demand(platform: str = "pc"):
+    payload, errors = _fetch_warframe_riven_demand(platform)
     return {**payload, "errors": errors}
 
 

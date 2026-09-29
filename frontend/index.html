@@ -1137,6 +1137,10 @@
           <h2 style="margin:0">Riven Demand Radar</h2>
           <span id="wf-riven-demand-meta" class="tool-minor">Weapon demand from market activity samples</span>
         </div>
+        <div class="row">
+          <input id="wf-riven-query" placeholder="Check a Riven weapon, e.g. Torid or Bo" style="flex:1;min-width:220px" />
+          <button class="sm" onclick="loadWarframeRivenDemand()">Check demand</button>
+        </div>
         <div id="wf-riven-demand" class="wf-plan-grid"><div class="muted">Riven demand will appear when the Farm & trade workspace loads.</div></div>
       </div>
       </section>
@@ -6054,13 +6058,13 @@ async function loadWarframeValueLab(seedQuery = '') {
   }
 }
 
-function renderWarframeRivenDemand(data) {
+function renderWarframeRivenDemand(data, query = '') {
   const metaEl = document.getElementById('wf-riven-demand-meta');
   const gridEl = document.getElementById('wf-riven-demand');
   if (!gridEl) return;
   const items = Array.isArray(data.items) ? data.items : [];
   if (metaEl) metaEl.textContent = items.length
-    ? `${data.coverage_count || items.length} weapons ranked by market samples`
+    ? (query ? `${items.length} match(es) for ${query} | market activity samples` : `${data.coverage_count || items.length} weapons ranked by market samples`)
     : 'No Riven activity data available';
   if (!items.length) {
     gridEl.innerHTML = '<div class="muted">No Riven demand data is available right now.</div>';
@@ -6084,11 +6088,12 @@ async function loadWarframeRivenDemand() {
   const metaEl = document.getElementById('wf-riven-demand-meta');
   const gridEl = document.getElementById('wf-riven-demand');
   if (!gridEl) return;
+  const query = document.getElementById('wf-riven-query')?.value?.trim() || '';
   gridEl.innerHTML = '<div class="muted">Scanning Riven market activity...</div>';
   try {
     const platform = document.getElementById('wf-platform')?.value || 'pc';
-    const data = await fetchJson(`${API}/warframe/rivens/demand?${new URLSearchParams({ platform })}`);
-    renderWarframeRivenDemand(data);
+    const data = await fetchJson(`${API}/warframe/rivens/demand?${new URLSearchParams({ platform, q: query })}`);
+    renderWarframeRivenDemand(data, query);
   } catch (e) {
     gridEl.innerHTML = `<div class="err-msg">Riven demand scan failed: ${esc(e.message)}</div>`;
     if (metaEl) metaEl.textContent = 'Riven demand unavailable';

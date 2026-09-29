@@ -5698,7 +5698,7 @@ def _build_warframe_personal_opportunities(platform: str = "pc") -> tuple[dict[s
     return payload, errors[:24]
 
 
-def _fetch_warframe_riven_demand(platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
+def _fetch_warframe_riven_demand(platform: str = "pc", query: str = "") -> tuple[dict[str, Any], list[str]]:
     """Summarize Riven market activity by weapon from WarframeStatus statistics."""
     platform_key = str(platform or "pc").strip().lower()
     if platform_key not in {"pc", "ps4", "xb1", "swi"}:
@@ -5706,7 +5706,13 @@ def _fetch_warframe_riven_demand(platform: str = "pc") -> tuple[dict[str, Any], 
     cache_key = f"warframe:riven_demand:v1:{platform_key}"
     cached = _cache_get(cache_key, ttl_seconds=30 * 60)
     if isinstance(cached, dict):
-        return cached, list(cached.get("errors") or [])
+        payload = dict(cached)
+        if str(query or "").strip():
+            needle = _normalize_warframe_item_name(query)
+            all_items = payload.get("all_items") if isinstance(payload.get("all_items"), list) else payload.get("items") or []
+            payload["items"] = [item for item in all_items if needle in _normalize_warframe_item_name(item.get("weapon"))][:12]
+        payload.pop("all_items", None)
+        return payload, list(payload.get("errors") or [])
 
     raw, err = _http_get_json(f"https://api.warframestat.us/{platform_key}/rivens", timeout=20)
     if err:
@@ -5717,6 +5723,7 @@ def _fetch_warframe_riven_demand(platform: str = "pc") -> tuple[dict[str, Any], 
             stale_payload = _mark_payload_stale(stale_payload, age_seconds=age)
             stale_payload["errors"] = fallback_errors
             _cache_set(cache_key, stale_payload)
+            stale_payload.pop("all_items", None)
             return stale_payload, fallback_errors
         _cache_set(cache_key, payload)
         return payload, payload["errors"]
@@ -5774,17 +5781,22 @@ def _fetch_warframe_riven_demand(platform: str = "pc") -> tuple[dict[str, Any], 
                 )
 
     rows.sort(key=lambda row: (int(row.get("market_samples") or 0), float(row.get("median_price") or 0.0), str(row.get("weapon") or "")), reverse=True)
+    selected_rows = rows[:24]
+    if str(query or "").strip():
+        needle = _normalize_warframe_item_name(query)
+        selected_rows = [row for row in rows if needle in _normalize_warframe_item_name(row.get("weapon"))][:12]
     payload = {
         "platform": platform_key,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "source": "warframestat_riven_statistics",
-        "items": rows[:24],
+        "items": selected_rows,
         "coverage_count": len(rows),
         "errors": [],
     }
     if rows:
-        _cache_set(cache_key, payload)
-        _set_last_good(cache_key, payload)
+        cache_payload = {**payload, "items": rows[:24], "all_items": rows}
+        _cache_set(cache_key, cache_payload)
+        _set_last_good(cache_key, cache_payload)
     return payload, []
 
 
@@ -7099,8 +7111,9 @@ def warframe_opportunities(platform: str = "pc"):
 
 
 @app.get("/api/warframe/rivens/demand")
-def warframe_riven_demand(platform: str = "pc"):
-    payload, errors = _fetch_warframe_riven_demand(platform)
+def warframe_riven_demand(platform: str = "pc", q: str = ""):
+    payload, errors = _fetch_warframe_riven_demand(platform, query=q)
+    payload.pop("all_items", None)
     return {**payload, "errors": errors}
 
 

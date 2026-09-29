@@ -3609,6 +3609,23 @@ _WARFRAME_MARKET_WATCHLIST = [
     "Nekros Prime Set",
     "Xaku Prime Set",
     "Glaive Prime Set",
+    "Volt Prime Set",
+    "Mesa Prime Set",
+    "Nidus Prime Set",
+    "Condition Overload",
+    "Blood Rush",
+    "Weeping Wounds",
+    "Adaptation",
+    "Rolling Guard",
+    "Galvanized Diffusion",
+    "Galvanized Chamber",
+    "Galvanized Aptitude",
+    "Primed Pressure Point",
+    "Primed Reach",
+    "Primed Continuity",
+    "Narrow Minded",
+    "Blind Rage",
+    "Overextended",
 ]
 
 
@@ -3779,7 +3796,7 @@ def _summarize_warframe_statistics(stats_payload: Any, *, max_rank: Optional[int
 
 
 def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]], list[str]]:
-    cache_key = f"warframe:hot_items:{platform}"
+    cache_key = f"warframe:hot_items:v2:{platform}"
     cached = _cache_get(cache_key, ttl_seconds=10 * 60)
     if isinstance(cached, dict):
         return list(cached.get("items") or []), list(cached.get("errors") or [])
@@ -3841,7 +3858,7 @@ def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]
             hot["local_history"] = local_history
         return hot, []
 
-    with ThreadPoolExecutor(max_workers=min(6, max(1, len(selected_items)))) as pool:
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(selected_items)))) as pool:
         futures = {pool.submit(load_item, entry): entry for entry in selected_items}
         for future in as_completed(futures):
             try:
@@ -3861,7 +3878,7 @@ def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]
         ),
         reverse=True,
     )
-    hot_items = hot_items[:16]
+    hot_items = hot_items[:24]
     trimmed_errors = errors[:16]
     payload = {"items": hot_items, "errors": trimmed_errors}
     if hot_items:

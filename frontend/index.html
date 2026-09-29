@@ -1055,7 +1055,7 @@
         <div class="diag-head">
           <h2 style="margin:0">Top Sells Right Now</h2>
           <div class="row" style="margin:0">
-            <span id="wf-hot-meta" class="tool-minor">48h volume from curated warframe.market watch items</span>
+            <span id="wf-hot-meta" class="tool-minor">48h volume across curated mods, arcanes and sets</span>
             <button id="wf-hot-toggle" class="sm" onclick="toggleWarframeHot()" hidden>See more</button>
           </div>
         </div>
@@ -5135,13 +5135,13 @@ function renderWarframeHotItems() {
   if (!hotItems.length) {
     hotEl.innerHTML = '<div class="muted">No high-volume items available right now.</div>';
     toggleBtn.hidden = true;
-    metaEl.textContent = '48h volume from curated warframe.market watch items';
+    metaEl.textContent = '48h volume across curated mods, arcanes and sets';
     return;
   }
 
-  const visible = _warframeHotExpanded ? hotItems : hotItems.slice(0, 6);
-  metaEl.textContent = `${hotItems.length} hot items from curated warframe.market stats`;
-  toggleBtn.hidden = hotItems.length <= 6;
+  const visible = _warframeHotExpanded ? hotItems : hotItems.slice(0, 8);
+  metaEl.textContent = `${hotItems.length} items ranked by 48h volume`;
+  toggleBtn.hidden = hotItems.length <= 8;
   toggleBtn.textContent = _warframeHotExpanded ? 'Show less' : `See more (${hotItems.length - visible.length})`;
 
   hotEl.innerHTML = '';

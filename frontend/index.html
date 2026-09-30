@@ -1143,6 +1143,7 @@
           <label class="sm" style="cursor:pointer">Import AlecaFrame JSON<input id="wf-riven-import" type="file" accept=".json,application/json" hidden onchange="importWarframeRivens(event)" /></label>
           <button class="sm" onclick="clearWarframeRivens()">Clear import</button>
         </div>
+        <div id="wf-riven-import-meta" class="tool-minor" style="margin-top:6px"></div>
         <div id="wf-riven-demand" class="wf-plan-grid"><div class="muted">Riven demand will appear when the Farm & trade workspace loads.</div></div>
         <div id="wf-riven-personal" class="wf-plan-grid" style="margin-top:10px"></div>
       </div>
@@ -6095,7 +6096,7 @@ function extractWarframeRivens(value, output = []) {
     if (weaponName && !/^(riven|mod)$/i.test(weaponName)) {
       const stats = value.stats || value.attributes || [value.positiveStats, value.negativeStats].filter(Boolean);
       output.push({
-        id: `${weaponName.toLowerCase()}::${rivenStatText(stats)}::${value.rerolls ?? value.rerollCount ?? ''}`,
+        id: String(value.id || value.rivenId || value.uuid || `${weaponName.toLowerCase()}::${rivenStatText(stats)}::${value.rerolls ?? value.rerollCount ?? ''}`),
         weapon: weaponName,
         stats: rivenStatText(stats),
         disposition: value.disposition ?? value.weaponDisposition ?? null,
@@ -6147,8 +6148,17 @@ async function importWarframeRivens(event) {
   if (!file) return;
   try {
     const parsed = JSON.parse(await file.text());
+    const previous = readImportedWarframeRivens();
     const rivens = extractWarframeRivens(parsed).filter((item, index, all) => all.findIndex(other => other.id === item.id) === index).slice(0, 100);
+    const previousIds = new Set(previous.map(item => item.id));
+    const nextIds = new Set(rivens.map(item => item.id));
+    const added = rivens.filter(item => !previousIds.has(item.id)).length;
+    const removed = previous.filter(item => !nextIds.has(item.id)).length;
+    const previousById = new Map(previous.map(item => [item.id, JSON.stringify(item)]));
+    const updated = rivens.filter(item => previousById.has(item.id) && previousById.get(item.id) !== JSON.stringify(item)).length;
+    const metaEl = document.getElementById('wf-riven-import-meta');
     safeLocalSet(WARFRAME_RIVEN_IMPORT_KEY, rivens);
+    if (metaEl) metaEl.textContent = `Synced ${rivens.length} Riven(s) | +${added} added | ${updated} updated | -${removed} removed | ${new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
     await renderPersonalWarframeRivens(document.getElementById('wf-platform')?.value || 'pc');
   } catch (e) {
     const gridEl = document.getElementById('wf-riven-personal');
@@ -6162,6 +6172,8 @@ function clearWarframeRivens() {
   safeLocalSet(WARFRAME_RIVEN_IMPORT_KEY, []);
   const gridEl = document.getElementById('wf-riven-personal');
   if (gridEl) gridEl.innerHTML = '';
+  const metaEl = document.getElementById('wf-riven-import-meta');
+  if (metaEl) metaEl.textContent = 'Local Riven import cleared.';
 }
 
 function renderWarframeRivenDemand(data, query = '') {

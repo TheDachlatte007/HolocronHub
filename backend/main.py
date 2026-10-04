@@ -77,6 +77,11 @@ try:
 except Exception:
     from tldr_imap import fetch_tldr_messages_imap
 
+try:
+    from .warframe_history_store import ensure_warframe_history_db, get_warframe_snapshots, upsert_warframe_snapshot
+except Exception:
+    from warframe_history_store import ensure_warframe_history_db, get_warframe_snapshots, upsert_warframe_snapshot
+
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_FILE = BASE_DIR / "data" / "tools.json"
 SAMPLE_FILE = BASE_DIR / "data" / "tools.sample.json"
@@ -86,6 +91,7 @@ FEED_FILE = BASE_DIR / "data" / "feed_items.json"
 SAVED_FILE = BASE_DIR / "data" / "saved_items.json"
 WARFRAME_WATCHLIST_FILE = BASE_DIR / "data" / "warframe_watchlist.json"
 WARFRAME_MARKET_HISTORY_FILE = BASE_DIR / "data" / "warframe_market_history.json"
+WARFRAME_MARKET_HISTORY_DB_FILE = BASE_DIR / "data" / "warframe_market_history.db"
 SCHEDULE_FILE = BASE_DIR / "data" / "schedule.json"
 SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
 LAST_GOOD_FILE = BASE_DIR / "data" / "last_good_cache.json"
@@ -164,6 +170,10 @@ app = FastAPI(title="HolocronHub API", version="0.2.0")
 
 _ingest_state: dict = {"running": False, "last_result": None, "started_at": None}
 _warframe_market_history_lock = Lock()
+_warframe_market_request_lock = Lock()
+_warframe_market_next_request_at = 0.0
+_warframe_market_backoff_until = 0.0
+_WARFRAME_MARKET_MIN_REQUEST_INTERVAL = 1.1
 _last_good_lock = Lock()
 _f1_snapshot_lock = Lock()
 _f1_archive_lock = Lock()
@@ -473,6 +483,29 @@ def _save_warframe_market_history_store(store: dict[str, Any]) -> None:
     )
 
 
+def _migrate_warframe_market_history_to_db() -> None:
+    store = _load_warframe_market_history_store()
+    for platform, items in (store.get("platforms") or {}).items():
+        if not isinstance(items, dict):
+            continue
+        for slug, entry in items.items():
+            if not isinstance(entry, dict):
+                continue
+            for snapshot in entry.get("snapshots") or []:
+                if not isinstance(snapshot, dict):
+                    continue
+                try:
+                    upsert_warframe_snapshot(
+                        WARFRAME_MARKET_HISTORY_DB_FILE,
+                        platform=platform,
+                        slug=slug,
+                        item_name=str(entry.get("name") or slug.replace("_", " ")),
+                        snapshot=snapshot,
+                    )
+                except Exception:
+                    continue
+
+
 def _record_warframe_market_snapshot(market: dict[str, Any], platform: str = "pc") -> dict[str, Any]:
     slug = str(market.get("slug") or "").strip()
     if not slug:
@@ -562,6 +595,18 @@ def _record_warframe_market_snapshot(market: dict[str, Any], platform: str = "pc
         store["updated_at"] = captured_at
         _save_warframe_market_history_store(store)
 
+    try:
+        upsert_warframe_snapshot(
+            WARFRAME_MARKET_HISTORY_DB_FILE,
+            platform=platform_key,
+            slug=slug,
+            item_name=str(market.get("canonical_name") or market.get("item") or slug.replace("_", " ")),
+            snapshot=snapshot,
+        )
+    except Exception:
+        # The JSON store remains the compatibility fallback if SQLite is unavailable.
+        pass
+
     return _summarize_warframe_market_history(slug, platform_key)
 
 
@@ -573,7 +618,8 @@ def _summarize_warframe_market_history(slug: str, platform: str = "pc") -> dict[
     entry = platform_items.get(slug)
     if not isinstance(entry, dict):
         return {}
-    snapshots = [snap for snap in (entry.get("snapshots") or []) if isinstance(snap, dict)]
+    db_snapshots = get_warframe_snapshots(WARFRAME_MARKET_HISTORY_DB_FILE, platform=platform, slug=slug)
+    snapshots = db_snapshots or [snap for snap in (entry.get("snapshots") or []) if isinstance(snap, dict)]
     if not snapshots:
         return {}
 
@@ -1416,6 +1462,23 @@ def _cache_set(key: str, value: Any) -> None:
     _API_CACHE[key] = {"ts": time.time(), "value": deepcopy(value)}
 
 
+def _wait_for_warframe_market_slot() -> None:
+    global _warframe_market_next_request_at
+    now = time.time()
+    with _warframe_market_request_lock:
+        wait_for = max(0.0, _warframe_market_next_request_at - now, _warframe_market_backoff_until - now)
+        start_at = max(now, _warframe_market_next_request_at, _warframe_market_backoff_until)
+        _warframe_market_next_request_at = start_at + _WARFRAME_MARKET_MIN_REQUEST_INTERVAL
+    if wait_for > 0:
+        time.sleep(wait_for)
+
+
+def _mark_warframe_market_backoff(seconds: float = 5.0) -> None:
+    global _warframe_market_backoff_until
+    with _warframe_market_request_lock:
+        _warframe_market_backoff_until = max(_warframe_market_backoff_until, time.time() + seconds)
+
+
 def _http_get_json(
     url: str,
     *,
@@ -1433,9 +1496,12 @@ def _http_get_json(
         return None, f"{provider_name}:circuit_open:{retry_in}s"
 
     last_err: Optional[str] = None
-    attempts = 2 if provider_name == "openf1" else 1
+    is_warframe_market = "api.warframe.market" in str(url or "")
+    attempts = 2 if provider_name == "openf1" or is_warframe_market else 1
     for attempt in range(attempts):
         try:
+            if is_warframe_market:
+                _wait_for_warframe_market_slot()
             r = requests.get(url, params=params, headers=merged_headers, timeout=timeout)
             r.raise_for_status()
             try:
@@ -1447,8 +1513,12 @@ def _http_get_json(
             return payload, None
         except Exception as e:
             last_err = str(e)
+            if is_warframe_market and "429" in last_err:
+                _mark_warframe_market_backoff(8.0)
             if provider_name and attempt + 1 < attempts:
                 time.sleep(0.35)
+                continue
+            if is_warframe_market and attempt + 1 < attempts:
                 continue
     if provider_name:
         _provider_breaker_error(provider_name, last_err or "request_failed")
@@ -6229,6 +6299,10 @@ def _prewarm_provider_caches() -> None:
 def _startup() -> None:
     ensure_f1_history_db(F1_HISTORY_DB_FILE)
     ensure_market_history_db(MARKETS_HISTORY_DB_FILE)
+    history_db_exists = WARFRAME_MARKET_HISTORY_DB_FILE.exists()
+    ensure_warframe_history_db(WARFRAME_MARKET_HISTORY_DB_FILE)
+    if not history_db_exists:
+        _migrate_warframe_market_history_to_db()
     _ensure_tldr_db_path()
     ensure_tldr_db(TLDR_DB_FILE)
     _boot_last_good_store()

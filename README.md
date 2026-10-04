@@ -144,6 +144,9 @@ Notes:
 - Data persists in Docker volume `holocron_data`.
 - On Docker Standalone, `build: .` works directly from Git repo checkout.
 - On Docker Swarm stacks, `build` is typically not supported; use a prebuilt image in that case.
+- Normal updates should use `docker compose up -d --build`; this recreates the container but keeps the data volume.
+- Do not use `docker compose down -v` unless you intentionally want to delete all local application data.
+- Keep the Portainer stack name and volume mapping stable. A changed stack name can create a new empty prefixed volume that looks like lost data.
 
 ## Data
 - Tools file: `data/tools.json` (auto-created from the bundled seed file, with missing defaults synced on load)
@@ -151,7 +154,12 @@ Notes:
 - Feed snapshot: `data/feed_items.json`
 - F1 history DB: `data/f1_history.db`
 - Market history DB: `data/markets_history.db`
+- Warframe market history DB: `data/warframe_market_history.db`
 - TLDR issue DB: `data/tldr_issues.db`
+
+### Data Safety
+
+Runtime databases and local state are excluded from Git and Docker images. They live in the persistent `holocron_data` volume. Application startup only creates missing SQLite tables with `CREATE TABLE IF NOT EXISTS`; it does not replace existing databases. Before changing a Portainer stack or volume, export or back up the volume first.
 
 ## Next (v2)
 - n8n integration

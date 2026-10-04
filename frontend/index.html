@@ -1322,8 +1322,10 @@
           <p class="settings-hint">Download databases, histories, feeds and local tool data as a portable ZIP. API keys and Gmail credentials are never included.</p>
           <div class="settings-actions">
             <button onclick="downloadRuntimeBackup()">Download Data Backup</button>
+            <button onclick="downloadRuntimeBackup(true)">Download Full Migration Backup</button>
             <span id="settings-status-backup" class="muted"></span>
           </div>
+          <div class="settings-hint">The full migration backup is private and includes API keys plus TLDR/Gmail configuration for plug-and-play restoration. Store it securely and never share it.</div>
         </div>
       </div>
 
@@ -7094,11 +7096,12 @@ async function saveSettingsGeneral() {
   }
 }
 
-async function downloadRuntimeBackup() {
+async function downloadRuntimeBackup(includeSecrets = false) {
   const status = document.getElementById('settings-status-backup');
+  if (includeSecrets && !window.confirm('This download contains API keys and TLDR/Gmail credentials. Create the private migration backup?')) return;
   if (status) status.textContent = 'Preparing backup...';
   try {
-    const response = await fetch(`${API}/backup/export`);
+    const response = await fetch(`${API}/backup/export${includeSecrets ? '?include_secrets=true' : ''}`);
     if (!response.ok) throw new Error(`Backup failed (${response.status})`);
     const blob = await response.blob();
     const disposition = response.headers.get('Content-Disposition') || '';

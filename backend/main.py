@@ -6365,15 +6365,15 @@ def _shutdown() -> None:
         _scheduler.shutdown(wait=False)
 
 
-def _build_runtime_backup() -> bytes:
-    """Create a portable data backup without exporting credentials or API keys."""
+def _build_runtime_backup(*, include_secrets: bool = False) -> bytes:
+    """Create a portable runtime backup, optionally including private migration config."""
     archive = io.BytesIO()
     manifest = {
         "format": "holocronhub-runtime-backup",
         "version": 1,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "included": [],
-        "excluded": [
+        "excluded": [] if include_secrets else [
             "settings.json (contains API keys)",
             "tldr_imap_config.json (contains mailbox credentials)",
             "environment variables and Docker secrets",
@@ -6388,6 +6388,22 @@ def _build_runtime_backup() -> bytes:
                 if source.is_file():
                     bundle.write(source, arcname=f"data/{name}")
                     manifest["included"].append(f"data/{name}")
+
+            if include_secrets:
+                # Export the effective config so Portainer-only environment values
+                # are also carried into a private migration backup.
+                bundle.writestr(
+                    "data/settings.json",
+                    json.dumps(_load_settings(), indent=2, ensure_ascii=False),
+                )
+                bundle.writestr(
+                    "data/tldr_imap_config.json",
+                    json.dumps(_load_tldr_imap_config(), indent=2, ensure_ascii=False),
+                )
+                manifest["included"].extend([
+                    "data/settings.json",
+                    "data/tldr_imap_config.json",
+                ])
 
             for name in _BACKUP_DATABASE_FILES:
                 source = BASE_DIR / "data" / name
@@ -6420,9 +6436,10 @@ def health():
 
 
 @app.get("/api/backup/export")
-def export_runtime_backup():
-    payload = _build_runtime_backup()
-    filename = f"holocronhub-runtime-{datetime.now(timezone.utc):%Y%m%d-%H%M%S}Z.zip"
+def export_runtime_backup(include_secrets: bool = False):
+    payload = _build_runtime_backup(include_secrets=include_secrets)
+    kind = "full-migration" if include_secrets else "runtime"
+    filename = f"holocronhub-{kind}-{datetime.now(timezone.utc):%Y%m%d-%H%M%S}Z.zip"
     return StreamingResponse(
         io.BytesIO(payload),
         media_type="application/zip",

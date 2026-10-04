@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import io
 import json
 import math
 import os
 import re
 import shutil
 import socket
+import sqlite3
 import requests
 import time
+import tempfile
+import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 from urllib.parse import quote, quote_plus, urlparse
@@ -20,7 +24,7 @@ from typing import Any, List, Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 try:
@@ -104,6 +108,27 @@ TLDR_DB_FILE = BASE_DIR / "data" / "tldr_issues.db"
 TLDR_DB_LEGACY_FILE = BASE_DIR / "data" / "tldr.db"
 TLDR_IMAP_CONFIG_FILE = BASE_DIR / "data" / "tldr_imap_config.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
+
+_BACKUP_DATA_FILES = (
+    "tools.json",
+    "sources.json",
+    "feed_items.json",
+    "saved_items.json",
+    "warframe_watchlist.json",
+    "warframe_market_history.json",
+    "schedule.json",
+    "last_good_cache.json",
+    "f1_session_snapshots.json",
+    "f1_secondary_ingest.json",
+    "f1_session_archive.json",
+)
+_BACKUP_DATABASE_FILES = (
+    "tldr_issues.db",
+    "tldr.db",
+    "warframe_market_history.db",
+    "f1_history.db",
+    "markets_history.db",
+)
 
 
 # ── models ────────────────────────────────────────────────────────────────────
@@ -6340,11 +6365,69 @@ def _shutdown() -> None:
         _scheduler.shutdown(wait=False)
 
 
+def _build_runtime_backup() -> bytes:
+    """Create a portable data backup without exporting credentials or API keys."""
+    archive = io.BytesIO()
+    manifest = {
+        "format": "holocronhub-runtime-backup",
+        "version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "included": [],
+        "excluded": [
+            "settings.json (contains API keys)",
+            "tldr_imap_config.json (contains mailbox credentials)",
+            "environment variables and Docker secrets",
+        ],
+    }
+
+    with tempfile.TemporaryDirectory(prefix="holocronhub-backup-") as temp_dir:
+        temp_path = Path(temp_dir)
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+            for name in _BACKUP_DATA_FILES:
+                source = BASE_DIR / "data" / name
+                if source.is_file():
+                    bundle.write(source, arcname=f"data/{name}")
+                    manifest["included"].append(f"data/{name}")
+
+            for name in _BACKUP_DATABASE_FILES:
+                source = BASE_DIR / "data" / name
+                if not source.is_file():
+                    continue
+
+                # Use SQLite's online backup API so WAL data is included safely.
+                snapshot = temp_path / name
+                source_db = sqlite3.connect(str(source), timeout=10)
+                target_db = sqlite3.connect(str(snapshot))
+                try:
+                    source_db.backup(target_db)
+                finally:
+                    target_db.close()
+                    source_db.close()
+                bundle.write(snapshot, arcname=f"data/{name}")
+                manifest["included"].append(f"data/{name}")
+
+            bundle.writestr("MANIFEST.json", json.dumps(manifest, indent=2))
+
+    archive.seek(0)
+    return archive.getvalue()
+
+
 # ── health ────────────────────────────────────────────────────────────────────
 
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/api/backup/export")
+def export_runtime_backup():
+    payload = _build_runtime_backup()
+    filename = f"holocronhub-runtime-{datetime.now(timezone.utc):%Y%m%d-%H%M%S}Z.zip"
+    return StreamingResponse(
+        io.BytesIO(payload),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.get("/")

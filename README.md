@@ -161,6 +161,8 @@ Notes:
 
 Runtime databases and local state are excluded from Git and Docker images. They live in the persistent `holocron_data` volume. Application startup only creates missing SQLite tables with `CREATE TABLE IF NOT EXISTS`; it does not replace existing databases. Before changing a Portainer stack or volume, export or back up the volume first.
 
+The Settings page includes **Download Data Backup**. It creates a portable ZIP containing application databases, histories, feeds, schedules and tool data. API keys, Docker secrets and TLDR mailbox credentials are intentionally excluded and must be configured again in the new deployment. To move data to a bind-mounted `/app/data` path, stop the old container, extract the ZIP into the new host folder, and deploy without deleting the existing volume.
+
 ## Next (v2)
 - n8n integration
 - Workflow execution + queue

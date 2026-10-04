@@ -1317,6 +1317,14 @@
           <button class="primary" onclick="saveSettingsGeneral()">Save General</button>
           <span id="settings-status-general" class="muted"></span>
         </div>
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155">
+          <h3>Data Backup</h3>
+          <p class="settings-hint">Download databases, histories, feeds and local tool data as a portable ZIP. API keys and Gmail credentials are never included.</p>
+          <div class="settings-actions">
+            <button onclick="downloadRuntimeBackup()">Download Data Backup</button>
+            <span id="settings-status-backup" class="muted"></span>
+          </div>
+        </div>
       </div>
 
       <div id="settings-panel-feed" class="settings-panel">
@@ -7083,6 +7091,30 @@ async function saveSettingsGeneral() {
     }
   } catch (e) {
     setSettingsStatus('general', `Save failed: ${e.message}`, true);
+  }
+}
+
+async function downloadRuntimeBackup() {
+  const status = document.getElementById('settings-status-backup');
+  if (status) status.textContent = 'Preparing backup...';
+  try {
+    const response = await fetch(`${API}/backup/export`);
+    if (!response.ok) throw new Error(`Backup failed (${response.status})`);
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    const filename = match?.[1] || 'holocronhub-runtime-backup.zip';
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    if (status) status.textContent = 'Backup downloaded.';
+  } catch (error) {
+    if (status) status.textContent = `Backup failed: ${error.message}`;
   }
 }
 

@@ -155,6 +155,7 @@ Notes:
 - F1 history DB: `data/f1_history.db`
 - Market history DB: `data/markets_history.db`
 - Warframe market history DB: `data/warframe_market_history.db`
+- Warframe world-state history DB: `data/warframe_worldstate.db`
 - TLDR issue DB: `data/tldr_issues.db`
 
 ### Data Safety

@@ -86,6 +86,19 @@ try:
 except Exception:
     from warframe_history_store import ensure_warframe_history_db, get_warframe_snapshots, upsert_warframe_snapshot
 
+try:
+    from .warframe_worldstate_store import (
+        ensure_warframe_worldstate_db,
+        get_latest_warframe_worldstate,
+        upsert_warframe_worldstate,
+    )
+except Exception:
+    from warframe_worldstate_store import (
+        ensure_warframe_worldstate_db,
+        get_latest_warframe_worldstate,
+        upsert_warframe_worldstate,
+    )
+
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_FILE = BASE_DIR / "data" / "tools.json"
 SAMPLE_FILE = BASE_DIR / "data" / "tools.sample.json"
@@ -96,6 +109,7 @@ SAVED_FILE = BASE_DIR / "data" / "saved_items.json"
 WARFRAME_WATCHLIST_FILE = BASE_DIR / "data" / "warframe_watchlist.json"
 WARFRAME_MARKET_HISTORY_FILE = BASE_DIR / "data" / "warframe_market_history.json"
 WARFRAME_MARKET_HISTORY_DB_FILE = BASE_DIR / "data" / "warframe_market_history.db"
+WARFRAME_WORLDSTATE_DB_FILE = BASE_DIR / "data" / "warframe_worldstate.db"
 SCHEDULE_FILE = BASE_DIR / "data" / "schedule.json"
 SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
 LAST_GOOD_FILE = BASE_DIR / "data" / "last_good_cache.json"
@@ -126,6 +140,7 @@ _BACKUP_DATABASE_FILES = (
     "tldr_issues.db",
     "tldr.db",
     "warframe_market_history.db",
+    "warframe_worldstate.db",
     "f1_history.db",
     "markets_history.db",
 )
@@ -5071,6 +5086,44 @@ def _merge_warframe_worldstate(base: dict[str, Any], extra: Optional[dict[str, A
     return merged
 
 
+def _record_warframe_worldstate_snapshot(
+    payload: dict[str, Any],
+    platform: str,
+    *,
+    source: str = "warframestat",
+) -> None:
+    if not isinstance(payload, dict):
+        return
+    snapshot = deepcopy(payload)
+    snapshot.pop("errors", None)
+    captured_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    try:
+        upsert_warframe_worldstate(
+            WARFRAME_WORLDSTATE_DB_FILE,
+            platform=platform,
+            captured_at=captured_at,
+            source=source,
+            payload=snapshot,
+        )
+    except Exception:
+        # The existing last-good JSON cache remains the compatibility fallback.
+        pass
+
+
+def _load_persisted_warframe_worldstate(platform: str) -> tuple[Optional[dict[str, Any]], Optional[int]]:
+    try:
+        entry = get_latest_warframe_worldstate(
+            WARFRAME_WORLDSTATE_DB_FILE,
+            platform=platform,
+            max_age_seconds=14 * 24 * 3600,
+        )
+    except Exception:
+        entry = None
+    if not isinstance(entry, dict) or not isinstance(entry.get("payload"), dict):
+        return None, None
+    return deepcopy(entry["payload"]), entry.get("age_seconds")
+
+
 def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]]:
     platform_key = str(platform or "pc").strip().lower()
     cache_key = f"warframe:worldstate:{platform_key}"
@@ -5081,6 +5134,8 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
     errors: list[str] = []
     headers = {"Accept": "application/json"}
     stale_payload, age = _get_last_good(cache_key, max_age_seconds=6 * 3600)
+    if not isinstance(stale_payload, dict):
+        stale_payload, age = _load_persisted_warframe_worldstate(platform_key)
 
     # The complete warframestat.us payload is the supported live source. The
     # former official worldState.php endpoint now returns 404 in production,
@@ -5095,6 +5150,7 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
 
     for parsed in parsed_candidates:
         if _warframe_worldstate_has_data(parsed):
+            _record_warframe_worldstate_snapshot(parsed, platform_key)
             payload = {**parsed, "errors": errors[:16]}
             _cache_set(cache_key, payload)
             _set_last_good(cache_key, payload)
@@ -5151,6 +5207,7 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
 
     parsed = _merge_warframe_worldstate(_parse_warframe_worldstate(segment_payload, platform_key), stale_payload)
     if _warframe_worldstate_has_data(parsed):
+        _record_warframe_worldstate_snapshot(parsed, platform_key)
         payload = {**parsed, "errors": errors[:20]}
         _cache_set(cache_key, payload)
         _set_last_good(cache_key, payload)
@@ -6328,6 +6385,7 @@ def _startup() -> None:
     ensure_market_history_db(MARKETS_HISTORY_DB_FILE)
     history_db_exists = WARFRAME_MARKET_HISTORY_DB_FILE.exists()
     ensure_warframe_history_db(WARFRAME_MARKET_HISTORY_DB_FILE)
+    ensure_warframe_worldstate_db(WARFRAME_WORLDSTATE_DB_FILE)
     if not history_db_exists:
         _migrate_warframe_market_history_to_db()
     _ensure_tldr_db_path()

@@ -5556,6 +5556,15 @@ def _build_warframe_market_pulse(platform: str = "pc") -> tuple[dict[str, Any], 
     if isinstance(cached, dict):
         return cached, list(cached.get("errors") or [])
 
+    # Warm-start after a container restart from the persistent last-good store.
+    # The scheduled refresh can replace it later without blocking the first view.
+    warm_payload, warm_age = _get_last_good(cache_key, max_age_seconds=20 * 60)
+    if isinstance(warm_payload, dict) and warm_payload.get("coverage_count"):
+        warm_payload["cached"] = True
+        warm_payload["cache_age_seconds"] = warm_age
+        _cache_set(cache_key, warm_payload)
+        return warm_payload, list(warm_payload.get("errors") or [])
+
     tracked_names = [
         str(item.get("name") or "").strip()
         for item in _load_warframe_watchlist()

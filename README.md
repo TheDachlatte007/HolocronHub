@@ -160,9 +160,14 @@ Notes:
 
 ## Homelab Command Center
 
-The `Homelab` view aggregates registered Home Lab services into Overview, Systems, Services, Network, Media and Monitoring sections. Phase 1 uses the existing editable Tool Hub registry and lightweight reachability checks through `GET /api/homelab/overview`; it does not replace Uptime Kuma, Beszel, TrueNAS, Home Assistant or Jellyfin. Missing host/port metadata remains `unknown`, and no mock health data is generated.
+The `Homelab` view aggregates registered Home Lab services into Overview, Systems, Services, Network, Media and Monitoring sections. `GET /api/homelab/overview` combines the editable Tool Hub registry with optional read-only Uptime Kuma and Beszel adapters. Missing provider configuration is safe: registry reachability checks still work, and no mock health data is generated.
 
-Provider adapters for read-only monitoring data are planned separately. Credentials will stay server-side through environment variables and will not be exposed to the browser.
+Provider credentials stay server-side through environment variables and are never exposed to the browser. Configure these optional variables in Portainer or Docker Compose:
+
+- `UPTIME_KUMA_URL`, optionally `UPTIME_KUMA_API_KEY` or `UPTIME_KUMA_USERNAME` / `UPTIME_KUMA_PASSWORD`
+- `BESZEL_URL`, optionally `BESZEL_API_KEY` or `BESZEL_USERNAME` / `BESZEL_PASSWORD`
+
+The adapter layer caches the last successful provider snapshot in `data/homelab_provider_cache.json`. Provider failures return the last known data with a stale marker instead of blocking the Homelab page. The cache is included in normal runtime backups and is written atomically; existing application databases are not replaced.
 
 ### Data Safety
 

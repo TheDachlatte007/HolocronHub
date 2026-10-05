@@ -14,6 +14,7 @@ data/f1_secondary_ingest.json
 data/f1_session_archive.json
 data/*.db
 data/newsletter_cache/
+data/homelab_provider_cache.json
 __pycache__/
 backend/__pycache__/
 *.log

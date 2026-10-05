@@ -28,6 +28,11 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 try:
+    from .homelab_providers import collect_provider_snapshots, overall_provider_status
+except ImportError:
+    from homelab_providers import collect_provider_snapshots, overall_provider_status
+
+try:
     from .f1_history_store import (
         ensure_f1_history_db,
         f1_history_summary as load_f1_history_summary,
@@ -121,6 +126,7 @@ MARKETS_HISTORY_DB_FILE = BASE_DIR / "data" / "markets_history.db"
 TLDR_DB_FILE = BASE_DIR / "data" / "tldr_issues.db"
 TLDR_DB_LEGACY_FILE = BASE_DIR / "data" / "tldr.db"
 TLDR_IMAP_CONFIG_FILE = BASE_DIR / "data" / "tldr_imap_config.json"
+HOMELAB_PROVIDER_CACHE_FILE = BASE_DIR / "data" / "homelab_provider_cache.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
 
 _BACKUP_DATA_FILES = (
@@ -135,6 +141,7 @@ _BACKUP_DATA_FILES = (
     "f1_session_snapshots.json",
     "f1_secondary_ingest.json",
     "f1_session_archive.json",
+    "homelab_provider_cache.json",
 )
 _BACKUP_DATABASE_FILES = (
     "tldr_issues.db",
@@ -7633,9 +7640,46 @@ def home_lab_overview():
 
 @app.get("/api/homelab/overview")
 def homelab_command_center_overview():
-    """Aggregate the existing Home Lab registry for the Command Center UI."""
+    """Aggregate registry reachability and optional provider snapshots."""
     base = home_lab_overview()
     services = list(base.get("services") or [])
+    provider_snapshots = collect_provider_snapshots(HOMELAB_PROVIDER_CACHE_FILE)
+
+    # Kuma is the canonical health source when configured. Registry probes
+    # remain useful for services that have not been added to Kuma yet.
+    kuma_services = list((provider_snapshots.get("uptime_kuma") or {}).get("services") or [])
+    registry_by_name = {
+        str(service.get("name") or "").strip().lower(): service
+        for service in services
+        if str(service.get("name") or "").strip()
+    }
+    for monitor in kuma_services:
+        registry = registry_by_name.get(str(monitor.get("name") or "").strip().lower())
+        if registry:
+            registry["status"] = monitor.get("status", registry.get("status"))
+            registry["latency_ms"] = monitor.get("latency_ms")
+            registry["status_source"] = "uptime_kuma"
+            registry["status_checked_at"] = (provider_snapshots.get("uptime_kuma") or {}).get("checked_at")
+        else:
+            services.append({
+                "id": f"kuma:{monitor.get('id') or monitor.get('name')}",
+                "name": monitor.get("name") or "Kuma monitor",
+                "link": monitor.get("url"),
+                "group": "Monitoring",
+                "service_kind": "monitoring",
+                "status": monitor.get("status", "unknown"),
+                "latency_ms": monitor.get("latency_ms"),
+                "status_source": "uptime_kuma",
+                "status_checked_at": (provider_snapshots.get("uptime_kuma") or {}).get("checked_at"),
+            })
+
+    registry_summary = {
+        "total": len(services),
+        "online": sum(1 for service in services if service.get("status") in {"online", "healthy"}),
+        "offline": sum(1 for service in services if service.get("status") in {"offline", "critical"}),
+        "unknown": sum(1 for service in services if service.get("status") == "unknown"),
+        "deep_links": sum(len(service.get("links") or []) for service in services),
+    }
 
     def bucket_for(service: dict[str, Any]) -> str:
         value = " ".join([
@@ -7663,16 +7707,17 @@ def homelab_command_center_overview():
     ]
     offline = [service for service in services if service.get("status") == "offline"]
     unknown = [service for service in services if service.get("status") == "unknown"]
-    if critical:
+    provider_status = overall_provider_status(provider_snapshots)
+    if critical or provider_status == "critical":
         overall_status = "critical"
-    elif offline:
+    elif offline or provider_status == "warning":
         overall_status = "warning"
     elif services and len(unknown) == len(services):
-        overall_status = "unknown"
+        overall_status = provider_status if provider_status != "unknown" else "unknown"
     elif unknown:
-        overall_status = "degraded"
+        overall_status = "degraded" if provider_status == "unknown" else provider_status
     else:
-        overall_status = "healthy"
+        overall_status = provider_status if provider_status != "unknown" else "healthy"
 
     alerts = [
         {
@@ -7690,14 +7735,19 @@ def homelab_command_center_overview():
     return {
         "generated_at": base.get("generated_at"),
         "overall_status": overall_status,
-        "summary": base.get("summary") or {},
+        "summary": {
+            **registry_summary,
+            "providers": len(provider_snapshots),
+            "provider_status": provider_status,
+        },
         "alerts": alerts,
         "systems": buckets["systems"],
         "services": buckets["services"],
         "network": buckets["network"],
         "media": buckets["media"],
         "monitoring": buckets["monitoring"],
-        "source": "tool_registry_reachability",
+        "providers": provider_snapshots,
+        "source": "provider_adapters_and_tool_registry",
     }
 
 

@@ -105,6 +105,20 @@
     .home-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}
     .home-overview-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
     .home-overview-card strong{font-size:14px;color:#f8fafc}
+    .homelab-command-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+    .homelab-command-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+    .homelab-command-tab{border:1px solid #334155;background:#0b1220;color:#94a3b8;border-radius:8px;padding:7px 11px;cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+    .homelab-command-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
+    .homelab-status{display:flex;align-items:center;gap:8px;font-size:12px;color:#94a3b8}
+    .homelab-status-dot{width:9px;height:9px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px rgba(100,116,139,.12)}
+    .homelab-status-dot.healthy{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.12)}
+    .homelab-status-dot.warning,.homelab-status-dot.degraded{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.12)}
+    .homelab-status-dot.critical{background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
+    .homelab-command-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+    .homelab-command-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;min-height:100px}
+    .homelab-command-card h3{margin:0 0 9px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
+    .homelab-alert{border-left:3px solid #f59e0b;padding:7px 9px;background:#1c1917;border-radius:6px;margin-top:6px;font-size:12px}
+    .homelab-alert.critical{border-left-color:#ef4444;background:#1f1115}
     .home-overview-metrics{display:flex;gap:6px;flex-wrap:wrap}
     .tool-latency{font-size:11px;color:#93c5fd}
     .ai-overview-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
@@ -600,6 +614,7 @@
 
   <div class="nav" style="align-items:center">
     <button class="nav-tab active" onclick="showTab('tools',this)">Tool Hub</button>
+    <button class="nav-tab" onclick="showTab('homelab',this)">Homelab</button>
     <button class="nav-tab" onclick="showTab('feed',this)">Feed</button>
     <button class="nav-tab" onclick="showTab('digest',this)">Morning Digest</button>
     <button class="nav-tab" onclick="showTab('tldr',this)">TLDR</button>
@@ -612,6 +627,28 @@
   </div>
 
   <!-- ═══ TOOLS ═══ -->
+  <div id="tab-homelab" style="display:none">
+    <div class="card">
+      <div class="homelab-command-head">
+        <div>
+          <h2 style="margin:0">Homelab Command Center</h2>
+          <div class="tool-hub-strap">A compact health overview built from your registered services. Holocron aggregates status and links; the original tools remain the source of truth.</div>
+        </div>
+        <div id="homelab-overall-status" class="homelab-status"><span class="homelab-status-dot"></span><span>Loading health</span></div>
+      </div>
+      <div id="homelab-command-tabs" class="homelab-command-tabs">
+        <button class="homelab-command-tab active" data-homelab-view="overview" onclick="setHomelabView('overview',this)">Overview</button>
+        <button class="homelab-command-tab" data-homelab-view="systems" onclick="setHomelabView('systems',this)">Systems</button>
+        <button class="homelab-command-tab" data-homelab-view="services" onclick="setHomelabView('services',this)">Services</button>
+        <button class="homelab-command-tab" data-homelab-view="network" onclick="setHomelabView('network',this)">Network</button>
+        <button class="homelab-command-tab" data-homelab-view="media" onclick="setHomelabView('media',this)">Media</button>
+        <button class="homelab-command-tab" data-homelab-view="monitoring" onclick="setHomelabView('monitoring',this)">Monitoring</button>
+      </div>
+      <div id="homelab-command-content"><div class="empty">Loading Homelab status.</div></div>
+      <div id="homelab-command-meta" class="muted" style="margin-top:12px"></div>
+    </div>
+  </div>
+
   <div id="tab-tools">
     <div class="card">
       <div class="tool-hub-top">
@@ -1600,6 +1637,7 @@ function showTab(name, btn) {
       if(gSet.default_category) document.getElementById('feed-cat').value = gSet.default_category;
       loadFeed();
     }
+    if (name==='homelab') loadHomelabCommandCenter();
     if (name==='digest') {
       const digestMode = _appSettings?.feed?.digest_mode || 'daily';
       if (digestMode === 'off') {
@@ -2108,6 +2146,87 @@ async function loadHomeLabOverview() {
   } catch (e) {
     if (requestId !== _homeLabOverviewRequest) return;
     renderHomeLabOverview(null, e.message || 'Unknown error');
+  }
+}
+
+let _homelabCommandData = null;
+let _homelabCommandView = 'overview';
+
+function homelabStatusClass(status) {
+  const value = String(status || 'unknown').toLowerCase();
+  if (value === 'online' || value === 'healthy') return 'healthy';
+  if (value === 'offline' || value === 'critical') return 'critical';
+  if (value === 'warning' || value === 'degraded') return value;
+  return 'unknown';
+}
+
+function homelabStatusLabel(status) {
+  return String(status || 'unknown').replace(/_/g, ' ');
+}
+
+function renderHomelabService(service) {
+  const status = homelabStatusClass(service.status);
+  const link = String(service.link || '').trim();
+  return `<div class="small-row">
+    <span style="display:flex;align-items:center;gap:8px"><span class="homelab-status-dot ${status}"></span><strong>${esc(service.name || service.id || 'Unnamed service')}</strong></span>
+    <span class="muted">${esc(homelabStatusLabel(service.status))}${service.latency_ms != null ? ` | ${esc(String(service.latency_ms))}ms` : ''}${link ? ` | <a href="${esc(link)}" target="_blank" rel="noopener">Open</a>` : ''}</span>
+  </div>`;
+}
+
+function renderHomelabCommandCenter() {
+  const data = _homelabCommandData;
+  const content = document.getElementById('homelab-command-content');
+  const overall = document.getElementById('homelab-overall-status');
+  const meta = document.getElementById('homelab-command-meta');
+  if (!content || !overall) return;
+  if (!data) {
+    content.innerHTML = '<div class="empty">No Homelab data available.</div>';
+    return;
+  }
+  const overallStatus = homelabStatusClass(data.overall_status);
+  overall.innerHTML = `<span class="homelab-status-dot ${overallStatus}"></span><span>${esc(homelabStatusLabel(data.overall_status))}</span>`;
+  if (meta) meta.textContent = `${data.source === 'tool_registry_reachability' ? 'Registered service reachability' : 'Aggregated provider data'}${data.generated_at ? ` | Updated ${relTime(data.generated_at)}` : ''}`;
+
+  const summary = data.summary || {};
+  const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+  if (_homelabCommandView === 'overview') {
+    const sections = ['systems', 'services', 'network', 'media', 'monitoring'];
+    content.innerHTML = `
+      <div class="homelab-command-grid">
+        <div class="homelab-command-card"><h3>Overall Health</h3><div class="homelab-status"><span class="homelab-status-dot ${overallStatus}"></span><strong>${esc(homelabStatusLabel(data.overall_status))}</strong></div><span class="muted">${esc(String(summary.total || 0))} registered services</span></div>
+        <div class="homelab-command-card"><h3>Services</h3><strong>${esc(String(summary.online || 0))} online</strong><span class="muted">${esc(String(summary.offline || 0))} offline | ${esc(String(summary.unknown || 0))} unknown</span></div>
+        <div class="homelab-command-card"><h3>Alerts</h3><strong>${esc(String(alerts.length))} active</strong><span class="muted">Only registered checks are shown.</span></div>
+      </div>
+      <div class="homelab-command-grid" style="margin-top:10px">${sections.map(section => {
+        const rows = Array.isArray(data[section]) ? data[section] : [];
+        return `<div class="homelab-command-card"><h3>${esc(section)}</h3>${rows.length ? rows.slice(0, 5).map(renderHomelabService).join('') : '<span class="muted">No registered services.</span>'}</div>`;
+      }).join('')}</div>
+      ${alerts.length ? `<div class="homelab-command-card" style="margin-top:10px"><h3>Active Alerts</h3>${alerts.slice(0, 8).map(alert => `<div class="homelab-alert ${alert.severity === 'critical' ? 'critical' : ''}"><strong>${esc(alert.name || alert.service_id || 'Service')}</strong><span class="muted">${esc(alert.message || alert.status || 'Attention required')}</span></div>`).join('')}</div>` : ''}`;
+    return;
+  }
+
+  const rows = Array.isArray(data[_homelabCommandView]) ? data[_homelabCommandView] : [];
+  content.innerHTML = `<div class="homelab-command-card"><h3>${esc(_homelabCommandView)}</h3>${rows.length ? rows.map(renderHomelabService).join('') : '<span class="muted">No registered services in this area yet.</span>'}</div>`;
+}
+
+function setHomelabView(view, button) {
+  _homelabCommandView = view;
+  document.querySelectorAll('.homelab-command-tab').forEach(item => item.classList.remove('active'));
+  if (button) button.classList.add('active');
+  renderHomelabCommandCenter();
+}
+
+async function loadHomelabCommandCenter() {
+  const content = document.getElementById('homelab-command-content');
+  if (content) content.innerHTML = '<div class="empty">Loading registered Homelab services...</div>';
+  try {
+    _homelabCommandData = await fetch(`${API}/homelab/overview`).then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    });
+    renderHomelabCommandCenter();
+  } catch (error) {
+    if (content) content.innerHTML = `<div class="empty">Homelab overview unavailable: ${esc(error.message || 'Unknown error')}</div>`;
   }
 }
 

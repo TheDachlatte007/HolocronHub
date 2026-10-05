@@ -7631,6 +7631,76 @@ def home_lab_overview():
     }
 
 
+@app.get("/api/homelab/overview")
+def homelab_command_center_overview():
+    """Aggregate the existing Home Lab registry for the Command Center UI."""
+    base = home_lab_overview()
+    services = list(base.get("services") or [])
+
+    def bucket_for(service: dict[str, Any]) -> str:
+        value = " ".join([
+            str(service.get("group") or ""),
+            str(service.get("category") or ""),
+            str(service.get("service_kind") or ""),
+        ]).lower()
+        if any(token in value for token in ("media", "jellyfin", "audiobook", "navidrome", "immich")):
+            return "media"
+        if any(token in value for token in ("network", "pihole", "router", "fritz")):
+            return "network"
+        if any(token in value for token in ("monitor", "uptime", "beszel", "observability")):
+            return "monitoring"
+        if any(token in value for token in ("core", "system", "truenas", "home assistant", "homelab")):
+            return "systems"
+        return "services"
+
+    buckets = {"systems": [], "services": [], "network": [], "media": [], "monitoring": []}
+    for service in services:
+        buckets[bucket_for(service)].append(service)
+
+    critical = [
+        service for service in services
+        if service.get("status") == "offline" and bucket_for(service) == "systems"
+    ]
+    offline = [service for service in services if service.get("status") == "offline"]
+    unknown = [service for service in services if service.get("status") == "unknown"]
+    if critical:
+        overall_status = "critical"
+    elif offline:
+        overall_status = "warning"
+    elif services and len(unknown) == len(services):
+        overall_status = "unknown"
+    elif unknown:
+        overall_status = "degraded"
+    else:
+        overall_status = "healthy"
+
+    alerts = [
+        {
+            "severity": "critical" if bucket_for(service) == "systems" else "warning",
+            "service_id": service.get("id"),
+            "name": service.get("name"),
+            "status": service.get("status"),
+            "latency_ms": service.get("latency_ms"),
+            "checked_at": service.get("status_checked_at"),
+            "message": "Service unreachable" if service.get("status") == "offline" else "Health unknown",
+        }
+        for service in [*offline, *unknown]
+    ]
+
+    return {
+        "generated_at": base.get("generated_at"),
+        "overall_status": overall_status,
+        "summary": base.get("summary") or {},
+        "alerts": alerts,
+        "systems": buckets["systems"],
+        "services": buckets["services"],
+        "network": buckets["network"],
+        "media": buckets["media"],
+        "monitoring": buckets["monitoring"],
+        "source": "tool_registry_reachability",
+    }
+
+
 @app.get("/api/debug/providers")
 def debug_providers():
     cache_counts = {

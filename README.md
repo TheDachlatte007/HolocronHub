@@ -158,6 +158,12 @@ Notes:
 - Warframe world-state history DB: `data/warframe_worldstate.db`
 - TLDR issue DB: `data/tldr_issues.db`
 
+## Homelab Command Center
+
+The `Homelab` view aggregates registered Home Lab services into Overview, Systems, Services, Network, Media and Monitoring sections. Phase 1 uses the existing editable Tool Hub registry and lightweight reachability checks through `GET /api/homelab/overview`; it does not replace Uptime Kuma, Beszel, TrueNAS, Home Assistant or Jellyfin. Missing host/port metadata remains `unknown`, and no mock health data is generated.
+
+Provider adapters for read-only monitoring data are planned separately. Credentials will stay server-side through environment variables and will not be exposed to the browser.
+
 ### Data Safety
 
 Runtime databases and local state are excluded from Git and Docker images. They live in the persistent `holocron_data` volume. Application startup only creates missing SQLite tables with `CREATE TABLE IF NOT EXISTS`; it does not replace existing databases. Before changing a Portainer stack or volume, export or back up the volume first.

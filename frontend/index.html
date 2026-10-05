@@ -1320,6 +1320,7 @@
         <button class="settings-tab" data-settings-tab="feed" onclick="showSettingsPanel('feed',this)">Feed & Digest</button>
         <button class="settings-tab" data-settings-tab="ingest" onclick="showSettingsPanel('ingest',this)">Ingest</button>
         <button class="settings-tab" data-settings-tab="api" onclick="showSettingsPanel('api',this)">API</button>
+        <button class="settings-tab" data-settings-tab="homelab" onclick="showSettingsPanel('homelab',this)">Homelab</button>
       </div>
 
       <div id="settings-panel-general" class="settings-panel active">
@@ -1457,6 +1458,51 @@
           <span id="settings-status-api" class="muted"></span>
         </div>
         <div class="settings-hint">Keys are stored in local project settings for this self-hosted instance. AlecaFrame supports either `userHash + optional secretToken` or a public token for shared stats/relic inventory.</div>
+      </div>
+
+      <div id="settings-panel-homelab" class="settings-panel">
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label>Uptime Kuma URL</label>
+            <input id="set-homelab-kuma-url" type="url" placeholder="http://192.168.x.x:3001" />
+          </div>
+          <div class="settings-field">
+            <label>Uptime Kuma API Key</label>
+            <input id="set-homelab-kuma-key" type="password" placeholder="optional" />
+          </div>
+          <div class="settings-field">
+            <label>Uptime Kuma Username</label>
+            <input id="set-homelab-kuma-user" type="text" placeholder="optional basic auth" />
+          </div>
+          <div class="settings-field">
+            <label>Uptime Kuma Password</label>
+            <input id="set-homelab-kuma-password" type="password" placeholder="optional basic auth" />
+          </div>
+          <div class="settings-field">
+            <label>Beszel URL</label>
+            <input id="set-homelab-beszel-url" type="url" placeholder="optional" />
+          </div>
+          <div class="settings-field">
+            <label>Beszel API Key</label>
+            <input id="set-homelab-beszel-key" type="password" placeholder="optional" />
+          </div>
+          <div class="settings-field">
+            <label>Beszel Username</label>
+            <input id="set-homelab-beszel-user" type="text" placeholder="optional basic auth" />
+          </div>
+          <div class="settings-field">
+            <label>Beszel Password</label>
+            <input id="set-homelab-beszel-password" type="password" placeholder="optional basic auth" />
+          </div>
+        </div>
+        <div class="settings-actions">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="set-homelab-show" onchange="toggleHomelabKeyVisibility()" /> Show credentials
+          </label>
+          <button class="primary" onclick="saveSettingsHomelab()">Save Homelab Connections</button>
+          <span id="settings-status-homelab" class="muted"></span>
+        </div>
+        <div class="settings-hint">Connections are stored in the private local settings file and applied as backend environment variables. Credentials are never included in the Homelab API response.</div>
       </div>
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155">
         <h2>Provider Diagnostics</h2>
@@ -7003,6 +7049,16 @@ const DEFAULT_SETTINGS = {
     alecaframe_secret_token: '',
     alecaframe_public_token: '',
   },
+  homelab: {
+    uptime_kuma_url: '',
+    uptime_kuma_api_key: '',
+    uptime_kuma_username: '',
+    uptime_kuma_password: '',
+    beszel_url: '',
+    beszel_api_key: '',
+    beszel_username: '',
+    beszel_password: '',
+  },
 };
 
 let _appSettings = null;
@@ -7137,6 +7193,14 @@ function toggleApiKeyVisibility() {
   });
 }
 
+function toggleHomelabKeyVisibility() {
+  const show = document.getElementById('set-homelab-show')?.checked;
+  ['set-homelab-kuma-key','set-homelab-kuma-password','set-homelab-beszel-key','set-homelab-beszel-password'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.type = show ? 'text' : 'password';
+  });
+}
+
 function populateSettingsForm(cfg) {
   document.getElementById('set-ux-lang').value = cfg.ux.language || 'EN';
   document.getElementById('set-ux-default-category').value = cfg.ux.default_category || '';
@@ -7156,6 +7220,19 @@ function populateSettingsForm(cfg) {
   const showToggle = document.getElementById('set-api-show');
   if (showToggle) showToggle.checked = false;
   toggleApiKeyVisibility();
+
+  const homelab = cfg.homelab || {};
+  document.getElementById('set-homelab-kuma-url').value = homelab.uptime_kuma_url || '';
+  document.getElementById('set-homelab-kuma-key').value = homelab.uptime_kuma_api_key || '';
+  document.getElementById('set-homelab-kuma-user').value = homelab.uptime_kuma_username || '';
+  document.getElementById('set-homelab-kuma-password').value = homelab.uptime_kuma_password || '';
+  document.getElementById('set-homelab-beszel-url').value = homelab.beszel_url || '';
+  document.getElementById('set-homelab-beszel-key').value = homelab.beszel_api_key || '';
+  document.getElementById('set-homelab-beszel-user').value = homelab.beszel_username || '';
+  document.getElementById('set-homelab-beszel-password').value = homelab.beszel_password || '';
+  const homelabShowToggle = document.getElementById('set-homelab-show');
+  if (homelabShowToggle) homelabShowToggle.checked = false;
+  toggleHomelabKeyVisibility();
 
   applyScheduleUI(cfg.schedule || {});
 }
@@ -7190,6 +7267,7 @@ async function loadSettingsPage() {
     setSettingsStatus('feed', '');
     setSettingsStatus('ingest', '');
     setSettingsStatus('api', '');
+    setSettingsStatus('homelab', '');
     loadProviderDiagnostics();
   } catch (e) {
     setSettingsStatus('general', `Could not load settings: ${e.message}`, true);
@@ -7297,6 +7375,26 @@ async function saveSettingsApi() {
     setSettingsStatus('api', 'Saved.');
   } catch (e) {
     setSettingsStatus('api', `Save failed: ${e.message}`, true);
+  }
+}
+
+async function saveSettingsHomelab() {
+  try {
+    await patchSettings({
+      homelab: {
+        uptime_kuma_url: document.getElementById('set-homelab-kuma-url').value.trim(),
+        uptime_kuma_api_key: document.getElementById('set-homelab-kuma-key').value.trim(),
+        uptime_kuma_username: document.getElementById('set-homelab-kuma-user').value.trim(),
+        uptime_kuma_password: document.getElementById('set-homelab-kuma-password').value.trim(),
+        beszel_url: document.getElementById('set-homelab-beszel-url').value.trim(),
+        beszel_api_key: document.getElementById('set-homelab-beszel-key').value.trim(),
+        beszel_username: document.getElementById('set-homelab-beszel-user').value.trim(),
+        beszel_password: document.getElementById('set-homelab-beszel-password').value.trim(),
+      },
+    });
+    setSettingsStatus('homelab', 'Saved. Refresh the Homelab view to check connections.');
+  } catch (e) {
+    setSettingsStatus('homelab', `Save failed: ${e.message}`, true);
   }
 }
 

@@ -14,6 +14,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse, urlunparse
 
 import requests
 
@@ -32,7 +33,18 @@ def _env(name: str) -> str:
 
 
 def _url(name: str) -> str:
-    return _env(name).rstrip("/")
+    value = _env(name).rstrip("/")
+    if name != "UPTIME_KUMA_URL" or not value:
+        return value
+    # Users commonly paste a Kuma dashboard URL. The metrics endpoint lives
+    # at the server root, so preserve scheme/host/port and drop dashboard UI paths.
+    try:
+        parsed = urlparse(value)
+        if parsed.path.lower().startswith("/dashboard"):
+            return urlunparse((parsed.scheme, parsed.netloc, "", "", "", "")).rstrip("/")
+    except Exception:
+        pass
+    return value
 
 
 def _request(method: str, url: str, *, headers: dict[str, str] | None = None,

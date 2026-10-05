@@ -780,6 +780,16 @@ _DEFAULT_SETTINGS = {
         "alecaframe_secret_token": "",
         "alecaframe_public_token": "",
     },
+    "homelab": {
+        "uptime_kuma_url": "",
+        "uptime_kuma_api_key": "",
+        "uptime_kuma_username": "",
+        "uptime_kuma_password": "",
+        "beszel_url": "",
+        "beszel_api_key": "",
+        "beszel_username": "",
+        "beszel_password": "",
+    },
 }
 
 _ALLOWED_SETTINGS_PATCH = {
@@ -795,6 +805,16 @@ _ALLOWED_SETTINGS_PATCH = {
         "alecaframe_secret_token",
         "alecaframe_public_token",
     },
+    "homelab": {
+        "uptime_kuma_url",
+        "uptime_kuma_api_key",
+        "uptime_kuma_username",
+        "uptime_kuma_password",
+        "beszel_url",
+        "beszel_api_key",
+        "beszel_username",
+        "beszel_password",
+    },
 }
 
 _API_KEY_ENV_MAP = {
@@ -805,6 +825,17 @@ _API_KEY_ENV_MAP = {
     "alecaframe_user_hash": "ALECAFRAME_USER_HASH",
     "alecaframe_secret_token": "ALECAFRAME_SECRET_TOKEN",
     "alecaframe_public_token": "ALECAFRAME_PUBLIC_TOKEN",
+}
+
+_HOMELAB_ENV_MAP = {
+    "uptime_kuma_url": "UPTIME_KUMA_URL",
+    "uptime_kuma_api_key": "UPTIME_KUMA_API_KEY",
+    "uptime_kuma_username": "UPTIME_KUMA_USERNAME",
+    "uptime_kuma_password": "UPTIME_KUMA_PASSWORD",
+    "beszel_url": "BESZEL_URL",
+    "beszel_api_key": "BESZEL_API_KEY",
+    "beszel_username": "BESZEL_USERNAME",
+    "beszel_password": "BESZEL_PASSWORD",
 }
 
 _DEFAULT_MARKET_SYMBOLS = [
@@ -6032,6 +6063,10 @@ def _load_settings() -> dict[str, Any]:
         if not cfg["api_keys"].get(settings_key):
             cfg["api_keys"][settings_key] = os.getenv(env_name, "").strip()
 
+    for settings_key, env_name in _HOMELAB_ENV_MAP.items():
+        if not cfg["homelab"].get(settings_key):
+            cfg["homelab"][settings_key] = os.getenv(env_name, "").strip()
+
     return cfg
 
 
@@ -6068,6 +6103,14 @@ def _apply_settings_env(cfg: dict[str, Any]) -> None:
     api_cfg = cfg.get("api_keys", {})
     for settings_key, env_name in _API_KEY_ENV_MAP.items():
         value = str(api_cfg.get(settings_key, "")).strip()
+        if value:
+            os.environ[env_name] = value
+        else:
+            os.environ.pop(env_name, None)
+
+    homelab_cfg = cfg.get("homelab", {})
+    for settings_key, env_name in _HOMELAB_ENV_MAP.items():
+        value = str(homelab_cfg.get(settings_key, "")).strip()
         if value:
             os.environ[env_name] = value
         else:

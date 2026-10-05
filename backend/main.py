@@ -4195,12 +4195,18 @@ def _fetch_warframe_value_snapshot(item: str, platform: str = "pc", *, catalog: 
         return {"item": item, "canonical_name": canonical_name, "slug": "", "last_avg_price": None, "volume_total": 0}, ["invalid_item"]
 
     req_headers = {"Accept": "application/json", "Language": "en", "User-Agent": "HolocronHub/0.5"}
-    stats_data, stats_err = _http_get_json(
-        f"https://api.warframe.market/v1/items/{slug}/statistics",
-        params={"platform": platform},
-        headers=req_headers,
-        timeout=15,
-    )
+    stats_cache_key = f"warframe:market_statistics:{platform}:{slug}"
+    stats_data = _cache_get(stats_cache_key, ttl_seconds=30 * 60)
+    stats_err: Optional[str] = None
+    if not isinstance(stats_data, dict):
+        stats_data, stats_err = _http_get_json(
+            f"https://api.warframe.market/v1/items/{slug}/statistics",
+            params={"platform": platform},
+            headers=req_headers,
+            timeout=15,
+        )
+        if isinstance(stats_data, dict):
+            _cache_set(stats_cache_key, stats_data)
     stats_summary = _summarize_warframe_statistics(stats_data, max_rank=max_rank)
     price = stats_summary.get("last_avg_price")
     if price is None:

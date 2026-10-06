@@ -615,46 +615,6 @@
     .wf-shell-card>h2{font-size:11px;letter-spacing:.14em;color:#8293ac;margin-bottom:9px}
     #tab-tools>.card,#tab-homelab>.card{background:linear-gradient(150deg,#18263c 0%,#142137 48%,#101b2e 100%);border-color:#2e4664;box-shadow:0 20px 55px rgba(2,6,23,.22)}
     #tab-tools>.card h2,#tab-homelab>.card h2{color:#8293ac}
-    #tab-tools>.card>.home-welcome{display:none}
-    .home-dashboard{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
-    .home-dashboard-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;padding:4px 2px 8px;border-bottom:1px solid rgba(71,95,124,.45)}
-    .home-dashboard-title{font-size:18px;font-weight:750;letter-spacing:.03em;color:#f8fafc}
-    .home-dashboard-kicker{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#67e8f9;margin-bottom:4px;font-weight:700}
-    .home-dashboard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-    .home-dashboard-grid.wide{grid-template-columns:1.2fr 1fr 1fr}
-    .home-dashboard-grid.bottom{grid-template-columns:1.2fr 1fr 1fr}
-    .home-panel{background:linear-gradient(145deg,rgba(10,20,34,.96),rgba(8,15,27,.98));border:1px solid #263b56;border-radius:12px;padding:14px;min-height:150px;box-shadow:inset 0 1px rgba(148,163,184,.04)}
-    .home-panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px;color:#9cafc5;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
-    .home-panel-head strong{color:#dbeafe;font-size:11px}
-    .home-time{font-size:44px;line-height:1;color:#dffbff;letter-spacing:-.05em;text-shadow:0 0 22px rgba(103,232,249,.2)}
-    .home-date{margin-top:8px;color:#9cafc5;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
-    .home-weather-empty{display:flex;align-items:center;justify-content:center;min-height:84px;color:#8495ad;text-align:center;font-size:12px}
-    .home-network-status{display:flex;align-items:center;gap:9px;font-size:17px;color:#f8fafc;margin:8px 0}
-    .home-network-status .homelab-status-dot{width:10px;height:10px}
-    .home-stat-row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid rgba(71,95,124,.3);font-size:12px}
-    .home-stat-row:last-child{border-bottom:0}
-    .home-dashboard-service-list{display:flex;flex-direction:column;gap:1px;max-height:182px;overflow:auto}
-    .home-dashboard-service{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid rgba(71,95,124,.24);font-size:12px}
-    .home-dashboard-service:last-child{border-bottom:0}
-    .home-dashboard-service span:first-child{display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .home-quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-    .home-quick-link{display:flex;flex-direction:column;gap:9px;align-items:center;justify-content:center;min-height:88px;border:1px solid #263b56;border-radius:12px;background:linear-gradient(145deg,#101c2e,#0b1524);color:#dbeafe;font-size:11px;text-align:center;text-decoration:none;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
-    .home-quick-link:hover{transform:translateY(-2px);border-color:#38bdf8;background:linear-gradient(145deg,#142a43,#0c1a2a);box-shadow:0 9px 20px rgba(0,0,0,.22);text-decoration:none}
-    .home-quick-icon-wrap{position:relative;display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(83,122,157,.45);border-radius:11px;background:radial-gradient(circle at 30% 20%,rgba(56,189,248,.15),transparent 68%),#091525;color:#d8f5ff;box-shadow:inset 0 1px rgba(255,255,255,.06)}
-    .home-quick-icon{width:24px;height:24px;object-fit:contain}.home-quick-icon-fallback{font-size:11px;font-weight:750;letter-spacing:.02em}.home-quick-icon-wrap [hidden]{display:none!important}
-    .home-gauge-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
-    .home-gauge{display:flex;flex-direction:column;align-items:center;gap:7px;color:#8ea0b7;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
-    .home-gauge-ring{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#38bdf8 0 28%,#1c2b3d 28% 100%);position:relative}
-    .home-gauge-ring::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#0b1627;border:1px solid #253b55}
-    .home-gauge-ring span{position:relative;z-index:1;font-size:12px;color:#f1f5f9}
-    .home-media-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
-    .home-media-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:60px;border:1px solid #263b56;border-radius:8px;background:#101c2e;color:#dbeafe;font-size:10px;text-transform:uppercase;letter-spacing:.05em;text-decoration:none}.home-media-link .media-icon{width:24px;height:24px;padding:4px;border:1px solid #35506f;border-radius:7px;color:#67e8f9;fill:none;stroke:currentColor;stroke-width:1.6}
-    .home-media-link:hover{border-color:#38bdf8;text-decoration:none}
-    .home-event-list{display:flex;flex-direction:column;gap:0}
-    .home-event{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(71,95,124,.24);font-size:11px;color:#c4d0df}
-    .home-event:last-child{border-bottom:0}.home-event-dot{width:7px;height:7px;border-radius:50%;background:#34d399;flex:0 0 auto}.home-event-dot.warn{background:#f59e0b}
-    @media (max-width:900px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr 1fr}}
-    @media (max-width:640px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-time{font-size:38px}}
     @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}.app-shell-header{gap:8px}.shell-search{display:none!important}.shell-controls{margin-left:auto}.mobile-search-trigger{display:grid;place-items:center}}
     @media(max-width:640px){.shell-clock,.shell-back,.shell-utility[aria-label="Display options"]{display:none!important}.shell-controls{gap:6px}.app-shell-header{justify-content:flex-start}}
     body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
@@ -903,6 +863,67 @@
     .wf-history-caption{color:#9bb0c4;font-size:11px;line-height:1.5;margin:5px 0;overflow-wrap:anywhere}
     .wf-history-empty{padding:30px 12px;color:#9bb0c4;font-size:12px}
 
+    /* Home dashboard: quiet command center with real service links and health. */
+    .nav-tab::before{content:none!important;display:none!important}
+    .holocron-shell>.nav .nav-tab{display:flex;align-items:center;gap:11px;padding:9px 11px!important}
+    .nav-icon{display:block;width:18px;height:18px;flex:0 0 18px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;color:#56dff4;opacity:.9;transition:filter .18s ease,color .18s ease}
+    .holocron-shell>.nav .nav-tab:hover .nav-icon,.holocron-shell>.nav .nav-tab.active .nav-icon{color:#a5f3fc;filter:drop-shadow(0 0 5px rgba(34,211,238,.5));opacity:1}
+    #tab-tools>.card>.home-welcome{display:flex}
+    .home-dashboard{display:flex;flex-direction:column;gap:16px;margin:0 0 28px}
+    .home-welcome{position:relative;min-height:176px;align-items:center;padding:24px clamp(22px,3vw,40px);border-color:rgba(49,197,226,.3);border-radius:18px;background:radial-gradient(ellipse at 12% 55%,rgba(0,191,221,.16),transparent 35%),radial-gradient(ellipse at 92% 0,rgba(24,90,156,.2),transparent 42%),linear-gradient(112deg,#07101b 0%,#0b1728 55%,#07121f 100%);box-shadow:0 22px 56px rgba(0,0,0,.28),inset 0 1px rgba(164,235,255,.045)}
+    .home-welcome::after{content:"";position:absolute;right:23%;bottom:0;width:38%;height:1px;background:linear-gradient(90deg,transparent,rgba(34,211,238,.45),transparent)}
+    .home-hero-brand{display:flex;align-items:center;gap:22px;min-width:0}
+    .home-holocron-mark{width:88px;height:88px;border-radius:27px;border-color:rgba(103,232,249,.76);background:radial-gradient(circle,rgba(34,211,238,.24),rgba(11,64,100,.12) 60%,transparent 70%),linear-gradient(145deg,rgba(56,189,248,.2),rgba(37,99,235,.05));box-shadow:0 0 34px rgba(34,211,238,.2),inset 0 0 22px rgba(125,211,252,.14);animation:holocron-pulse 5s ease-in-out infinite}
+    .home-holocron-mark::before{inset:14px;border-radius:15px;border-color:rgba(165,243,252,.75)}
+    .home-holocron-mark::after{inset:31px;border-radius:8px;background:rgba(103,232,249,.9);box-shadow:0 0 19px rgba(34,211,238,.95)}
+    .home-holocron-mark>span{position:absolute;inset:22px;border:1px solid rgba(103,232,249,.4);border-radius:11px;transform:rotate(45deg)}
+    .home-welcome-copy{gap:8px}
+    .home-welcome-kicker{font-size:10px;letter-spacing:.22em}
+    .home-welcome-title{margin:0;font-size:clamp(30px,4vw,46px);font-weight:760;letter-spacing:-.035em}
+    .home-welcome-sub{font-size:13px;max-width:540px}
+    .home-hero-time{position:relative;z-index:1;min-width:190px;padding-left:28px;border-left:1px solid rgba(112,157,187,.26);text-align:right}
+    .home-time{font-size:clamp(48px,6vw,70px);font-variant-numeric:tabular-nums;letter-spacing:-.065em}
+    .home-date{font-size:11px;letter-spacing:.11em}
+    .home-dashboard-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(280px,.85fr);gap:14px;align-items:stretch}
+    .home-panel{min-height:0;padding:18px;border-radius:15px;background:linear-gradient(148deg,#0b1725 0%,#08121e 100%);border-color:#1c344a;box-shadow:0 12px 32px rgba(0,0,0,.19),inset 0 1px rgba(179,229,245,.035)}
+    .home-panel-head{margin-bottom:17px;color:#b6c9d9;font-size:11px;letter-spacing:.16em}
+    .home-panel-head>div{display:flex;flex-direction:column;gap:5px}
+    .home-panel-head small{font-size:11px;font-weight:400;letter-spacing:.015em;text-transform:none;color:#71869d}
+    .home-text-link{display:inline-flex;align-items:center;gap:6px;padding:3px 0;border:0;background:none;color:#66e4f5;font:inherit;font-size:11px;white-space:nowrap;cursor:pointer}
+    .home-text-link:hover{color:#c5f9ff;text-decoration:none}
+    .home-quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .home-quick-link{position:relative;display:flex;min-width:0;min-height:82px;flex-direction:row;justify-content:flex-start;gap:12px;padding:13px;border-radius:12px;background:linear-gradient(145deg,#0d1a2a,#091421);border-color:#203b51;text-align:left;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease,background .2s ease}
+    .home-quick-link:hover{transform:translateY(-2px);border-color:rgba(45,212,235,.68);background:linear-gradient(145deg,#10253a,#0b1928);box-shadow:0 11px 28px rgba(0,0,0,.26),0 0 18px rgba(34,211,238,.07)}
+    .home-quick-link:focus-visible,.home-text-link:focus-visible{outline:2px solid #67e8f9;outline-offset:3px}
+    .home-service-icon{position:relative;display:grid;place-items:center;width:46px;height:46px;flex:0 0 46px;overflow:hidden;border:1px solid rgba(78,139,166,.34);border-radius:13px;background:radial-gradient(circle at 35% 25%,rgba(34,211,238,.2),transparent 70%),#0a1927;color:#76eaff}
+    .home-service-icon img{position:relative;z-index:1;width:27px;height:27px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(34,211,238,.25))}
+    .home-service-icon svg{position:absolute;width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+    .home-service-icon.has-brand svg{opacity:0}
+    .home-quick-copy{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .home-quick-copy strong{overflow:hidden;color:#e3f1fa;font-size:12px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+    .home-quick-copy small{overflow:hidden;color:#7890a5;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+    .home-dashboard-empty{grid-column:1/-1;padding:22px 12px;border:1px dashed rgba(89,128,153,.28);border-radius:12px;color:#8296a8;font-size:12px;text-align:center}
+    .home-kuma-panel{display:flex;flex-direction:column;justify-content:space-between;min-height:190px}
+    .home-kuma-panel .home-panel-head{margin-bottom:14px}
+    .home-kuma-mark{display:grid;place-items:center;width:52px;height:52px;margin:5px 0 13px;border:1px solid rgba(82,220,180,.35);border-radius:15px;background:radial-gradient(circle at 50% 38%,rgba(52,211,153,.2),rgba(9,29,38,.65) 70%);color:#61e6b5;box-shadow:0 0 25px rgba(52,211,153,.1)}
+    .home-kuma-mark svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .home-kuma-copy{display:flex;flex-direction:column;gap:5px;margin-bottom:16px}
+    .home-kuma-copy strong{font-size:15px;color:#e6f4f8}
+    .home-kuma-copy span{font-size:11px;line-height:1.5;color:#879db0}
+    .home-kuma-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:8px 11px;border:1px solid rgba(52,211,153,.38);border-radius:9px;background:rgba(6,78,59,.28);color:#8ff3ce;font-size:11px;font-weight:650;text-decoration:none;transition:background .16s ease,border-color .16s ease,transform .16s ease}
+    .home-kuma-link:hover{background:rgba(6,95,70,.42);border-color:rgba(52,211,153,.65);transform:translateY(-1px)}
+    .home-kuma-link svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .tool-hub-top{margin-top:3px}
+    .tool-hub-top h2{margin:0;color:#e5f4fc;font-size:17px}
+    @keyframes holocron-pulse{0%,100%{box-shadow:0 0 30px rgba(34,211,238,.17),inset 0 0 20px rgba(125,211,252,.12)}50%{box-shadow:0 0 42px rgba(34,211,238,.31),inset 0 0 25px rgba(125,211,252,.2)}}
+    .home-dashboard.home-arriving .home-welcome,.home-dashboard.home-arriving .home-panel{animation:dashboard-panel-arrive .42s cubic-bezier(.2,.72,.24,1) both}
+    @media(max-width:900px){body.nav-menu-open[data-hub="tools"] .holocron-shell>.nav{position:fixed!important;z-index:1000;top:58px;left:12px;right:auto;display:flex!important;flex-direction:column!important;align-items:stretch!important;width:min(280px,calc(100vw - 24px));max-height:calc(100vh - 74px);overflow:auto;margin:0!important;padding:12px!important;border:1px solid #244761!important;border-radius:14px!important;background:rgba(5,12,22,.97)!important;box-shadow:0 22px 70px rgba(0,0,0,.62)!important;backdrop-filter:blur(18px)}body.nav-menu-open[data-hub="tools"] .holocron-shell>.nav .nav-tab{display:flex!important;width:100%;flex:0 0 auto;text-align:left}.holocron-shell>.nav .nav-tab .nav-icon{width:18px;height:18px}}
+    @media(max-width:1050px){.home-dashboard-grid{grid-template-columns:minmax(0,1.35fr) minmax(260px,.9fr)}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:780px){.home-dashboard-grid{grid-template-columns:1fr}.home-kuma-panel{min-height:0}}
+    @media(max-width:640px){.home-welcome{min-height:0;align-items:flex-start;gap:20px;padding:18px}.home-hero-brand{gap:14px}.home-holocron-mark{width:58px;height:58px;flex-basis:58px;border-radius:18px}.home-holocron-mark::before{inset:9px;border-radius:10px}.home-holocron-mark::after{inset:20px;border-radius:6px}.home-holocron-mark>span{inset:15px;border-radius:7px}.home-welcome-title{font-size:28px}.home-welcome-sub{font-size:11px}.home-hero-time{min-width:0;padding-left:14px}.home-time{font-size:38px}.home-date{max-width:150px;font-size:9px;line-height:1.4}.home-panel{padding:14px}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.home-quick-link{min-height:72px;padding:10px;gap:9px}.home-service-icon{width:39px;height:39px;flex-basis:39px}.home-service-icon img{width:23px;height:23px}.home-service-icon svg{width:22px;height:22px}}
+    @media(max-width:420px){.home-welcome{flex-direction:column}.home-hero-time{width:100%;display:flex;align-items:baseline;justify-content:space-between;padding:12px 0 0;border-top:1px solid rgba(112,157,187,.26);border-left:0;text-align:left}.home-date{max-width:none}.home-quick-copy strong{font-size:11px}}
+    @media(prefers-reduced-motion:reduce){.home-holocron-mark{animation:none}.home-dashboard.home-arriving .home-welcome,.home-dashboard.home-arriving .home-panel{animation:none;opacity:1;transform:none}.home-quick-link{transition:none}}
+
   </style>
 </head>
 <body data-hub="tools">
@@ -927,17 +948,17 @@
   </div>
 
   <div class="nav" style="align-items:center">
-    <button class="nav-tab active" data-icon="H" onclick="showTab('tools',this)">Home</button>
-    <button class="nav-tab" data-icon="S" onclick="showTab('homelab',this)">Homelab</button>
-    <button class="nav-tab" data-icon="F" onclick="showTab('feed',this)">Feed</button>
-    <button class="nav-tab" data-icon="D" onclick="showTab('digest',this)">Morning Digest</button>
-    <button class="nav-tab" data-icon="T" onclick="showTab('tldr',this)">TLDR</button>
-    <button class="nav-tab" data-icon="M" onclick="showTab('markets',this)">Markets</button>
-    <button class="nav-tab" data-icon="F1" onclick="showTab('f1',this)">F1</button>
-    <button class="nav-tab" data-icon="W" onclick="showTab('warframe',this)">Warframe</button>
-    <button class="nav-tab" data-icon="SV" onclick="showTab('saved',this)">Saved</button>
-    <button class="nav-tab" data-icon="SRC" onclick="showTab('sources',this)">Sources</button>
-    <button class="nav-tab" data-icon="SET" onclick="showTab('settings',this)">Settings</button>
+    <button class="nav-tab active" onclick="showTab('tools',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
+    <button class="nav-tab" onclick="showTab('homelab',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="6" rx="1.5"/><rect x="4" y="14" width="16" height="6" rx="1.5"/><path d="M8 7h.01M8 17h.01M12 7h4M12 17h4"/></svg><span>Homelab</span></button>
+    <button class="nav-tab" onclick="showTab('feed',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19a2 2 0 0 0 0-4M5 11a10 10 0 0 1 8 8M5 4a17 17 0 0 1 15 15"/><circle cx="5" cy="19" r=".7"/></svg><span>Feed</span></button>
+    <button class="nav-tab" onclick="showTab('digest',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h5M8 16h3"/><path d="M7 3v4M17 3v4"/></svg><span>Morning Digest</span></button>
+    <button class="nav-tab" onclick="showTab('tldr',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6M8 10l-4 5M16 10l4 5"/></svg><span>TLDR</span></button>
+    <button class="nav-tab" onclick="showTab('markets',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7"/><path d="M16 6h4v4"/></svg><span>Markets</span></button>
+    <button class="nav-tab" onclick="showTab('f1',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M6 18l2-8h8l2 8M9 10l1-4h5l2 4M5 18l-2 2M19 18l2 2M10 14h.01M15 14h.01"/></svg><span>F1</span></button>
+    <button class="nav-tab" onclick="showTab('warframe',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 8 4v7c0 4.5-3.4 7.5-8 9-4.6-1.5-8-4.5-8-9V6z"/><path d="m9 12 2 2 4-5"/></svg><span>Warframe</span></button>
+    <button class="nav-tab" onclick="showTab('saved',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg><span>Saved</span></button>
+    <button class="nav-tab" onclick="showTab('sources',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.5-3.6M8.2 13.2l7.5 3.6"/></svg><span>Sources</span></button>
+    <button class="nav-tab" onclick="showTab('settings',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 15 .1.1 1.2 1-1.5 2.6-1.5-.6a8 8 0 0 1-1.7 1l-.3 1.6h-3l-.3-1.6a8 8 0 0 1-1.7-1l-1.5.6-1.5-2.6 1.2-1a7 7 0 0 1 0-2l-1.2-1 1.5-2.6 1.5.6a8 8 0 0 1 1.7-1l.3-1.6h3l.3 1.6a8 8 0 0 1 1.7 1l1.5-.6 1.5 2.6-1.2 1a7 7 0 0 1-.1 1.9Z" transform="translate(-1 -1) scale(1.08)"/></svg><span>Settings</span></button>
   </div>
 
   <!-- ═══ TOOLS ═══ -->
@@ -971,38 +992,36 @@
   <div id="tab-tools">
     <div class="card">
       <section class="home-dashboard" aria-label="HolocronHub command center">
-        <div class="home-dashboard-head">
-          <div><div class="home-dashboard-kicker">Personal command center</div><div class="home-dashboard-title">HolocronHub Home</div></div>
-          <span class="tool-minor">Live local overview</span>
-        </div>
-        <div class="home-dashboard-grid wide">
-          <div class="home-panel"><div class="home-panel-head"><span>Time & Date</span><span>Local</span></div><div id="home-dashboard-time" class="home-time">--:--</div><div id="home-dashboard-date" class="home-date">Loading local time</div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Weather</span><span>Augsburg</span></div><div class="home-weather-empty"><span style="font-size:28px;color:#cbd5e1;margin-right:10px">~</span><span>Local weather source<br><strong style="color:#dbeafe">not configured</strong></span></div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Network</span><span>Homelab</span></div><div id="home-dashboard-network" class="home-network-status"><span class="homelab-status-dot unknown"></span>Checking services</div><div id="home-dashboard-network-meta" class="muted">Reachability data will appear here.</div></div>
-        </div>
-        <div class="home-dashboard-grid bottom">
-          <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span id="home-dashboard-system-meta">Telemetry</span></div><div class="home-stat-row"><span>CPU / Memory</span><strong class="muted">Local adapter</strong></div><div class="home-stat-row"><span>Storage</span><strong class="muted">Local adapter</strong></div><div class="home-stat-row"><span>Last sync</span><strong id="home-dashboard-sync" class="muted">Waiting</strong></div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Services</span><span id="home-dashboard-service-count">waiting</span></div><div id="home-dashboard-services" class="home-dashboard-service-list"><div class="muted">Awaiting reachability snapshot.</div></div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Quick Links</span><span>Launch</span></div><div id="home-dashboard-links" class="home-quick-grid"><div class="muted">Loading links.</div></div></div>
-        </div>
-        <div class="home-dashboard-grid wide">
-          <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span>Local telemetry</span></div><div class="home-gauge-grid"><div class="home-gauge"><div class="home-gauge-ring"><span>N/A</span></div>CPU</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#38bdf8 0 62%,#1c2b3d 62% 100%)"><span>N/A</span></div>RAM</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#f59e0b 0 38%,#1c2b3d 38% 100%)"><span>N/A</span></div>TEMP</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#34d399 0 18%,#1c2b3d 18% 100%)"><span>N/A</span></div>NET</div></div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Media Quick Launch</span><span>Services</span></div><div id="home-dashboard-media" class="home-media-grid"><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m9 9 6 3-6 3Z"/></svg><span>Media</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="m10 9 5 3-5 3Z"/></svg><span>Series</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V7l9-2v11"/><circle cx="7" cy="18" r="2"/><circle cx="16" cy="16" r="2"/></svg><span>Music</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 0 1 16 0M7 13a5 5 0 0 1 10 0M10 16a2 2 0 0 1 4 0"/><path d="M12 20v.1"/></svg><span>Radio</span></a></div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Latest Events</span><span>Activity</span></div><div class="home-event-list"><div class="home-event"><span class="home-event-dot"></span><span>Homelab adapter ready</span></div><div class="home-event"><span class="home-event-dot"></span><span>Local tool registry loaded</span></div><div class="home-event"><span class="home-event-dot warn"></span><span>Live telemetry depends on configured adapters</span></div></div></div>
+        <header class="home-welcome">
+          <div class="home-hero-brand">
+            <div class="home-holocron-mark" aria-hidden="true"><span></span></div>
+            <div class="home-welcome-copy">
+              <div class="home-welcome-kicker">Personal command center</div>
+              <h1 class="home-welcome-title">Welcome back.</h1>
+              <div class="home-welcome-sub">Your services, systems and everyday tools, ready when you are.</div>
+            </div>
+          </div>
+          <div class="home-hero-time"><div id="home-dashboard-time" class="home-time">--:--</div><div id="home-dashboard-date" class="home-date">Loading local time</div></div>
+        </header>
+        <div class="home-dashboard-grid">
+          <section class="home-panel home-launch-panel">
+            <div class="home-panel-head"><div><span>Quick Launch</span><small>Home Lab services</small></div><div class="home-panel-actions"><button class="home-text-link" onclick="showTab('homelab')">All services <span aria-hidden="true">↗</span></button></div></div>
+            <div id="home-dashboard-links" class="home-quick-grid"><div class="home-dashboard-empty">Loading your services...</div></div>
+          </section>
+          <section class="home-panel home-kuma-panel">
+            <div>
+              <div class="home-panel-head"><div><span>Monitoring</span><small>Uptime Kuma</small></div></div>
+              <div class="home-kuma-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h4l2.2-6 4.1 12 2.1-6H21"/><path d="M4 4h16v16H4z" opacity=".35"/></svg></div>
+              <div class="home-kuma-copy"><strong>Service status</strong><span>Open Kuma for the current, authoritative status of your services.</span></div>
+            </div>
+            <a class="home-kuma-link" href="http://192.168.178.32:31050/dashboard" target="_blank" rel="noopener noreferrer">Open Uptime Kuma <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+          </section>
         </div>
       </section>
-      <div class="home-welcome">
-        <div class="home-welcome-copy">
-          <div class="home-welcome-kicker">Personal command center</div>
-          <div class="home-welcome-title">Welcome back.</div>
-          <div class="home-welcome-sub">Your fastest route to the tools, services and systems you use every day.</div>
-        </div>
-        <div class="home-holocron-mark" aria-hidden="true"></div>
-      </div>
       <div class="tool-hub-top">
-        <div>
+        <div class="home-welcome-copy">
           <h2>HolocronHub Tool Hub</h2>
-          <div class="tool-hub-strap">Quiet daily launcher for AI services and Home Lab shortcuts. Open what you need fast, keep editing tucked behind manage mode.</div>
+          <div class="tool-hub-strap">A curated launcher for AI tools and the services you use every day.</div>
         </div>
         <div class="toolhub-actions">
           <button class="sm" id="tool-search-trigger" onclick="toggleToolSearchPanel()">Search</button>
@@ -1031,8 +1050,8 @@
       <div id="quick-tools-section" class="tool-section" hidden>
         <div class="tool-section-head">
           <div>
-            <div class="tool-section-title">Quick Access</div>
-            <div class="tool-section-sub">Pinned and favorite launch points for the tools and services you open most.</div>
+            <div class="tool-section-title">AI & Web Quick Access</div>
+            <div class="tool-section-sub">Your pinned and favorite online tools. Home Lab services are available above.</div>
           </div>
         </div>
         <div id="tools-quick" class="grid"><div class="empty">No favorites yet.</div></div>
@@ -1072,10 +1091,9 @@
         <div class="tool-section-head">
           <div>
             <div class="tool-section-title">Home Lab</div>
-            <div class="tool-section-sub">Canonical launcher for local services with groups, host context, status, and optional deep links.</div>
+            <div class="tool-section-sub">Canonical launcher for local services with groups, friendly hostnames, and optional deep links.</div>
           </div>
         </div>
-        <div id="home-lab-overview" class="home-overview-grid"><div class="home-overview-card"><strong>Home Lab checks</strong><span class="muted">Reachability snapshots will appear here after the launcher loads.</span></div></div>
         <div id="home-group-tabs" class="tool-group-tabs"><button class="tool-group-tab active" onclick="setHomeGroup('',this)">All services</button></div>
         <div id="tools-home" class="home-groups"><div class="empty">No Home Lab services.</div></div>
       </div>
@@ -2059,6 +2077,24 @@ function toolIconMarkup(tool, className = 'tool-icon') {
   return `<span class="${className}-wrap">${src ? `<img class="${className}" src="${esc(src)}" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"/>` : ''}<span class="${className}-fallback" ${src ? 'hidden' : ''} aria-hidden="true">${esc(initials || 'H')}</span></span>`;
 }
 
+function homeServiceGlyph(service) {
+  const kind = String(service?.service_kind || service?.group || '').toLowerCase();
+  if (/media|jellyfin/.test(kind)) return '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>';
+  if (/storage|nas/.test(kind)) return '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h5"/>';
+  if (/container|portainer/.test(kind)) return '<path d="M4 8h16v11H4zM7 5h3M14 5h3M7 12h.01M12 12h.01M17 12h.01M7 16h.01M12 16h.01M17 16h.01"/>';
+  if (/vm_host|infra|proxmox/.test(kind)) return '<rect x="4" y="4" width="16" height="6" rx="1.5"/><rect x="4" y="14" width="16" height="6" rx="1.5"/><path d="M8 7h.01M8 17h.01M12 7h4M12 17h4"/>';
+  if (/dns|network|pihole/.test(kind)) return '<circle cx="12" cy="12" r="8"/><path d="M4.5 9h15M4.5 15h15M12 4c2 2 3 5 3 8s-1 6-3 8c-2-2-3-5-3-8s1-6 3-8Z"/>';
+  if (/smarthome|automation/.test(kind)) return '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>';
+  if (/monitor|observability|kuma/.test(kind)) return '<path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7"/><path d="M16 6h4v4"/>';
+  return '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h4"/>';
+}
+
+function homeDashboardIconMarkup(tool) {
+  const src = tool?.icon_url || deriveToolIcon(tool?.link, tool);
+  const glyph = homeServiceGlyph(tool);
+  return `<span class="home-service-icon${src ? ' has-brand' : ''}">${src ? `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove();this.parentElement.classList.remove('has-brand')"/>` : ''}<svg viewBox="0 0 24 24" aria-hidden="true">${glyph}</svg></span>`;
+}
+
 function normalizeToolCategory(cat) {
   const raw = String(cat || 'General').replace(/[_-]+/g, ' ').trim();
   if (!raw) return 'General';
@@ -2117,10 +2153,14 @@ function setGlobalNavCollapsed(collapsed) {
 }
 
 function toggleGlobalNav() {
-  if (['f1', 'warframe'].includes(document.body.dataset.hub)) {
+  if (['f1', 'warframe'].includes(document.body.dataset.hub) || window.matchMedia('(max-width: 900px)').matches) {
     const open = document.body.classList.toggle('nav-menu-open');
     const toggle = document.getElementById('shell-nav-toggle');
-    if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Hide navigation' : 'Show navigation');
+      toggle.title = open ? 'Hide navigation' : 'Show navigation';
+    }
     return;
   }
   setGlobalNavCollapsed(!document.body.classList.contains('nav-collapsed'));
@@ -2166,7 +2206,13 @@ function showTab(name, btn, options = {}) {
   document.body.dataset.hub = name;
   document.body.classList.remove('nav-menu-open');
   const navToggle = document.getElementById('shell-nav-toggle');
-  if (navToggle) navToggle.setAttribute('aria-expanded', String(!['f1', 'warframe'].includes(name) && !document.body.classList.contains('nav-collapsed')));
+  if (navToggle) {
+    const menuMode = ['f1', 'warframe'].includes(name) || window.matchMedia('(max-width: 900px)').matches;
+    const expanded = menuMode ? false : !document.body.classList.contains('nav-collapsed');
+    navToggle.setAttribute('aria-expanded', String(expanded));
+    navToggle.setAttribute('aria-label', expanded ? 'Hide navigation' : 'Show navigation');
+    navToggle.title = expanded ? 'Hide navigation' : 'Show navigation';
+  }
   const context = document.getElementById('shell-context');
   if (context) context.textContent = HUB_CONTEXT_LABELS[name] || name;
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
@@ -2679,75 +2725,16 @@ async function loadAiRadar() {
   renderAiRail(_toolCache);
 }
 
-function renderHomeLabOverview(data, errMsg='') {
-  const el = document.getElementById('home-lab-overview');
-  if (!el) return;
-  if (errMsg) {
-    el.innerHTML = `<div class="home-overview-card home-overview-compact"><strong>Home Lab checks unavailable</strong><span class="err-msg">${esc(errMsg)}</span></div>`;
-    return;
-  }
-  const services = Array.isArray(data?.services) ? data.services : [];
-  if (!services.length) {
-    el.innerHTML = '<div class="home-overview-card home-overview-compact"><strong>No Home Lab services</strong><span class="muted">Add local services with host and port metadata to enable live checks.</span></div>';
-    return;
-  }
-  const summary = data.summary || {};
-  const fastest = [...services].filter(item => item.status === 'online' && item.latency_ms !== null && item.latency_ms !== undefined).sort((a,b) => (a.latency_ms||999999) - (b.latency_ms||999999))[0];
-  const topGroups = (Array.isArray(data.groups) ? data.groups : []).slice(0, 2).map(item => `${item.name} ${item.count}`).join(' | ');
-  el.innerHTML = `
-    <div class="home-overview-card home-overview-compact">
-      <strong>Reachability</strong>
-      <div class="home-overview-copy">
-        <span class="pill status-online">online ${esc(String(summary.online || 0))}</span>
-        <span class="pill status-offline">offline ${esc(String(summary.offline || 0))}</span>
-        <span class="pill status-unknown">unknown ${esc(String(summary.unknown || 0))}</span>
-        <span class="muted">${fastest ? `${esc(fastest.name)} ${esc(String(fastest.latency_ms))}ms` : 'No live response yet'}</span>
-      </div>
-      <span class="muted">${esc(String(summary.total || services.length))} services checked${topGroups ? ` | ${esc(topGroups)}` : ''}${data.generated_at ? ` | Updated ${esc(relTime(data.generated_at))}` : ''}</span>
-    </div>`;
-}
-
-function renderHomeDashboard(data) {
-  const servicesEl = document.getElementById('home-dashboard-services');
-  const countEl = document.getElementById('home-dashboard-service-count');
-  const networkEl = document.getElementById('home-dashboard-network');
-  const networkMeta = document.getElementById('home-dashboard-network-meta');
-  const syncEl = document.getElementById('home-dashboard-sync');
+function renderHomeDashboard() {
   const linksEl = document.getElementById('home-dashboard-links');
-  if (!servicesEl || !countEl || !networkEl || !linksEl) return;
-  const services = Array.isArray(data?.services) ? data.services : [];
-  const summary = data?.summary || {};
-  const online = Number(summary.online || 0);
-  const status = online > 0 && Number(summary.offline || 0) === 0 ? 'healthy' : (Number(summary.offline || 0) ? 'warning' : 'unknown');
-  networkEl.innerHTML = `<span class="homelab-status-dot ${status}"></span>${online ? `${online} service${online === 1 ? '' : 's'} online` : 'No telemetry yet'}`;
-  if (networkMeta) networkMeta.textContent = services.length ? `${summary.online || 0} online | ${summary.offline || 0} offline | ${summary.unknown || 0} unknown` : 'Reachability data will appear here.';
-  if (syncEl) syncEl.textContent = data?.generated_at ? `Updated ${relTime(data.generated_at)}` : 'Waiting';
-  countEl.textContent = `${online} online`;
-  servicesEl.innerHTML = services.length ? services.slice(0, 7).map(service => {
-    const serviceStatus = homelabStatusClass(service.status);
-    return `<div class="home-dashboard-service"><span><span class="homelab-status-dot ${serviceStatus}"></span>${esc(service.name || service.id || 'Service')}</span><span class="muted">${esc(homelabStatusLabel(service.status))}${service.latency_ms != null ? ` ${esc(String(service.latency_ms))}ms` : ''}</span></div>`;
-  }).join('') : '<div class="muted">No registered services yet.</div>';
-  const links = (_toolCache || []).filter(tool => tool.favorite || tool.pinned || isHomeTool(tool)).slice(0, 8);
-  linksEl.innerHTML = links.length ? links.map(tool => `<a class="home-quick-link" href="${esc(tool.link || '#')}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')">${toolIconMarkup(tool, 'home-quick-icon')}<span>${esc(tool.name || 'Tool')}</span></a>`).join('') : '<div class="muted">Pin tools to build quick links.</div>';
-}
-
-async function loadHomeLabOverview() {
-  const requestId = ++_homeLabOverviewRequest;
-  const el = document.getElementById('home-lab-overview');
-  if (el) el.innerHTML = '<div class="home-overview-card"><strong>Checking Home Lab</strong><span class="muted">Running lightweight reachability probes for local services.</span></div>';
-  try {
-    const data = await fetch(`${API}/tools/home-lab/overview`).then(r=>r.json());
-    if (requestId !== _homeLabOverviewRequest) return;
-    const overrides = new Map((data.services || []).map(item => [item.id, item]));
-    _toolCache = _toolCache.map(tool => overrides.has(tool.id) ? { ...tool, ...overrides.get(tool.id) } : tool);
-    renderHomeLabOverview(data);
-    renderHomeDashboard(data);
-    renderToolSections(_toolCache);
-  } catch (e) {
-    if (requestId !== _homeLabOverviewRequest) return;
-    renderHomeLabOverview(null, e.message || 'Unknown error');
-    renderHomeDashboard(null);
-  }
+  if (!linksEl) return;
+  const homeTools = (_toolCache || []).filter(isHomeTool).sort((a,b) => (Number(Boolean(b.pinned)) - Number(Boolean(a.pinned))) || (Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))) || String(a.name || '').localeCompare(String(b.name || '')));
+  linksEl.innerHTML = homeTools.length ? homeTools.map(tool => {
+    const group = normalizeToolCategory(tool.group || tool.service_kind || tool.category || 'Service');
+    const href = String(tool.link || '').trim();
+    const safeHref = /^https?:\/\//i.test(href) ? href : '#';
+    return `<a class="home-quick-link" href="${esc(safeHref)}" target="_blank" rel="noopener" title="Open ${esc(tool.name || 'service')}" onclick="markToolUsed('${esc(tool.id)}')">${homeDashboardIconMarkup(tool)}<span class="home-quick-copy"><strong>${esc(tool.name || 'Service')}</strong><small>${esc(group)}</small></span></a>`;
+  }).join('') : '<div class="home-dashboard-empty">No Home Lab services in your tool catalog yet. Add services from Manage Tools.</div>';
 }
 
 let _homelabCommandData = null;
@@ -2869,7 +2856,7 @@ function renderToolSections(tools) {
   renderHomeGroupTabs(tools);
 
   const favorites = tools
-    .filter(t => t.favorite || t.pinned)
+    .filter(t => (t.favorite || t.pinned) && !isHomeTool(t))
     .sort((a,b) => (Number(b.pinned) - Number(a.pinned)) || (Number(b.favorite) - Number(a.favorite)) || ((b.usage_count||0) - (a.usage_count||0)) || String(b.last_used||'').localeCompare(String(a.last_used||'')));
   secQuick.hidden = favorites.length === 0;
   if (favorites.length) renderToolGrid(elQuick, favorites, 'quick', 'No favorites yet.');
@@ -2961,12 +2948,10 @@ async function loadTools() {
 
   try {
     _toolCache = await fetch(`${API}/tools?${params}`).then(r=>r.json());
-    renderHomeDashboard({ services: [] });
     renderToolSections(_toolCache);
     if (_toolCache.some(t => isAiTool(t) && !isHomeTool(t))) loadAiRadar();
     else { _aiFeedCache = []; renderAiOverview(_toolCache); renderAiRail(_toolCache); }
-    if (_toolCache.some(isHomeTool)) loadHomeLabOverview();
-    else renderHomeLabOverview({ services: [] });
+    renderHomeDashboard();
   } catch(e) {
     document.getElementById('tools-ai').innerHTML = `<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
     document.getElementById('tools-home').innerHTML = '';
@@ -2993,7 +2978,6 @@ function buildToolCard(t, variant='default') {
   const sublineParts = [t.provider, variant === 'home' ? group : category].filter(Boolean);
   const mainMeta = [];
   if (variant === 'home' && hostPort) mainMeta.push(`<span class="pill">${esc(hostPort)}</span>`);
-  if (variant === 'home' && t.latency_ms !== null && t.latency_ms !== undefined) mainMeta.push(`<span class="pill">live ${esc(String(t.latency_ms))}ms</span>`);
   if (variant === 'quick' && hostPort) mainMeta.push(`<span class="pill">${esc(hostPort)}</span>`);
   if (!mainMeta.length && variant === 'default' && t.local_or_cloud) mainMeta.push(`<span class="pill">${esc(t.local_or_cloud)}</span>`);
   const detailTags = (t.tags || []).slice(0, 8).map(tag => `<span class="pill">${esc(tag)}</span>`).join('');
@@ -3001,7 +2985,7 @@ function buildToolCard(t, variant='default') {
   d.innerHTML = `
     <div class="tool-card-top">
       <div class="tool-head">
-        <span class="tool-status-dot ${esc(status)}" title="${esc(status)}"></span>
+        ${variant === 'home' ? '' : `<span class="tool-status-dot ${esc(status)}" title="${esc(status)}"></span>`}
         ${toolIconMarkup(t)}
         <strong>${esc(t.name)}</strong>
       </div>
@@ -3018,7 +3002,7 @@ function buildToolCard(t, variant='default') {
       <summary><span>Details</span><span>${hiddenLinks.length ? `+${hiddenLinks.length} links` : 'more info'}</span></summary>
       <div class="tool-detail-body">
         <div class="tool-detail-grid">
-          <div class="small-row"><span>Status</span><strong>${esc(status)}</strong></div>
+          ${variant === 'home' ? '' : `<div class="small-row"><span>Status</span><strong>${esc(status)}</strong></div>`}
           <div class="small-row"><span>Host</span><strong>${esc(hostPort || 'n/a')}</strong></div>
           <div class="small-row"><span>Surface</span><strong>${esc(t.local_or_cloud || 'unknown')}</strong></div>
           <div class="small-row"><span>Auth</span><strong>${esc(t.auth_type || 'n/a')}</strong></div>
@@ -3029,7 +3013,7 @@ function buildToolCard(t, variant='default') {
           ${aiTaskText ? `<div class="small-row"><span>AI tasks</span><strong>${esc(aiTaskText)}</strong></div>` : ''}
           ${getToolShortHint(t) ? `<div class="small-row"><span>Hint</span><strong>${esc(getToolShortHint(t))}</strong></div>` : ''}
           ${t.last_used ? `<div class="small-row"><span>Last used</span><strong>${esc(relTime(t.last_used))}</strong></div>` : ''}
-          ${t.status_checked_at ? `<div class="small-row"><span>Status checked</span><strong>${esc(relTime(t.status_checked_at))}</strong></div>` : ''}
+          ${variant !== 'home' && t.status_checked_at ? `<div class="small-row"><span>Status checked</span><strong>${esc(relTime(t.status_checked_at))}</strong></div>` : ''}
         </div>
         ${detailTags ? `<div class="tool-main-meta">${detailTags}</div>` : ''}
         ${hiddenLinks.length ? `<div class="tool-open-row">${hiddenLinks.map(link => `<a class="tool-link-chip" href="${esc(link.url)}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(t.id)}')">${esc(link.label)}</a>`).join('')}</div>` : ''}

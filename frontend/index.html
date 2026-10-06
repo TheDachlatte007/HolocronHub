@@ -10,6 +10,14 @@
     body[data-hub="f1"]{--hh-accent:#38bdf8;--hh-accent-strong:#0ea5e9}
     body[data-hub="warframe"]{--hh-accent:#67e8f9;--hh-accent-strong:#0891b2;--hh-warn:#fbbf24}
     body[data-hub="homelab"]{--hh-accent:#67e8f9;--hh-accent-strong:#2563eb}
+    .app-shell-header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;position:relative}
+    .holocron-brand{margin:0;display:flex;align-items:baseline;gap:8px;font-size:1.4rem;letter-spacing:-.02em}
+    .shell-context{font-size:11px;color:var(--hh-accent);letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+    .shell-controls{display:flex;align-items:center;gap:8px}
+    .shell-nav-toggle{width:34px;height:34px;padding:0;border-radius:10px;color:var(--hh-accent);border-color:var(--hh-border);background:rgba(11,18,32,.82);font-size:16px;line-height:1}
+    .shell-nav-toggle:hover{border-color:var(--hh-accent);background:rgba(17,31,56,.95)}
+    .nav-collapsed .nav{display:none}
+    .nav-collapsed .app-shell-header{margin-bottom:20px}
     *{box-sizing:border-box}
     body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 12% -8%,rgba(37,99,235,.22),transparent 34%),radial-gradient(circle at 92% 8%,rgba(14,165,233,.12),transparent 28%),var(--hh-bg);color:var(--hh-text);margin:0;background-attachment:fixed}
     .wrap{max-width:1280px;margin:0 auto;padding:20px}
@@ -617,7 +625,12 @@
 </head>
 <body data-hub="tools">
 <div class="wrap holocron-shell">
-  <h1 class="holocron-brand">HolocronHub <span style="font-size:12px;color:#64748b;font-weight:normal;">(AI & Home Network)</span></h1>
+  <div class="app-shell-header">
+    <h1 class="holocron-brand">HolocronHub <span id="shell-context" class="shell-context">Tool Hub</span></h1>
+    <div class="shell-controls">
+      <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" title="Toggle navigation">NAV</button>
+    </div>
+  </div>
 
   <div class="nav" style="align-items:center">
     <button class="nav-tab active" onclick="showTab('tools',this)">Tool Hub</button>
@@ -1668,8 +1681,31 @@ function markAllRead(scope) {
 // ══ tab nav ═══════════════════════════════════════════════════
 
 const tabLoaded = {};
+const HUB_CONTEXT_LABELS = {
+  tools: 'Tool Hub', homelab: 'Homelab', feed: 'Feed', digest: 'Morning Digest',
+  tldr: 'TLDR', markets: 'Markets', f1: 'F1', warframe: 'Warframe',
+  saved: 'Saved', sources: 'Sources', settings: 'Settings',
+};
+
+function setGlobalNavCollapsed(collapsed) {
+  document.body.classList.toggle('nav-collapsed', collapsed === true);
+  const toggle = document.getElementById('shell-nav-toggle');
+  if (toggle) {
+    toggle.textContent = collapsed ? 'OPEN' : 'NAV';
+    toggle.title = collapsed ? 'Show navigation' : 'Hide navigation';
+    toggle.setAttribute('aria-label', toggle.title);
+  }
+}
+
+function toggleGlobalNav() {
+  setGlobalNavCollapsed(!document.body.classList.contains('nav-collapsed'));
+}
+
 function showTab(name, btn) {
   document.body.dataset.hub = name;
+  const context = document.getElementById('shell-context');
+  if (context) context.textContent = HUB_CONTEXT_LABELS[name] || name;
+  setGlobalNavCollapsed(!['tools', 'homelab'].includes(name));
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
   if (name !== 'f1') { clearF1SessionPolling(); clearF1ClockTicker(); }

@@ -562,6 +562,21 @@
     body[data-hub="f1"] .stat-card{border-color:rgba(56,189,248,.16)}
     body[data-hub="f1"] .f1-hero{border-color:rgba(56,189,248,.45);box-shadow:0 14px 35px rgba(2,132,199,.14)}
     body[data-hub="f1"] .f1-history-panel{border-color:rgba(56,189,248,.24)}
+    .wf-shell-card{background:linear-gradient(150deg,#18263c 0%,#142137 48%,#101b2e 100%);border-color:#2e4664;border-radius:12px;box-shadow:0 20px 55px rgba(2,6,23,.22)}
+    .wf-shell-card>h2{font-size:11px;letter-spacing:.14em;color:#8293ac;margin-bottom:9px}
+    body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
+    body[data-hub="warframe"] .hub-subnav{margin-top:12px}
+    body[data-hub="warframe"] .hub-subnav button{background:#16243a;border-color:#334a68;color:#b9c8db;padding:6px 12px}
+    body[data-hub="warframe"] .hub-subnav button.active{background:#2563eb;border-color:#3b82f6;color:#fff;box-shadow:0 4px 12px rgba(37,99,235,.2)}
+    body[data-hub="warframe"] .wf-farm-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:15px}
+    body[data-hub="warframe"] .wf-reco-card{background:linear-gradient(145deg,#101b2d,#0c1627);border-color:#334863;border-radius:11px;padding:12px;gap:8px;box-shadow:inset 0 1px rgba(148,163,184,.04)}
+    body[data-hub="warframe"] .wf-reco-card strong{font-size:15px;color:#f1f5f9}
+    body[data-hub="warframe"] .wf-meta-chip{background:#111c2e;border-color:#30425b;color:#c4d0df}
+    body[data-hub="warframe"] .wf-section-title{color:#9aabc1;letter-spacing:.12em}
+    body[data-hub="warframe"] .tool-minor{color:#8495ad}
+    body[data-hub="warframe"] .wf-market-hero,.wf-hot-panel{box-shadow:0 14px 30px rgba(2,6,23,.18)}
+    @media (max-width:1100px){body[data-hub="warframe"] .wf-farm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:640px){body[data-hub="warframe"] .wf-farm-grid{grid-template-columns:1fr}}
     .wf-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
     .wf-frame-card{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
@@ -1099,7 +1114,7 @@
 
   <!-- WARFRAME -->
   <div id="tab-warframe" style="display:none">
-    <div class="card">
+    <div class="card wf-shell-card">
       <h2>Warframe Hub</h2>
       <div class="row">
         <input id="wf-item" placeholder="Item, e.g. arcane energize" style="flex:1;min-width:220px" />

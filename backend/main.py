@@ -25,6 +25,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 try:
@@ -128,6 +129,7 @@ TLDR_DB_LEGACY_FILE = BASE_DIR / "data" / "tldr.db"
 TLDR_IMAP_CONFIG_FILE = BASE_DIR / "data" / "tldr_imap_config.json"
 HOMELAB_PROVIDER_CACHE_FILE = BASE_DIR / "data" / "homelab_provider_cache.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
+FRONTEND_ASSETS = BASE_DIR / "frontend" / "assets"
 
 _BACKUP_DATA_FILES = (
     "tools.json",
@@ -214,6 +216,7 @@ class F1SecondaryIngestPayload(BaseModel):
 # ── app + state ───────────────────────────────────────────────────────────────
 
 app = FastAPI(title="HolocronHub API", version="0.2.0")
+app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS), name="assets")
 
 _ingest_state: dict = {"running": False, "last_result": None, "started_at": None}
 _warframe_market_history_lock = Lock()

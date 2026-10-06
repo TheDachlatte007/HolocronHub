@@ -29,6 +29,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 try:
+    from .learning_api import create_learning_router
+    from .learning_store import init_learning_db, sync_seed_cards
+except ImportError:
+    from learning_api import create_learning_router
+    from learning_store import init_learning_db, sync_seed_cards
+
+try:
     from .homelab_providers import collect_provider_snapshots, overall_provider_status
 except ImportError:
     from homelab_providers import collect_provider_snapshots, overall_provider_status
@@ -137,6 +144,8 @@ F1_HISTORY_DB_FILE = BASE_DIR / "data" / "f1_history.db"
 MARKETS_HISTORY_DB_FILE = BASE_DIR / "data" / "markets_history.db"
 TLDR_DB_FILE = BASE_DIR / "data" / "tldr_issues.db"
 TLDR_DB_LEGACY_FILE = BASE_DIR / "data" / "tldr.db"
+LEARNING_DB_FILE = BASE_DIR / "data" / "learning.db"
+LEARNING_SEED_FILE = BASE_DIR / "backend" / "learning.seed.json"
 TLDR_IMAP_CONFIG_FILE = BASE_DIR / "data" / "tldr_imap_config.json"
 HOMELAB_PROVIDER_CACHE_FILE = BASE_DIR / "data" / "homelab_provider_cache.json"
 FRONTEND_INDEX = BASE_DIR / "frontend" / "index.html"
@@ -164,6 +173,7 @@ _BACKUP_DATABASE_FILES = (
     "warframe_cache.db",
     "f1_history.db",
     "markets_history.db",
+    "learning.db",
 )
 
 
@@ -228,6 +238,7 @@ class F1SecondaryIngestPayload(BaseModel):
 # ── app + state ───────────────────────────────────────────────────────────────
 
 app = FastAPI(title="HolocronHub API", version="0.2.0")
+app.include_router(create_learning_router(LEARNING_DB_FILE, LEARNING_SEED_FILE))
 app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS), name="assets")
 
 _ingest_state: dict = {"running": False, "last_result": None, "started_at": None}
@@ -6573,6 +6584,8 @@ def _prewarm_provider_caches() -> None:
 
 @app.on_event("startup")
 def _startup() -> None:
+    init_learning_db(LEARNING_DB_FILE)
+    sync_seed_cards(LEARNING_DB_FILE, LEARNING_SEED_FILE)
     ensure_f1_history_db(F1_HISTORY_DB_FILE)
     ensure_market_history_db(MARKETS_HISTORY_DB_FILE)
     history_db_exists = WARFRAME_MARKET_HISTORY_DB_FILE.exists()

@@ -14,13 +14,13 @@
     .holocron-brand{margin:0;display:flex;align-items:baseline;gap:8px;font-size:1.4rem;letter-spacing:-.02em}
     .shell-context{font-size:11px;color:var(--hh-accent);letter-spacing:.14em;text-transform:uppercase;font-weight:700}
     .shell-controls{display:flex;align-items:center;gap:8px}
-    .shell-back{display:grid;place-items:center;width:31px;height:31px;padding:0;border-radius:50%;border-color:#29405f;background:#0b1627;color:#b6c8dc}.shell-back svg{width:16px;height:16px}
+    .shell-back{display:grid;place-items:center;width:36px;height:36px;padding:0;border-radius:11px;border:1px solid rgba(71,105,139,.55);background:linear-gradient(145deg,rgba(18,35,56,.96),rgba(8,18,32,.96));color:#b8d7e9;box-shadow:inset 0 1px rgba(255,255,255,.06),0 5px 14px rgba(0,0,0,.16);transition:transform .18s ease,border-color .18s ease,color .18s ease}.shell-back svg{width:18px;height:18px;stroke-width:1.9}.shell-back:hover{transform:translateY(-1px);border-color:#38bdf8;color:#e7fbff}
     .shell-clock{font-size:11px;color:#94a3b8;letter-spacing:.04em;white-space:nowrap}
     .shell-topnav{display:none;align-items:center;gap:5px;margin-left:auto;margin-right:16px}
     .shell-top-tab{padding:8px 13px;border:1px solid transparent;border-radius:8px;background:transparent;color:#91a4bd;font-size:12px;cursor:pointer}
     .shell-top-tab:hover,.shell-top-tab.active{color:#ecfeff;background:rgba(8,145,178,.14);border-color:rgba(34,211,238,.28)}
-    .shell-utility{width:31px;height:31px;padding:0;border-radius:50%;border-color:#29405f;background:#0b1627;color:#b6c8dc;display:grid;place-items:center}
-    .shell-utility svg{width:16px;height:16px}
+    .shell-utility{width:36px;height:36px;padding:0;border-radius:11px;border:1px solid rgba(71,105,139,.55);background:linear-gradient(145deg,rgba(18,35,56,.96),rgba(8,18,32,.96));color:#b8d7e9;display:grid;place-items:center;box-shadow:inset 0 1px rgba(255,255,255,.06),0 5px 14px rgba(0,0,0,.16);transition:transform .18s ease,border-color .18s ease,color .18s ease}
+    .shell-utility svg{width:18px;height:18px;stroke-width:1.8}.shell-utility:hover{transform:translateY(-1px);border-color:#38bdf8;color:#e7fbff}
     .shell-search{display:none;align-items:center;gap:9px;width:min(430px,34vw);height:38px;margin-left:auto;margin-right:18px;padding:0 13px;border:1px solid #29405f;border-radius:10px;background:#091525;color:#8ea0b7;font:inherit;font-size:12px;text-align:left;cursor:pointer}
     .shell-search svg{width:15px;height:15px;color:#67e8f9;flex:0 0 auto}.shell-search kbd{margin-left:auto;border:1px solid #35506f;border-radius:5px;padding:2px 5px;color:#b7cadf;font-size:10px}
     .mobile-search-trigger{display:none;width:34px;height:34px;padding:0;border-radius:10px;color:#67e8f9;border-color:#29405f;background:#091525}.mobile-search-trigger svg{width:16px;height:16px}
@@ -124,7 +124,7 @@
     .tool-card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
     .tool-head{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
     .tool-head strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .tool-icon{width:20px;height:20px;border-radius:4px;object-fit:cover;background:#0f172a;border:1px solid #334155}
+    .tool-icon-wrap{position:relative;display:grid;place-items:center;width:25px;height:25px;flex:0 0 auto;border:1px solid rgba(83,122,157,.45);border-radius:8px;background:#091525;color:#d8f5ff}.tool-icon{width:18px;height:18px;object-fit:contain}.tool-icon-fallback{font-size:9px;font-weight:750}.tool-icon-wrap [hidden]{display:none!important}
     .tool-badge-row{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
     .tool-status-dot{width:9px;height:9px;border-radius:999px;background:#475569;flex:0 0 auto;margin-top:5px;box-shadow:0 0 0 2px rgba(15,23,42,.9)}
     .tool-status-dot.online{background:#22c55e}
@@ -629,9 +629,10 @@
     .home-dashboard-service:last-child{border-bottom:0}
     .home-dashboard-service span:first-child{display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .home-quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-    .home-quick-link{display:flex;flex-direction:column;gap:7px;align-items:center;justify-content:center;min-height:70px;border:1px solid #263b56;border-radius:9px;background:#101c2e;color:#dbeafe;font-size:11px;text-align:center;text-decoration:none}
-    .home-quick-link:hover{border-color:#38bdf8;background:#142a43;text-decoration:none}
-    .home-quick-icon{width:20px;height:20px;object-fit:contain;border-radius:5px;border:1px solid #29405f;background:#091525;padding:2px}
+    .home-quick-link{display:flex;flex-direction:column;gap:9px;align-items:center;justify-content:center;min-height:88px;border:1px solid #263b56;border-radius:12px;background:linear-gradient(145deg,#101c2e,#0b1524);color:#dbeafe;font-size:11px;text-align:center;text-decoration:none;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
+    .home-quick-link:hover{transform:translateY(-2px);border-color:#38bdf8;background:linear-gradient(145deg,#142a43,#0c1a2a);box-shadow:0 9px 20px rgba(0,0,0,.22);text-decoration:none}
+    .home-quick-icon-wrap{position:relative;display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(83,122,157,.45);border-radius:11px;background:radial-gradient(circle at 30% 20%,rgba(56,189,248,.15),transparent 68%),#091525;color:#d8f5ff;box-shadow:inset 0 1px rgba(255,255,255,.06)}
+    .home-quick-icon{width:24px;height:24px;object-fit:contain}.home-quick-icon-fallback{font-size:11px;font-weight:750;letter-spacing:.02em}.home-quick-icon-wrap [hidden]{display:none!important}
     .home-gauge-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
     .home-gauge{display:flex;flex-direction:column;align-items:center;gap:7px;color:#8ea0b7;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
     .home-gauge-ring{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#38bdf8 0 28%,#1c2b3d 28% 100%);position:relative}
@@ -657,6 +658,9 @@
     .wf-market-identity{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-bottom:12px;border-bottom:1px solid rgba(71,95,124,.46)}
     .wf-market-item{display:flex;align-items:center;gap:12px;min-width:0}
     .wf-market-art{width:70px;height:70px;object-fit:contain;border-radius:9px;background:#08111f;border:1px solid #334863;padding:5px;flex:0 0 auto}
+    .wf-market-art-wrap{position:relative;display:grid;place-items:center;width:70px;height:70px;flex:0 0 auto;border:1px solid #334863;border-radius:10px;background:radial-gradient(circle at 35% 25%,rgba(34,211,238,.18),transparent 65%),#08111f;overflow:hidden}.wf-market-art-wrap .wf-market-art{width:100%;height:100%;padding:6px;border:0;border-radius:9px;background:transparent}.wf-item-art-fallback{display:grid;place-items:center;color:#a5f3fc;font-weight:800;font-size:12px;letter-spacing:.04em}.wf-market-art-wrap .wf-item-art-fallback{position:absolute;inset:0}
+    .wf-item-heading{display:flex;align-items:center;gap:9px;min-width:0;flex:1}.wf-item-heading strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wf-market-thumb-wrap{position:relative;display:grid;place-items:center;width:42px;height:42px;flex:0 0 auto;border:1px solid rgba(71,215,239,.28);border-radius:10px;background:radial-gradient(circle at 35% 25%,rgba(34,211,238,.17),transparent 68%),#08111f;overflow:hidden}.wf-market-thumb{width:100%;height:100%;padding:4px;object-fit:contain}.wf-market-thumb-wrap .wf-item-art-fallback{position:absolute;inset:0}.wf-item-art-fallback[hidden]{display:none!important}
     .wf-market-name{font-size:20px;font-weight:750;color:#f8fafc;letter-spacing:-.02em;line-height:1.05}
     .wf-market-sub{font-size:11px;color:#94a3b8;margin-top:5px}
     .wf-market-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
@@ -687,6 +691,11 @@
     .wf-detail-stat span{font-size:10px;color:#91a4bd}.wf-detail-stat strong{font-size:17px;color:#f8fafc}
     .wf-detail-chart-head{display:flex;justify-content:space-between;align-items:center;margin-top:13px;margin-bottom:5px;font-size:12px;color:#dbeafe}
     .wf-detail-chart .chart-wrap{min-height:180px}
+    .wf-detail-chart .wf-price-history,#wf-market-chart .wf-price-history{height:clamp(130px,16vw,210px)}
+    .wf-hot-panel .wf-price-history{height:88px}
+    .sparkline.wf-price-history .sparkline-point{opacity:.62;filter:drop-shadow(0 0 3px currentColor)}
+    .sparkline.wf-price-history:hover .sparkline-point{opacity:1}
+    .sparkline.wf-price-history .sparkline-hit{cursor:crosshair}
     .wf-context-sidebar{display:flex;flex-direction:column;gap:10px}
     .wf-context-card{background:linear-gradient(145deg,#0d1b2d,#0a1423);border:1px solid #2b4562;border-radius:11px;padding:11px}
     .wf-context-card h3{margin:0 0 9px;font-size:11px;color:#c8d9ed;letter-spacing:.1em;text-transform:uppercase}
@@ -833,6 +842,7 @@
     .wf-tracking-options{margin:8px 0 10px;border:1px solid rgba(44,67,91,.8);border-radius:9px;background:rgba(5,13,23,.42)}.wf-tracking-options summary{padding:9px 12px;color:#a9bdce;font-size:12px;cursor:pointer}.wf-tracking-options .row{padding:0 10px 10px}
     .wf-detail-art{width:92px;height:104px;object-fit:contain;border:1px solid #31516a;border-radius:10px;background:linear-gradient(145deg,#10243a,#08111e)}
     .wf-detail-art-fallback{display:grid;place-items:center;width:92px;height:104px;border:1px solid #31516a;border-radius:10px;background:radial-gradient(circle,#123249,#08111e 70%);color:#52d9ed}
+    .wf-detail-art-fallback[hidden]{display:none}
     .wf-detail-art-fallback svg{width:44px;height:44px}
     @media(max-width:900px){.wrap{padding:10px 12px 24px}.holocron-shell{display:block}.holocron-shell>.nav{display:none!important}.holocron-content{grid-column:auto}.wf-page-hero{min-height:230px}}
     @media(max-width:640px){.wf-page-hero{align-items:flex-start;flex-direction:column;justify-content:flex-end;min-height:235px;padding:20px}.wf-page-hero-status{align-self:flex-start}.app-shell-header{padding-bottom:7px}.holocron-brand{font-size:1.05rem}.f1-hero-meta .pill{max-width:100%}}
@@ -853,9 +863,9 @@
     </nav>
     <div class="shell-controls">
       <span id="shell-clock" class="shell-clock"></span>
-      <button class="shell-back" onclick="goBackInHub()" title="Back" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button class="shell-utility" onclick="showTab('settings')" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm9 3.5-2-.7a7.3 7.3 0 0 0-.7-1.7l.9-1.9-1.9-1.9-1.9.9a7.3 7.3 0 0 0-1.7-.7L13 4h-2l-.7 2a7.3 7.3 0 0 0-1.7.7l-1.9-.9-1.9 1.9.9 1.9a7.3 7.3 0 0 0-.7 1.7L3 12v2l2 .7c.2.6.4 1.2.7 1.7l-.9 1.9 1.9 1.9 1.9-.9c.5.3 1.1.5 1.7.7l.7 2h2l.7-2c.6-.2 1.2-.4 1.7-.7l1.9.9 1.9-1.9-.9-1.9c.3-.5.5-1.1.7-1.7l2-.7v-2Z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
-      <button class="shell-utility" title="Display options" aria-label="Display options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" stroke="currentColor" stroke-width="1.3"/></svg></button>
+      <button class="shell-back" onclick="goBackInHub()" title="Back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+      <button class="shell-utility" onclick="showTab('settings')" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.99l.06.06-1.8 1.8-.06-.06a1.8 1.8 0 0 0-1.99-.36 1.8 1.8 0 0 0-1.09 1.65V20.2h-2.56v-.12a1.8 1.8 0 0 0-1.09-1.65 1.8 1.8 0 0 0-1.99.36l-.06.06-1.8-1.8.06-.06A1.8 1.8 0 0 0 7.8 15a1.8 1.8 0 0 0-1.65-1.09h-.12v-2.56h.12A1.8 1.8 0 0 0 7.8 10.26a1.8 1.8 0 0 0-.36-1.99l-.06-.06 1.8-1.8.06.06a1.8 1.8 0 0 0 1.99.36 1.8 1.8 0 0 0 1.09-1.65v-.12h2.56v.12a1.8 1.8 0 0 0 1.09 1.65 1.8 1.8 0 0 0 1.99-.36l.06-.06 1.8 1.8-.06.06a1.8 1.8 0 0 0-.36 1.99 1.8 1.8 0 0 0 1.65 1.09h.12v2.56h-.12A1.8 1.8 0 0 0 19.4 15Z"/></svg></button>
+      <button class="shell-utility" title="Display options" aria-label="Display options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></button>
       <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" title="Toggle navigation"><span class="nav-glyph" aria-hidden="true"></span></button>
     </div>
   </div>
@@ -1943,15 +1953,48 @@ function isPrivateHost(host) {
   return false;
 }
 
-function deriveToolIcon(link) {
+const TOOL_BRAND_ICONS = {
+  'claude.ai': 'anthropic', 'gemini.google.com': 'googlegemini',
+  'perplexity.ai': 'perplexity', 'cursor.com': 'cursor',
+  'replicate.com': 'replicate', 'elevenlabs.io': 'elevenlabs',
+  'huggingface.co': 'huggingface', 'ollama.com': 'ollama', 'homeassistant.io': 'homeassistant',
+  'jellyfin.org': 'jellyfin', 'portainer.io': 'portainer', 'truenas.com': 'truenas',
+  'proxmox.com': 'proxmox', 'grafana.com': 'grafana', 'uptime.kuma': 'uptimekuma',
+  'pi.hole': 'pihole'
+};
+
+function toolBrandSlug(tool, hostname = '') {
+  const name = String(tool?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const host = String(hostname || '').toLowerCase().replace(/^www\./, '');
+  const hostKey = Object.keys(TOOL_BRAND_ICONS).find(domain => host === domain || host.endsWith(`.${domain}`));
+  if (hostKey) return TOOL_BRAND_ICONS[hostKey];
+  const nameSlugs = {
+    'claude': 'anthropic', 'gemini': 'googlegemini', 'perplexity': 'perplexity',
+    'cursor': 'cursor', 'replicate': 'replicate', 'elevenlabs': 'elevenlabs', 'huggingface': 'huggingface',
+    'ollama': 'ollama', 'pihole': 'pihole', 'homeassistant': 'homeassistant', 'jellyfin': 'jellyfin',
+    'portainer': 'portainer', 'truenas': 'truenas', 'proxmox': 'proxmox', 'grafana': 'grafana',
+    'uptimekuma': 'uptimekuma', 'lmstudio': 'lmstudio'
+  };
+  return nameSlugs[name] || '';
+}
+
+function deriveToolIcon(link, tool = null) {
   try {
     const u = new URL(link);
     if (!/^https?:$/.test(u.protocol)) return '';
+    const brand = toolBrandSlug(tool, u.hostname);
+    if (brand) return `https://cdn.simpleicons.org/${brand}/d8f5ff`;
     if (isPrivateHost(u.hostname)) return '';
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(u.hostname)}&sz=64`;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(u.hostname)}&sz=128`;
   } catch {
     return '';
   }
+}
+
+function toolIconMarkup(tool, className = 'tool-icon') {
+  const src = tool?.icon_url || deriveToolIcon(tool?.link, tool);
+  const initials = String(tool?.name || 'H').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+  return `<span class="${className}-wrap">${src ? `<img class="${className}" src="${esc(src)}" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"/>` : ''}<span class="${className}-fallback" ${src ? 'hidden' : ''} aria-hidden="true">${esc(initials || 'H')}</span></span>`;
 }
 
 function normalizeToolCategory(cat) {
@@ -2593,7 +2636,7 @@ function renderHomeDashboard(data) {
     return `<div class="home-dashboard-service"><span><span class="homelab-status-dot ${serviceStatus}"></span>${esc(service.name || service.id || 'Service')}</span><span class="muted">${esc(homelabStatusLabel(service.status))}${service.latency_ms != null ? ` ${esc(String(service.latency_ms))}ms` : ''}</span></div>`;
   }).join('') : '<div class="muted">No registered services yet.</div>';
   const links = (_toolCache || []).filter(tool => tool.favorite || tool.pinned || isHomeTool(tool)).slice(0, 8);
-  linksEl.innerHTML = links.length ? links.map(tool => `<a class="home-quick-link" href="${esc(tool.link || '#')}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')"><img class="home-quick-icon" src="${esc(tool.icon_url || deriveToolIcon(tool.link))}" alt="" loading="lazy" onerror="this.style.display='none'" /><span>${esc(tool.name || 'Tool')}</span></a>`).join('') : '<div class="muted">Pin tools to build quick links.</div>';
+  linksEl.innerHTML = links.length ? links.map(tool => `<a class="home-quick-link" href="${esc(tool.link || '#')}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')">${toolIconMarkup(tool, 'home-quick-icon')}<span>${esc(tool.name || 'Tool')}</span></a>`).join('') : '<div class="muted">Pin tools to build quick links.</div>';
 }
 
 async function loadHomeLabOverview() {
@@ -2844,7 +2887,6 @@ function buildToolCard(t, variant='default') {
   d.className = `tool-card tool-card-${variant}`;
   d.dataset.id = t.id;
   d.dataset.toolAnchor = t.id;
-  const icon = t.icon_url || deriveToolIcon(t.link);
   const category = normalizeToolCategory(t.category);
   const group = normalizeToolGroup(t.group);
   const summary = (t.notes || '').trim() || `${category} tool`;
@@ -2868,7 +2910,7 @@ function buildToolCard(t, variant='default') {
     <div class="tool-card-top">
       <div class="tool-head">
         <span class="tool-status-dot ${esc(status)}" title="${esc(status)}"></span>
-        ${icon ? `<img class="tool-icon" src="${esc(icon)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ''}
+        ${toolIconMarkup(t)}
         <strong>${esc(t.name)}</strong>
       </div>
       <div class="tool-badge-row">${badges.join('')}</div>
@@ -3677,19 +3719,23 @@ function normalizeSparklinePoints(points) {
 }
 
 // Builds a sparkline SVG. isUp = forces color (null = derive from data).
-function buildSparklineSvg(points, cls = '', isUp = null) {
+let _wfSparklineSequence = 0;
+
+function buildSparklineSvg(points, cls = '', isUp = null, theme = 'default') {
   const normalized = normalizeSparklinePoints(points);
   const vals = normalized.map(p => p.value);
   if (vals.length < 2) return '<div class="muted" style="font-size:11px;padding:4px 0">No chart data</div>';
 
   const w = 260; const h = 56;
+  const neon = theme === 'warframe';
   const min = Math.min(...vals); const max = Math.max(...vals);
   const span = max - min || 1;
   // determine color
   const trend = vals[vals.length - 1] - vals[0];
   const up = isUp !== null ? isUp : trend >= 0;
-  const lineColor = up ? '#4ade80' : '#f87171';
+  const lineColor = neon ? (up ? '#55f7d4' : '#ff67d2') : (up ? '#4ade80' : '#f87171');
   const fillColor = up ? 'rgba(74,222,128,.12)' : 'rgba(248,113,113,.12)';
+  const gradientId = neon ? `wf-price-fill-${++_wfSparklineSequence}` : '';
 
   const coords = vals.map((v, i) => {
     const x = (i / (vals.length - 1)) * w;
@@ -3701,15 +3747,22 @@ function buildSparklineSvg(points, cls = '', isUp = null) {
   const fill = `0,${h} ${line} ${w},${h}`;
   const dots = coords.map(([x, y], idx) => {
     const label = normalized[idx]?.label || `Point ${idx + 1}`;
+    const dotStyle = neon
+      ? `fill:#eafffb;stroke:${lineColor};stroke-width:1.5;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 2px ${lineColor})`
+      : `fill:#f8fafc;stroke:${lineColor};stroke-width:1.5`;
     return `<g>
       <circle class="sparkline-hit" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="9" onmouseenter='showSparklineTooltip(event, ${JSON.stringify(label)})' onmousemove='showSparklineTooltip(event, ${JSON.stringify(label)})' onmouseleave="hideSparklineTooltip()"></circle>
-      <circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.8" style="fill:#f8fafc;stroke:${lineColor};stroke-width:1.5"><title>${esc(label)}</title></circle>
+      <circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.4" style="${dotStyle}"><title>${esc(label)}</title></circle>
     </g>`;
   }).join('');
 
+  const neonGrid = neon ? `<g class="wf-chart-grid" stroke="rgba(103,232,249,.13)" stroke-width=".7"><path vector-effect="non-scaling-stroke" d="M0 14H${w}M0 28H${w}M0 42H${w}M65 0V${h}M130 0V${h}M195 0V${h}"/></g><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${lineColor}" stop-opacity=".3"/><stop offset="100%" stop-color="${lineColor}" stop-opacity=".015"/></linearGradient></defs>` : '';
+  const fillStyle = neon ? `url(#${gradientId})` : fillColor;
+  const lineStyle = neon ? `stroke:${lineColor};stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px ${lineColor})` : `stroke:${lineColor};stroke-width:2;fill:none`;
   return `<svg class="sparkline ${esc(cls)}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="overflow:visible">
-    <polygon class="sparkline-fill" points="${fill}" style="fill:${fillColor}" />
-    <polyline class="sparkline-line" points="${line}" style="stroke:${lineColor};stroke-width:2;fill:none" />
+    ${neonGrid}
+    <polygon class="sparkline-fill" points="${fill}" style="fill:${fillStyle}" />
+    <polyline class="sparkline-line" points="${line}" style="${lineStyle}" />
     ${dots}
   </svg>`;
 }
@@ -5102,11 +5155,11 @@ function renderF1Hero(weekend) {
   }
 
   const meeting = weekend.meeting || {};
-  const heroImage = weekend.track?.image_url || meeting.circuit_image || '';
+  const meetingIdentity = `${meeting.meeting_name || ''} ${meeting.meeting_official_name || ''} ${meeting.location || ''}`.toLowerCase();
+  const heroImage = meetingIdentity.includes('singapore') ? 'assets/f1-singapore-hero.png' : '';
   const heroLayers = [
-    'linear-gradient(90deg,rgba(3,9,17,.91) 0%,rgba(3,9,17,.64) 40%,rgba(3,9,17,.08) 100%)',
-    heroImage ? `url("${heroImage}")` : '',
-    'url("assets/f1-singapore-hero.png")'
+    'linear-gradient(90deg,rgba(3,9,17,.94) 0%,rgba(3,9,17,.75) 46%,rgba(3,9,17,.35) 100%)',
+    heroImage ? `url("${heroImage}")` : ''
   ].filter(Boolean);
   heroEl.style.backgroundImage = heroLayers.join(',');
   heroEl.style.backgroundSize = 'cover';
@@ -5811,14 +5864,14 @@ function renderWarframeHotItems() {
     card.className = 'market-card';
     card.innerHTML = `
       <div class="diag-head">
-        <strong>#${idx + 1} ${esc(entry.name || 'Unknown Item')}</strong>
+        <div class="wf-item-heading">${warframeItemArtMarkup(entry)}<strong>#${idx + 1} ${esc(entry.name || 'Unknown Item')}</strong></div>
         <span class="rank-pill">${fmtMarketNum(entry.volume_48h || 0,0)} trades</span>
       </div>
       <div class="small-row"><span>Avg Price</span><strong>${entry.last_avg_price != null ? fmtMarketNum(entry.last_avg_price,0) + 'p' : '-'}</strong></div>
       <div class="small-row"><span>Trend</span><span class="market-change ${moveClass}">${Number.isFinite(move) ? `${move >= 0 ? '+' : ''}${fmtMarketNum(move,1)}%` : 'n/a'}</span></div>
       <div class="small-row"><span>Local 24h</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
       <div class="small-row"><span>Rank</span><span class="muted">${entry.selected_rank != null ? `R${esc(entry.selected_rank)}` : esc(entry.rarity || 'base')}</span></div>
-      ${buildSparklineSvg(hist, 'sparkline-muted')}
+      ${buildSparklineSvg(hist, 'wf-price-history', null, 'warframe')}
       <div class="sparkline-label">
         <span>${esc((entry.history_period || '48hours').replace('_', ' '))}</span>
         <a href="https://warframe.market/items/${esc(entry.slug || '')}" target="_blank" rel="noopener">Open</a>
@@ -5847,7 +5900,7 @@ function warframePulseCard(item, mode = 'demand') {
   return `
     <div class="market-card">
       <div class="diag-head">
-        <strong>${esc(item.name || 'Unknown Item')}</strong>
+        <div class="wf-item-heading">${warframeItemArtMarkup(item)}<strong>${esc(item.name || 'Unknown Item')}</strong></div>
         <span class="rank-pill">${scoreLabel} ${fmtMarketNum(score || 0,0)}</span>
       </div>
       <div class="row" style="margin:0;justify-content:space-between">
@@ -5860,7 +5913,7 @@ function warframePulseCard(item, mode = 'demand') {
       <div class="small-row"><span>Local 24h</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
       <div class="small-row"><span>Spread</span><span class="muted">${item.spread != null ? `${fmtMarketNum(item.spread,0)}p (${fmtMarketNum(item.spread_pct || 0,1)}%)` : 'n/a'}</span></div>
       <div class="small-row"><span>Live B/S</span><span class="muted">${fmtMarketNum(item.live_buyers || 0,0)} / ${fmtMarketNum(item.live_sellers || 0,0)}</span></div>
-      ${buildSparklineSvg(hist, 'sparkline-muted')}
+      ${buildSparklineSvg(hist, 'wf-price-history', null, 'warframe')}
       <div class="sparkline-label">
         <button class="sm" onclick='trackWarframeNamedItem(${JSON.stringify(item.name || '')}, "item")'>Track</button>
         ${item.slug ? `<a href="https://warframe.market/items/${esc(item.slug)}" target="_blank" rel="noopener">Open</a>` : ''}
@@ -6165,7 +6218,7 @@ function renderWarframeCommandDetail(data, item, platform) {
   if (!detail || !chart || !fissuresEl || !worldEl || !alertsEl || !farmEl) return;
   const market = data?.market || {};
   const name = market.canonical_name || market.item || item || 'Selected item';
-  const thumb = market.thumb || market.icon || '';
+  const thumb = normalizeWarframeMarketImage(market.icon || market.thumb || '');
   const trend = Number(market.price_change_pct);
   const trendClass = !Number.isFinite(trend) ? 'flat' : trend >= 0 ? 'up' : 'down';
   const history = Array.isArray(market.history) && market.history.length ? market.history : (market.local_history?.series || []);
@@ -6184,7 +6237,7 @@ function renderWarframeCommandDetail(data, item, platform) {
       <div class="wf-detail-stat"><span>Volume (48h)</span><strong>${fmtMarketNum(market.volume_total || 0,0)}</strong></div>
       <div class="wf-detail-stat"><span>Trend</span><strong class="market-change ${trendClass}">${Number.isFinite(trend) ? `${trend >= 0 ? '+' : ''}${fmtMarketNum(trend,1)}%` : 'n/a'}</strong></div>
     </div>`;
-  chart.innerHTML = history.length ? `${buildSparklineSvg(history)}<div class="sparkline-label"><span>${esc((market.history_period || 'history').replace('_', ' '))}</span><span>${esc(`${history.length} points`)}</span></div>` : '<div class="empty">Price history is warming up from the local snapshot store.</div>';
+  chart.innerHTML = history.length ? `${buildSparklineSvg(history, 'wf-price-history', null, 'warframe')}<div class="sparkline-label"><span>${esc((market.history_period || 'history').replace('_', ' '))}</span><span>${esc(`${history.length} points`)}</span></div>` : '<div class="empty">Price history is warming up from the local snapshot store.</div>';
   const world = data?.worldstate || {};
   const rows = (items, empty, mapper) => items.length ? items.slice(0, 5).map(mapper).join('') : `<div class="muted">${empty}</div>`;
   const fissures = Array.isArray(world.fissures) ? world.fissures : [];
@@ -6195,6 +6248,22 @@ function renderWarframeCommandDetail(data, item, platform) {
   alertsEl.innerHTML = rows(alerts, 'No active alerts', a => `<div class="wf-context-row"><span>${esc(a.reward || a.type || 'Alert')}</span><span>${esc(a.node || formatTimeish(a.eta) || '-')}</span></div>`);
   const top = Array.isArray(data?.top_sells) ? data.top_sells.slice(0, 1) : [];
   farmEl.innerHTML = top.length ? `<div class="wf-context-row"><span>${esc(top[0].name || 'Top sell')}</span><span>${top[0].volume_total != null ? esc(fmtMarketNum(top[0].volume_total,0)) + ' vol' : 'watch'}</span></div>` : '<div class="muted">Waiting for market pulse</div>';
+}
+
+function normalizeWarframeMarketImage(value) {
+  const image = String(value || '').trim();
+  if (!image) return '';
+  if (/^https?:\/\//i.test(image)) return image;
+  if (image.startsWith('//')) return `https:${image}`;
+  const assetPath = image.replace(/^\/+/, '').replace(/^static\/assets\//i, '');
+  return new URL(assetPath, 'https://warframe.market/static/assets/').href;
+}
+
+function warframeItemArtMarkup(item, className = 'wf-market-thumb') {
+  const src = normalizeWarframeMarketImage(item?.thumb || item?.icon || '');
+  const name = String(item?.name || item?.canonical_name || 'Warframe item').trim();
+  const initials = name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+  return `<span class="${className}-wrap">${src ? `<img class="${className}" src="${esc(src)}" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"/>` : ''}<span class="wf-item-art-fallback" ${src ? 'hidden' : ''} aria-hidden="true">${esc(initials || 'WF')}</span></span>`;
 }
 
 function renderWarframeOverview(data, item, platform, options = {}) {
@@ -6241,11 +6310,11 @@ function renderWarframeOverview(data, item, platform, options = {}) {
   const liveOrderSummary = (m.sell_count_live || m.buy_count_live) ? `S${esc(m.sell_count_live ?? 0)} / B${esc(m.buy_count_live ?? 0)}` : 'n/a';
   const allOrderSummary = (m.sell_count_total || m.buy_count_total) ? `all S${esc(m.sell_count_total ?? 0)} / B${esc(m.buy_count_total ?? 0)}` : '';
   const marketName = m.canonical_name || m.item || item;
-  const marketThumb = m.thumb || m.icon || '';
+  const marketThumb = normalizeWarframeMarketImage(m.icon || m.thumb || '');
   marketEl.innerHTML = `
     <div class="wf-market-identity">
       <div class="wf-market-item">
-        ${marketThumb ? `<img class="wf-market-art" src="${esc(marketThumb)}" alt="${esc(marketName)}" loading="lazy" />` : ''}
+        ${warframeItemArtMarkup({ ...m, name: marketName, thumb: marketThumb, icon: '' }, 'wf-market-art')}
         <div><div class="wf-market-name">${esc(marketName)}</div><div class="wf-market-sub">Warframe Market <span class="pill">${esc(sourceLabel)}</span></div></div>
       </div>
       <div class="wf-market-actions">
@@ -6270,7 +6339,7 @@ function renderWarframeOverview(data, item, platform, options = {}) {
     const firstValue = hist.length ? Number(hist[0]?.avg_price ?? hist[0]?.price ?? hist[0]) : null;
     const lastValue = hist.length ? Number(hist[hist.length - 1]?.avg_price ?? hist[hist.length - 1]?.price ?? hist[hist.length - 1]) : null;
     marketChartEl.innerHTML = `
-      ${buildSparklineSvg(hist)}
+      ${buildSparklineSvg(hist, 'wf-price-history', null, 'warframe')}
       <div class="sparkline-label">
         <span>${esc((m.history_period || 'history').replace('_', ' '))}</span>
         <span>${Number.isFinite(firstValue) && Number.isFinite(lastValue) ? `${fmtMarketNum(firstValue,0)}p -> ${fmtMarketNum(lastValue,0)}p` : 'n/a'}</span>

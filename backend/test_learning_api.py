@@ -4,10 +4,10 @@ import sqlite3
 import tempfile
 import unittest
 import zipfile
-from contextlib import closing
+from contextlib import ExitStack, closing, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -158,6 +158,90 @@ class LearningApiTests(unittest.TestCase):
         paths = {route.path for route in main.app.routes}
         for route in ["summary", "session", "cards", "reviews"]:
             self.assertIn(f"/api/learning/{route}", paths)
+
+    @contextmanager
+    def isolated_startup_app(self, db, seed):
+        """Run the real startup/learning path without unrelated provider work."""
+        from backend import main
+        from backend.learning_api import create_learning_router
+
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(main, "LEARNING_DB_FILE", db))
+            stack.enter_context(patch.object(main, "LEARNING_SEED_FILE", seed))
+            stack.enter_context(patch.dict(main._LAST_GOOD, {}, clear=True))
+            for name in [
+                "ensure_f1_history_db", "ensure_market_history_db",
+                "ensure_warframe_history_db", "ensure_warframe_worldstate_db",
+                "_migrate_warframe_market_history_to_db", "_ensure_tldr_db_path",
+                "ensure_tldr_db", "_boot_last_good_store", "_boot_f1_session_snapshots",
+                "_boot_f1_secondary_ingest", "_boot_f1_session_archive",
+                "_seed_f1_session_archive_from_last_good", "_sync_f1_history_db_from_archive",
+                "_apply_settings_env", "_apply_schedule",
+            ]:
+                stack.enter_context(patch.object(main, name, return_value=None))
+            stack.enter_context(patch.object(main, "_load_settings", return_value={}))
+            stack.enter_context(patch.object(main, "_load_schedule", return_value={}))
+            stack.enter_context(patch.object(main, "_scheduler", Mock()))
+            # Suppress only the threads launched by main._startup; TestClient's
+            # own portal threads must keep their real implementation.
+            import threading
+            real_thread = threading.Thread
+
+            def provider_thread(*args, **kwargs):
+                if kwargs.get("target") in {main._prewarm_provider_caches, main._run_warframe_refresh_cycle}:
+                    return Mock()
+                return real_thread(*args, **kwargs)
+
+            stack.enter_context(patch("threading.Thread", side_effect=provider_thread))
+            app = FastAPI()
+            app.add_event_handler("startup", main._startup)
+            app.add_api_route("/api/health", main.health)
+            app.include_router(create_learning_router(db, seed))
+            yield app
+
+    def test_startup_learning_failures_keep_health_available_and_retry_after_repair(self):
+        for failure in ["missing-seed", "invalid-seed", "blocked-db", "corrupt-db"]:
+            with self.subTest(failure=failure):
+                root = self.root / failure
+                root.mkdir()
+                db = root / "learning.db"
+                seed = root / "seed.json"
+                if failure != "missing-seed":
+                    seed.write_text("invalid JSON" if failure == "invalid-seed" else json.dumps(self.cards), encoding="utf-8")
+                if failure == "blocked-db":
+                    db.mkdir()
+                elif failure == "corrupt-db":
+                    db.write_bytes(b"not a SQLite database")
+                try:
+                    with self.isolated_startup_app(db, seed) as app:
+                        with self.assertLogs("backend.main", level="ERROR") as logs:
+                            client = TestClient(app)
+                            client.__enter__()
+                        try:
+                            self.assertTrue(logs.output)
+                            self.assertEqual(client.get("/api/health").json(), {"ok": True})
+                            response = client.get("/api/learning/summary")
+                            self.assertEqual(response.status_code, 503)
+                            self.assertEqual(response.json()["detail"], "Learning store unavailable")
+                            if failure == "blocked-db":
+                                db.rmdir()
+                            elif failure == "corrupt-db":
+                                db.unlink()
+                            seed.write_text(json.dumps(self.cards), encoding="utf-8")
+                            response = client.get("/api/learning/summary")
+                            self.assertEqual(response.status_code, 200)
+                            self.assertEqual(response.json()["total_cards"], 120)
+                            self.assertEqual(client.post("/api/learning/reviews", json={"card_id": self.cards[0]["id"], "rating": 3}).status_code, 200)
+                        finally:
+                            client.__exit__(None, None, None)
+                            client.close()
+                            # Older Starlette leaves lifespan memory streams
+                            # open after shutdown; close test-owned endpoints.
+                            for stream in [client.stream_send, client.stream_receive]:
+                                stream.send_stream.close()
+                                stream.receive_stream.close()
+                except (OSError, sqlite3.Error, ValueError) as exc:
+                    self.fail(f"Learning failure prevented app startup: {exc}")
 
     def test_runtime_backup_includes_committed_review_and_progress_from_wal(self):
         from backend import main

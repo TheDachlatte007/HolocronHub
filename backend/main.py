@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import math
 import os
 import re
@@ -6584,8 +6585,11 @@ def _prewarm_provider_caches() -> None:
 
 @app.on_event("startup")
 def _startup() -> None:
-    init_learning_db(LEARNING_DB_FILE)
-    sync_seed_cards(LEARNING_DB_FILE, LEARNING_SEED_FILE)
+    try:
+        init_learning_db(LEARNING_DB_FILE)
+        sync_seed_cards(LEARNING_DB_FILE, LEARNING_SEED_FILE)
+    except (sqlite3.Error, OSError, ValueError):
+        logging.getLogger(__name__).exception("Learning initialization failed; requests will retry")
     ensure_f1_history_db(F1_HISTORY_DB_FILE)
     ensure_market_history_db(MARKETS_HISTORY_DB_FILE)
     history_db_exists = WARFRAME_MARKET_HISTORY_DB_FILE.exists()

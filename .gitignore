@@ -24,6 +24,7 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 .playwright-cli/
+output/
 .claude/
 .gitnexus
 .planning/ui-reviews/

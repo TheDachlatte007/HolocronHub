@@ -20,7 +20,7 @@
     .shell-top-tab:hover,.shell-top-tab.active{color:#ecfeff;background:rgba(8,145,178,.14);border-color:rgba(34,211,238,.28)}
     .shell-utility{width:31px;height:31px;padding:0;border-radius:50%;border-color:#29405f;background:#0b1627;color:#b6c8dc;display:grid;place-items:center}
     .shell-utility svg{width:16px;height:16px}
-    .shell-search{display:none;align-items:center;gap:9px;width:min(430px,34vw);height:38px;margin-left:auto;margin-right:18px;padding:0 13px;border:1px solid #29405f;border-radius:10px;background:#091525;color:#8ea0b7;font-size:12px}
+    .shell-search{display:none;align-items:center;gap:9px;width:min(430px,34vw);height:38px;margin-left:auto;margin-right:18px;padding:0 13px;border:1px solid #29405f;border-radius:10px;background:#091525;color:#8ea0b7;font:inherit;font-size:12px;text-align:left;cursor:pointer}
     .shell-search svg{width:15px;height:15px;color:#67e8f9;flex:0 0 auto}.shell-search kbd{margin-left:auto;border:1px solid #35506f;border-radius:5px;padding:2px 5px;color:#b7cadf;font-size:10px}
     body[data-hub="tools"] .shell-search{display:flex}
     body[data-hub="tools"] .shell-context{display:none}
@@ -636,7 +636,7 @@
     .home-gauge-ring::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#0b1627;border:1px solid #253b55}
     .home-gauge-ring span{position:relative;z-index:1;font-size:12px;color:#f1f5f9}
     .home-media-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
-    .home-media-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:60px;border:1px solid #263b56;border-radius:8px;background:#101c2e;color:#dbeafe;font-size:10px;text-transform:uppercase;letter-spacing:.05em;text-decoration:none}
+    .home-media-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:60px;border:1px solid #263b56;border-radius:8px;background:#101c2e;color:transparent;font-size:0;text-transform:uppercase;letter-spacing:.05em;text-decoration:none}.home-media-link>span{font-size:10px;color:#dbeafe}.home-media-link::before{display:grid;place-items:center;width:24px;height:24px;border:1px solid #35506f;border-radius:7px;color:#67e8f9;font-size:10px;font-weight:700}.home-media-link:nth-child(1)::before{content:'M'}.home-media-link:nth-child(2)::before{content:'S'}.home-media-link:nth-child(3)::before{content:'A'}.home-media-link:nth-child(4)::before{content:'R'}
     .home-media-link:hover{border-color:#38bdf8;text-decoration:none}
     .home-event-list{display:flex;flex-direction:column;gap:0}
     .home-event{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(71,95,124,.24);font-size:11px;color:#c4d0df}
@@ -799,7 +799,7 @@
 <div class="wrap holocron-shell">
   <div class="app-shell-header">
     <h1 class="holocron-brand"><span class="holocron-mark" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><polygon points="16,1.8 28.5,9 28.5,23 16,30.2 3.5,23 3.5,9" fill="#071a2c" stroke="#39d9f3" stroke-width="1.3"/><polygon points="16,6 24,10.6 24,21.4 16,26 8,21.4 8,10.6" fill="none" stroke="#62e9fb" stroke-width="1"/><circle cx="16" cy="16" r="4.2" fill="#67e8f9" opacity=".9"/></svg></span><span class="holocron-wordmark">HolocronHub</span> <span id="shell-context" class="shell-context">Tool Hub</span></h1>
-    <div class="shell-search" role="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg><span>Search services, devices, or commands...</span><kbd>CTRL K</kbd></div>
+    <button class="shell-search" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Search services, devices, or commands"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg><span>Search services, devices, or commands...</span><kbd>CTRL K</kbd></button>
     <nav class="shell-topnav" aria-label="Primary workspace navigation">
       <button class="shell-top-tab active" data-shell-tab="tools" onclick="showTab('tools',this)">Home</button>
       <button class="shell-top-tab" data-shell-tab="f1" onclick="showTab('f1',this)">F1</button>
@@ -4995,11 +4995,20 @@ function f1StatusLabel(status) {
   return 'Scheduled';
 }
 
+function renderF1FallbackHero(message = 'Weekend data will appear after the next sync.') {
+  const heroEl = document.getElementById('f1-hero');
+  if (!heroEl) return;
+  heroEl.style.backgroundImage = 'radial-gradient(circle at 78% 28%,rgba(14,165,233,.28),transparent 34%),linear-gradient(110deg,rgba(3,12,27,.98),rgba(8,36,63,.78) 48%,rgba(5,14,29,.92)),repeating-linear-gradient(145deg,rgba(56,189,248,.12) 0 1px,transparent 1px 24px)';
+  heroEl.style.backgroundSize = 'cover';
+  heroEl.style.backgroundPosition = 'center';
+  heroEl.innerHTML = `<div class="f1-hero-sub"><span class="f1-status-pill scheduled">F1 WEEKEND HUB</span><span class="pill">LIVE DATA</span></div><div class="f1-hero-title">Race control workspace</div><div class="f1-hero-sub">${esc(message)}</div><div class="f1-hero-meta"><span class="pill">Sessions</span><span class="pill">Timing</span><span class="pill">Track conditions</span></div>`;
+}
+
 function renderF1Hero(weekend) {
   const heroEl = document.getElementById('f1-hero');
   if (!heroEl) return;
   if (!weekend || !weekend.meeting) {
-    heroEl.innerHTML = '<div class="muted">No active weekend context found for this season.</div>';
+    renderF1FallbackHero('No active weekend context found for this season.');
     return;
   }
 
@@ -5608,7 +5617,7 @@ async function loadF1(options = {}) {
       profileEl.innerHTML = '<div class="muted">Select a driver profile...</div>';
       trackPanelEl.innerHTML = '<div class="muted">Loading track panel...</div>';
       tracksEl.innerHTML = '<div class="empty">Loading track guide...</div>';
-      document.getElementById('f1-hero').innerHTML = '<div class="muted">Loading weekend hub...</div>';
+      renderF1FallbackHero('Loading weekend hub...');
       document.getElementById('f1-nowbar').innerHTML = '<div class="muted">Syncing clocks...</div>';
       document.getElementById('f1-session-picker').innerHTML = '<div class="muted">Loading sessions...</div>';
       document.getElementById('f1-session-filters').innerHTML = '';
@@ -5659,7 +5668,7 @@ async function loadF1(options = {}) {
       profileEl.innerHTML = '';
       trackPanelEl.innerHTML = '';
       tracksEl.innerHTML = '';
-      document.getElementById('f1-hero').innerHTML = '';
+      renderF1FallbackHero('F1 API is unavailable; cached sessions remain available when present.');
       document.getElementById('f1-nowbar').innerHTML = '';
       document.getElementById('f1-session-picker').innerHTML = '';
       document.getElementById('f1-session-filters').innerHTML = '';
@@ -6306,6 +6315,7 @@ async function loadWarframe(options = {}) {
   const samePlatformContext = cachedPlatform === platform && (_warframeStaticCache.worldstate || (_warframeStaticCache.top_sells || []).length);
 
   renderWarframeTools();
+  renderWarframeCommandDetail({ market: { canonical_name: item, history: [] }, worldstate: {} }, item, platform);
   if (arsenalEl) arsenalEl.innerHTML = '<div class="muted">Search a frame to inspect stats and abilities.</div>';
   if (arsenalMetaEl) arsenalMetaEl.textContent = 'search on demand';
   if (canUseClientCache) {

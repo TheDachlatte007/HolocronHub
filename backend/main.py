@@ -93,6 +93,13 @@ except Exception:
     from warframe_history_store import ensure_warframe_history_db, get_warframe_snapshots, upsert_warframe_snapshot
 
 try:
+    from .warframe_cache_store import WarframeCacheStore, WarframeRefreshQueue
+    from .warframe_asset_store import WarframeAssetStore
+except ImportError:
+    from warframe_cache_store import WarframeCacheStore, WarframeRefreshQueue
+    from warframe_asset_store import WarframeAssetStore
+
+try:
     from .warframe_worldstate_store import (
         ensure_warframe_worldstate_db,
         get_latest_warframe_worldstate,
@@ -116,6 +123,10 @@ WARFRAME_WATCHLIST_FILE = BASE_DIR / "data" / "warframe_watchlist.json"
 WARFRAME_MARKET_HISTORY_FILE = BASE_DIR / "data" / "warframe_market_history.json"
 WARFRAME_MARKET_HISTORY_DB_FILE = BASE_DIR / "data" / "warframe_market_history.db"
 WARFRAME_WORLDSTATE_DB_FILE = BASE_DIR / "data" / "warframe_worldstate.db"
+WARFRAME_CACHE_DB_FILE = BASE_DIR / "data" / "warframe_cache.db"
+_warframe_store = WarframeCacheStore(WARFRAME_CACHE_DB_FILE)
+_warframe_refresh_queue = WarframeRefreshQueue(_warframe_store)
+_warframe_assets = WarframeAssetStore(BASE_DIR / "data")
 SCHEDULE_FILE = BASE_DIR / "data" / "schedule.json"
 SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
 LAST_GOOD_FILE = BASE_DIR / "data" / "last_good_cache.json"
@@ -150,6 +161,7 @@ _BACKUP_DATABASE_FILES = (
     "tldr.db",
     "warframe_market_history.db",
     "warframe_worldstate.db",
+    "warframe_cache.db",
     "f1_history.db",
     "markets_history.db",
 )
@@ -596,6 +608,17 @@ def _record_warframe_market_snapshot(market: dict[str, Any], platform: str = "pc
         "source": str(market.get("snapshot_source") or "unavailable"),
     }
 
+    try:
+        upsert_warframe_snapshot(
+            WARFRAME_MARKET_HISTORY_DB_FILE, platform=platform_key, slug=slug,
+            item_name=str(market.get("canonical_name") or market.get("item") or slug),
+            snapshot=snapshot,
+        )
+        return _summarize_warframe_market_history(slug, platform_key)
+    except sqlite3.Error:
+        # Preserve the old JSON path only as a fallback if SQLite cannot write.
+        pass
+
     with _warframe_market_history_lock:
         store = _load_warframe_market_history_store()
         platforms = store.setdefault("platforms", {})
@@ -663,13 +686,17 @@ def _record_warframe_market_snapshot(market: dict[str, Any], platform: str = "pc
 def _summarize_warframe_market_history(slug: str, platform: str = "pc") -> dict[str, Any]:
     if not slug:
         return {}
-    store = _load_warframe_market_history_store()
-    platform_items = ((store.get("platforms") or {}).get(str(platform or "pc").strip().lower()) or {})
-    entry = platform_items.get(slug)
-    if not isinstance(entry, dict):
-        return {}
-    db_snapshots = get_warframe_snapshots(WARFRAME_MARKET_HISTORY_DB_FILE, platform=platform, slug=slug)
-    snapshots = db_snapshots or [snap for snap in (entry.get("snapshots") or []) if isinstance(snap, dict)]
+    legacy_updated_at = None
+    try:
+        snapshots = get_warframe_snapshots(WARFRAME_MARKET_HISTORY_DB_FILE, platform=platform, slug=slug)
+    except sqlite3.Error:
+        snapshots = []
+    if not snapshots:
+        store = _load_warframe_market_history_store()
+        legacy_updated_at = store.get("updated_at")
+        platform_items = ((store.get("platforms") or {}).get(str(platform or "pc").strip().lower()) or {})
+        entry = platform_items.get(slug) or {}
+        snapshots = [snap for snap in entry.get("snapshots", []) if isinstance(snap, dict)]
     if not snapshots:
         return {}
 
@@ -695,7 +722,7 @@ def _summarize_warframe_market_history(slug: str, platform: str = "pc") -> dict[
 
     series = [
         {"captured_at": snap.get("captured_at"), "price": snap.get("price")}
-        for snap in snapshots[-24:]
+        for snap in snapshots
         if snap.get("price") is not None
     ]
     return {
@@ -715,7 +742,7 @@ def _summarize_warframe_market_history(slug: str, platform: str = "pc") -> dict[
         "last_source": latest.get("source"),
         "last_live_buyers": latest.get("live_buyers"),
         "last_live_sellers": latest.get("live_sellers"),
-        "updated_at": store.get("updated_at") or latest.get("captured_at"),
+        "updated_at": legacy_updated_at or latest.get("captured_at"),
         "age_minutes": max(0, int((datetime.now(timezone.utc) - latest_dt).total_seconds() // 60)) if latest_dt else None,
     }
 
@@ -1532,6 +1559,10 @@ def _warframe_worldstate_has_data(payload: dict[str, Any]) -> bool:
 
 def _cache_get(key: str, ttl_seconds: int) -> Optional[Any]:
     ent = _API_CACHE.get(key)
+    if not isinstance(ent, dict) and key.startswith("warframe:"):
+        ent = _warframe_store.read(key)
+        if isinstance(ent, dict):
+            _API_CACHE[key] = ent
     if not isinstance(ent, dict):
         return None
     ts = float(ent.get("ts") or 0.0)
@@ -1543,6 +1574,43 @@ def _cache_get(key: str, ttl_seconds: int) -> Optional[Any]:
 
 def _cache_set(key: str, value: Any) -> None:
     _API_CACHE[key] = {"ts": time.time(), "value": deepcopy(value)}
+    if key.startswith("warframe:") and _warframe_cache_has_data(value):
+        _warframe_store.put(key, value)
+        if key.startswith(("warframe:market_snapshot:", "warframe:hot_items:", "warframe:market_pulse:")):
+            _local_warframe_artwork(value)
+
+
+def _warframe_market_has_data(value: Any) -> bool:
+    return isinstance(value, dict) and (
+        any(value.get(field) is not None for field in ("best_sell", "best_buy", "last_avg_price"))
+        or bool(value.get("history"))
+    )
+
+
+def _warframe_cache_has_data(value: Any) -> bool:
+    if not isinstance(value, dict) or value.get("stale"):
+        return False
+    if isinstance(value.get("payload"), dict):
+        return not value["payload"].get("stale") and _warframe_market_has_data(value["payload"])
+    if "market" in value:
+        return not value["market"].get("stale") and _warframe_market_has_data(value["market"])
+    if _warframe_market_has_data(value) or _warframe_worldstate_has_data(value):
+        return True
+    return any(isinstance(value.get(field), list) and value[field] for field in (
+        "items", "all_items", "farm_now", "demand_leaders", "liquid_leaders", "relic_targets",
+    ))
+
+
+def _local_warframe_artwork(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_local_warframe_artwork(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    return {
+        key: _warframe_assets.local_url(item) if key in {"thumb", "icon"} and isinstance(item, str)
+        else _local_warframe_artwork(item)
+        for key, item in value.items()
+    }
 
 
 def _wait_for_warframe_market_slot() -> None:
@@ -3782,7 +3850,17 @@ _WARFRAME_MARKET_WATCHLIST = [
 ]
 
 
+_warframe_catalog_lock = Lock()
+_warframe_item_locks = tuple(Lock() for _ in range(32))
+_warframe_statistics_locks = tuple(Lock() for _ in range(32))
+
+
 def _fetch_warframe_market_catalog() -> tuple[list[dict[str, Any]], list[str]]:
+    with _warframe_catalog_lock:
+        return _load_warframe_market_catalog()
+
+
+def _load_warframe_market_catalog() -> tuple[list[dict[str, Any]], list[str]]:
     cache_key = "warframe:market:catalog:v2"
     cached = _cache_get(cache_key, ttl_seconds=24 * 3600)
     if isinstance(cached, dict):
@@ -3790,10 +3868,16 @@ def _fetch_warframe_market_catalog() -> tuple[list[dict[str, Any]], list[str]]:
 
     raw, err = _http_get_json("https://api.warframe.market/v2/items", timeout=20)
     if err:
+        saved = _warframe_store.read(cache_key)
+        if saved:
+            return list(saved["value"].get("items") or []), [f"catalog:saved_snapshot:{err}"]
         return [], [f"catalog:{err}"]
 
     payload = raw.get("data") if isinstance(raw, dict) else []
-    if not isinstance(payload, list):
+    if not isinstance(payload, list) or not payload:
+        saved = _warframe_store.read(cache_key)
+        if saved:
+            return list(saved["value"].get("items") or []), ["catalog:saved_snapshot:invalid_payload"]
         return [], ["catalog:invalid_payload"]
 
     items: list[dict[str, Any]] = []
@@ -3948,6 +4032,27 @@ def _summarize_warframe_statistics(stats_payload: Any, *, max_rank: Optional[int
     }
 
 
+def _fetch_warframe_statistics(slug: str, platform: str, max_rank=None):
+    key = f"warframe:statistics:{platform}:{slug}"
+    with _warframe_statistics_locks[hash(key) % len(_warframe_statistics_locks)]:
+        cached = _cache_get(key, ttl_seconds=10 * 60)
+        if isinstance(cached, dict):
+            return cached, None
+        raw, error = _http_get_json(
+            f"https://api.warframe.market/v1/items/{slug}/statistics",
+            params={"platform": platform},
+            headers={"Accept": "application/json", "Language": "en"}, timeout=15,
+        )
+        summary = _summarize_warframe_statistics(raw, max_rank=max_rank)
+        if error or not summary.get("history"):
+            saved = _warframe_store.read(key)
+            if saved:
+                return {**saved["value"], "stale": True}, error or "statistics:invalid_payload"
+            return summary, error or "statistics:invalid_payload"
+        _cache_set(key, summary)
+        return summary, None
+
+
 def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]], list[str]]:
     cache_key = f"warframe:hot_items:v2:{platform}"
     cached = _cache_get(cache_key, ttl_seconds=10 * 60)
@@ -3966,15 +4071,9 @@ def _fetch_warframe_hot_items(platform: str = "pc") -> tuple[list[dict[str, Any]
 
     def load_item(entry: dict[str, Any]) -> tuple[Optional[dict[str, Any]], list[str]]:
         slug = str(entry.get("slug") or "")
-        raw, err = _http_get_json(
-            f"https://api.warframe.market/v1/items/{slug}/statistics",
-            params={"platform": platform},
-            headers={"Accept": "application/json", "Language": "en", "User-Agent": "HolocronHub/0.5"},
-            timeout=12,
-        )
+        summary, err = _fetch_warframe_statistics(slug, platform, entry.get("max_rank"))
         if err:
             return None, [f"hot:{slug}:{err}"]
-        summary = _summarize_warframe_statistics(raw, max_rank=entry.get("max_rank"))
         if not summary.get("history"):
             return None, [f"hot:{slug}:no_history"]
         hot = {
@@ -5273,6 +5372,12 @@ def _fetch_warframe_worldstate(platform: str) -> tuple[dict[str, Any], list[str]
 
 
 def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
+    key = (platform, _normalize_warframe_item_name(item))
+    with _warframe_item_locks[hash(key) % len(_warframe_item_locks)]:
+        return _load_warframe_market(item, platform)
+
+
+def _load_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, Any], list[str]]:
     item_key = _normalize_warframe_item_name(item)
     cache_key = f"warframe:market_snapshot:{platform}:{item_key}"
     cached = _cache_get(cache_key, ttl_seconds=10 * 60)
@@ -5364,13 +5469,7 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
     sell_base = sorted(sells_live) if sells_live else sorted(sells_all)
     buy_base = sorted(buys_live, reverse=True) if buys_live else sorted(buys_all, reverse=True)
 
-    stats_data, stats_err = _http_get_json(
-        f"https://api.warframe.market/v1/items/{slug}/statistics",
-        params={"platform": platform},
-        headers=req_headers,
-        timeout=15,
-    )
-    stats_summary = _summarize_warframe_statistics(stats_data, max_rank=max_rank)
+    stats_summary, stats_err = _fetch_warframe_statistics(slug, platform, max_rank)
 
     if stats_err:
         errors.append(f"statistics:{stats_err}")
@@ -5414,7 +5513,13 @@ def _fetch_warframe_market(item: str, platform: str = "pc") -> tuple[dict[str, A
         "price_ceiling_estimate": price_ceiling,
         "price_change_pct": stats_summary.get("price_change_pct"),
     }
-    local_history = _record_warframe_market_snapshot(payload, platform)
+    if not _warframe_market_has_data(payload) or (stats_summary.get("stale") and not sell_base and not buy_base):
+        saved = _warframe_store.read(cache_key)
+        if saved:
+            return {**saved["value"]["payload"], "stale": True}, errors[:16]
+        payload["stale"] = True
+    local_history = (_summarize_warframe_market_history(slug, platform) if payload.get("stale")
+                     else _record_warframe_market_snapshot(payload, platform))
     if local_history:
         payload["local_history"] = local_history
     trimmed_errors = errors[:16]
@@ -6301,6 +6406,7 @@ _scheduler = BackgroundScheduler(daemon=True)
 _schedule_job_id = "auto_ingest"
 _warframe_refresh_job_id = "warframe_refresh"
 _WARFRAME_REFRESH_INTERVAL_MINUTES = 15
+_warframe_refresh_cycle_lock = Lock()
 _WARFRAME_REFRESH_STATE: dict[str, Any] = {
     "running": False,
     "started_at": None,
@@ -6325,7 +6431,7 @@ def _apply_schedule(cfg: dict) -> None:
 
 
 def _run_warframe_refresh_cycle(platform: str = "pc") -> None:
-    if _WARFRAME_REFRESH_STATE.get("running"):
+    if not _warframe_refresh_cycle_lock.acquire(blocking=False):
         return
 
     platform_key = str(platform or "pc").strip().lower() or "pc"
@@ -6366,7 +6472,7 @@ def _run_warframe_refresh_cycle(platform: str = "pc") -> None:
         seed_names = list(
             dict.fromkeys(
                 [
-                    "arcane energize",
+                    "saryn prime set", "arcane energize",
                     *tracked_names[:16],
                     *_WARFRAME_MARKET_WATCHLIST[:12],
                 ]
@@ -6374,7 +6480,7 @@ def _run_warframe_refresh_cycle(platform: str = "pc") -> None:
         )
 
         run_step("worldstate", lambda: _fetch_warframe_worldstate(platform_key)[0])
-        run_step("overview", lambda: warframe_overview("arcane energize", platform_key))
+        run_step("overview", lambda: _build_warframe_overview("saryn prime set", platform_key))
         run_step("hot_items", lambda: {"items": _fetch_warframe_hot_items(platform_key)[0]})
         run_step("market_pulse", lambda: _build_warframe_market_pulse(platform_key)[0])
         run_step("watchlist", lambda: {"items": _build_warframe_watchlist_payload(platform_key, sort_by="priority")[0]})
@@ -6407,6 +6513,7 @@ def _run_warframe_refresh_cycle(platform: str = "pc") -> None:
         _WARFRAME_REFRESH_STATE["last_run"] = datetime.now().isoformat(timespec="seconds")
         _WARFRAME_REFRESH_STATE["started_at"] = None
         _WARFRAME_REFRESH_STATE["results"] = results
+        _warframe_refresh_cycle_lock.release()
 
 
 def _prewarm_provider_caches() -> None:
@@ -6421,9 +6528,6 @@ def _prewarm_provider_caches() -> None:
     for name, fn in [
         ("markets", lambda: markets_overview()),
         ("f1", lambda: f1_overview("current")),
-        ("warframe", lambda: warframe_overview("arcane energize", "pc")),
-        ("warframe_pulse", lambda: _build_warframe_market_pulse("pc")[0]),
-        ("warframe_hot", lambda: {"items": _fetch_warframe_hot_items("pc")[0]}),
     ]:
         t0 = time.time()
         try:
@@ -6459,6 +6563,9 @@ def _startup() -> None:
     _ensure_tldr_db_path()
     ensure_tldr_db(TLDR_DB_FILE)
     _boot_last_good_store()
+    for key, entry in list(_LAST_GOOD.items()):
+        if key.startswith("warframe:") and _warframe_cache_has_data(entry.get("value")):
+            _warframe_store.put(key, entry["value"], timestamp=float(entry.get("ts") or 0))
     _boot_f1_session_snapshots()
     _boot_f1_secondary_ingest()
     _boot_f1_session_archive()
@@ -6489,6 +6596,8 @@ def _startup() -> None:
 
 @app.on_event("shutdown")
 def _shutdown() -> None:
+    _warframe_refresh_queue.close()
+    _warframe_assets.close()
     if _scheduler.running:
         _scheduler.shutdown(wait=False)
 
@@ -6549,6 +6658,14 @@ def _build_runtime_backup(*, include_secrets: bool = False) -> bytes:
                     source_db.close()
                 bundle.write(snapshot, arcname=f"data/{name}")
                 manifest["included"].append(f"data/{name}")
+
+            assets_dir = BASE_DIR / "data" / "warframe_assets"
+            if assets_dir.is_dir():
+                for source in assets_dir.iterdir():
+                    if source.is_file() and not source.is_symlink() and source.suffix != ".tmp":
+                        archive_name = f"data/warframe_assets/{source.name}"
+                        bundle.write(source, arcname=archive_name)
+                        manifest["included"].append(archive_name)
 
             bundle.writestr("MANIFEST.json", json.dumps(manifest, indent=2))
 
@@ -7390,8 +7507,15 @@ def warframe_relic_profit(platform: str = "pc"):
 
 @app.get("/api/warframe/marketpulse")
 def warframe_market_pulse(platform: str = "pc"):
-    payload, errors = _build_warframe_market_pulse(platform)
-    return {**payload, "errors": errors}
+    platform = platform if platform in {"pc", "ps4", "xb1", "swi"} else "pc"
+    key = f"warframe:market_pulse:{platform}"
+    def refresh():
+        payload, errors = _build_warframe_market_pulse(platform)
+        if not payload.get("coverage_count") or payload.get("stale"):
+            raise RuntimeError("Market pulse could not be updated; saved data remains available.")
+        _warframe_assets.warm([item.get(field, "") for item in payload.get("farm_recommendations", []) for field in ("icon", "thumb")])
+    return _serve_warframe_snapshot(key, refresh, ttl=900, empty={"platform": platform,
+        "demand_leaders": [], "liquidity_leaders": [], "farm_recommendations": [], "tracked_signals": [], "coverage_count": 0})
 
 
 @app.get("/api/warframe/watchlist")
@@ -7453,8 +7577,92 @@ def delete_warframe_watchlist_item(item_id: str):
     return {"ok": True}
 
 
+def _serve_warframe_snapshot(key, refresh, *, ttl, empty, force=False, entry=None):
+    entry = entry or _warframe_store.read(key)
+    refreshing = _warframe_refresh_queue.request(key, refresh, ttl=ttl, force=force)
+    attempt = _warframe_store.last_attempt(key)
+    payload = deepcopy(entry["value"] if entry else empty)
+    stamp = float(entry["ts"]) if entry else None
+    as_of = datetime.fromtimestamp(stamp, timezone.utc).isoformat() if stamp else None
+    age = max(0, int(time.time() - stamp)) if stamp else None
+    payload.update({
+        "cached": bool(entry), "loading": not bool(entry), "refreshing": refreshing,
+        "data_as_of": payload.get("data_as_of") or as_of,
+        "generated_at": payload.get("generated_at") or as_of,
+        "stale": bool(payload.get("stale")) or age is not None and age > ttl,
+        "stale_age_seconds": age or 0,
+        "refresh_error": attempt.get("error"),
+    })
+    payload.setdefault("errors", [])
+    return _local_warframe_artwork(payload)
+
+
+def _saved_warframe_overview(item: str, platform: str, key: str):
+    saved = _warframe_store.read(key)
+    catalog = _warframe_store.read("warframe:market:catalog:v2")
+    meta = _find_warframe_market_item((catalog or {}).get("value", {}).get("items", []), item) or {}
+    slug = meta.get("slug") or _normalize_warframe_item_name(item)
+    market_record = _warframe_store.read(f"warframe:market_snapshot:{platform}:{slug}")
+    market = deepcopy((market_record or {}).get("value", {}).get("payload", {}))
+    history = _summarize_warframe_market_history(slug, platform)
+    if not market and saved:
+        market = deepcopy(saved["value"].get("market") or {})
+    if not market and history:
+        market = {"slug": slug, "canonical_name": meta.get("name") or item,
+                  "thumb": meta.get("thumb"), "icon": meta.get("icon"),
+                  "last_avg_price": history.get("last_price"), "history": [],
+                  "history_period": "local history", "snapshot_source": "local_history"}
+    if market and history:
+        market["local_history"] = history
+    if not market and not saved:
+        return None
+    world_record = _warframe_store.read(f"warframe:worldstate:{platform}")
+    world = (world_record or {}).get("value")
+    if not world:
+        world, _ = _load_persisted_warframe_worldstate(platform)
+    hot = _warframe_store.read(f"warframe:hot_items:v2:{platform}")
+    payload = deepcopy(saved["value"] if saved else {})
+    stamp = ((market_record or saved or {}).get("ts")
+             or (_parse_dt(history.get("last_seen_at")).timestamp() if history.get("last_seen_at") else time.time()))
+    payload.update({"platform": platform, "item_query": item, "market": market,
+        "worldstate": world or payload.get("worldstate") or {},
+        "top_sells": (hot or {}).get("value", {}).get("items") or payload.get("top_sells") or [],
+        "data_as_of": datetime.fromtimestamp(stamp, timezone.utc).isoformat()})
+    return {"ts": stamp, "value": payload}
+
+
+@app.get("/api/warframe/assets/{key}")
+def warframe_asset(key: str):
+    asset = _warframe_assets.get_file(key)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Artwork not cached yet")
+    path, media_type = asset
+    return FileResponse(path, media_type=media_type, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
 @app.get("/api/warframe/overview")
-def warframe_overview(item: str = "arcane energize", platform: str = "pc", force: bool = False):
+def warframe_overview(item: str = "saryn prime set", platform: str = "pc", force: bool = False):
+    started = time.perf_counter()
+    platform = platform if platform in {"pc", "ps4", "xb1", "swi"} else "pc"
+    item = str(item or "saryn prime set").strip()[:160]
+    key = f"warframe:{platform}:{item.lower()}"
+    def refresh():
+        payload = _build_warframe_overview(item, platform)
+        if not _warframe_cache_has_data(payload):
+            raise RuntimeError("Market refresh failed; the last saved snapshot remains available.")
+        _local_warframe_artwork(payload)
+    entry = _saved_warframe_overview(item, platform, key)
+    payload = _serve_warframe_snapshot(key, refresh, ttl=75, force=force, entry=entry,
+        empty={"platform": platform, "item_query": item,
+               "market": {"canonical_name": item}, "worldstate": {}, "top_sells": []})
+    _record_provider_health("warframe", errors=payload.get("errors") or [], cached=bool(entry),
+        summary={"history_points": len(payload.get("market", {}).get("history") or []),
+                 "refreshing": payload["refreshing"], "data_as_of": payload["data_as_of"]},
+        duration_ms=int((time.perf_counter() - started) * 1000))
+    return payload
+
+
+def _build_warframe_overview(item: str = "saryn prime set", platform: str = "pc", force: bool = False):
     started = time.perf_counter()
     platform_key = str(platform or "pc").strip().lower()
     if platform_key not in {"pc", "ps4", "xb1", "swi"}:
@@ -7880,6 +8088,8 @@ def debug_providers():
             "entries": sum(len(rows) for rows in _F1_SESSION_SNAPSHOTS.values()),
         },
         "prewarm": deepcopy(_PREWARM_STATE),
+        "warframe_storage": _warframe_store.summary(),
+        "warframe_refresh": {**deepcopy(_WARFRAME_REFRESH_STATE), **_warframe_refresh_queue.summary()},
         "slowest": slowest[:3],
     }
 

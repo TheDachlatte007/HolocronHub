@@ -8,7 +8,7 @@ from typing import Any
 
 def _connect(db_path: Path) -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -58,9 +58,7 @@ def upsert_warframe_snapshot(
                 INSERT INTO warframe_market_snapshots (
                     platform, slug, item_name, captured_at, payload_json
                 ) VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(platform, slug, captured_at) DO UPDATE SET
-                    item_name=excluded.item_name,
-                    payload_json=excluded.payload_json
+                ON CONFLICT(platform, slug, captured_at) DO NOTHING
                 """,
                 (
                     platform_key,
@@ -70,24 +68,11 @@ def upsert_warframe_snapshot(
                     json.dumps(snapshot, ensure_ascii=False),
                 ),
             )
-            conn.execute(
-                """
-                DELETE FROM warframe_market_snapshots
-                WHERE platform = ? AND slug = ? AND captured_at NOT IN (
-                    SELECT captured_at
-                    FROM warframe_market_snapshots
-                    WHERE platform = ? AND slug = ?
-                    ORDER BY captured_at DESC
-                    LIMIT 240
-                )
-                """,
-                (platform_key, slug_key, platform_key, slug_key),
-            )
     finally:
         conn.close()
 
 
-def get_warframe_snapshots(db_path: Path, *, platform: str, slug: str) -> list[dict[str, Any]]:
+def get_warframe_snapshots(db_path: Path, *, platform: str, slug: str, limit: int = 2880) -> list[dict[str, Any]]:
     platform_key = str(platform or "pc").strip().lower()
     slug_key = str(slug or "").strip()
     if not slug_key:
@@ -101,15 +86,15 @@ def get_warframe_snapshots(db_path: Path, *, platform: str, slug: str) -> list[d
                 SELECT payload_json
                 FROM warframe_market_snapshots
                 WHERE platform = ? AND slug = ?
-                ORDER BY captured_at ASC
-                LIMIT 240
+                ORDER BY captured_at DESC
+                LIMIT ?
                 """,
-                (platform_key, slug_key),
+                (platform_key, slug_key, max(1, min(int(limit), 10000))),
             ).fetchall()
     finally:
         conn.close()
     snapshots: list[dict[str, Any]] = []
-    for row in rows:
+    for row in reversed(rows):
         try:
             payload = json.loads(row["payload_json"] or "{}")
         except Exception:

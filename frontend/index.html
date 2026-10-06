@@ -675,7 +675,7 @@
     .wf-detail-card{background:linear-gradient(145deg,#0d1c30,#091422);border:1px solid #2e4967;border-radius:12px;padding:14px;box-shadow:0 15px 35px rgba(2,6,23,.22)}
     .wf-detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;border-bottom:1px solid rgba(71,95,124,.44);padding-bottom:12px}
     .wf-detail-identity{display:flex;align-items:center;gap:12px;min-width:0}
-    .wf-detail-art{width:86px;height:86px;object-fit:contain;border-radius:10px;background:#07111e;border:1px solid #35506f;padding:6px;flex:0 0 auto}
+    .wf-detail-art{width:86px;height:86px;object-fit:contain;border-radius:10px;background:#07111e;border:1px solid #35506f;padding:6px;flex:0 0 auto}.wf-detail-art-placeholder{display:grid;place-items:center;color:#67e8f9;font-size:30px;font-weight:800;background:radial-gradient(circle,rgba(34,211,238,.22),transparent 64%),#07111e}
     .wf-detail-title{font-size:22px;font-weight:750;color:#f8fafc;letter-spacing:-.02em}
     .wf-detail-sub{font-size:11px;color:#91a4bd;margin-top:5px}
     .wf-detail-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
@@ -875,7 +875,7 @@
         </div>
         <div class="home-dashboard-grid wide">
           <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span>Local telemetry</span></div><div class="home-gauge-grid"><div class="home-gauge"><div class="home-gauge-ring"><span>N/A</span></div>CPU</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#38bdf8 0 62%,#1c2b3d 62% 100%)"><span>N/A</span></div>RAM</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#f59e0b 0 38%,#1c2b3d 38% 100%)"><span>N/A</span></div>TEMP</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#34d399 0 18%,#1c2b3d 18% 100%)"><span>N/A</span></div>NET</div></div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Media Quick Launch</span><span>Services</span></div><div id="home-dashboard-media" class="home-media-grid"><a class="home-media-link" href="#" onclick="showTab('homelab');return false">▣<span>Media</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false">▶<span>Series</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false">♫<span>Music</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false">▤<span>Radio</span></a></div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Media Quick Launch</span><span>Services</span></div><div id="home-dashboard-media" class="home-media-grid"><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><span class="media-icon" aria-hidden="true">M</span><span>Media</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><span class="media-icon" aria-hidden="true">S</span><span>Series</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><span class="media-icon" aria-hidden="true">A</span><span>Music</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><span class="media-icon" aria-hidden="true">R</span><span>Radio</span></a></div></div>
           <div class="home-panel"><div class="home-panel-head"><span>Latest Events</span><span>Activity</span></div><div class="home-event-list"><div class="home-event"><span class="home-event-dot"></span><span>Homelab adapter ready</span></div><div class="home-event"><span class="home-event-dot"></span><span>Local tool registry loaded</span></div><div class="home-event"><span class="home-event-dot warn"></span><span>Live telemetry depends on configured adapters</span></div></div></div>
         </div>
       </section>
@@ -1266,7 +1266,7 @@
     <div class="card wf-shell-card">
       <h2>Warframe Hub</h2>
       <div class="row">
-        <input id="wf-item" placeholder="Item, e.g. Saryn Prime Set" style="flex:1;min-width:220px" />
+        <input id="wf-item" value="saryn prime set" placeholder="Item, e.g. Saryn Prime Set" style="flex:1;min-width:220px" />
         <select id="wf-platform">
           <option value="pc">PC</option>
           <option value="ps4">PlayStation</option>
@@ -1291,11 +1291,11 @@
       <div id="wf-meta" class="muted" style="margin-bottom:4px"></div>
       <div id="wf-errors" class="warn-strip"></div>
       <div class="hub-subnav" role="tablist" aria-label="Warframe workspace">
-        <button class="active" data-wf-tab="overview" onclick="setWarframeWorkspace('overview', this)">Overview</button>
-        <button data-wf-tab="planner" onclick="setWarframeWorkspace('planner', this)">Farm & trade</button>
+        <button data-wf-tab="overview" onclick="setWarframeWorkspace('overview', this)">Overview</button>
+        <button class="active" data-wf-tab="planner" onclick="setWarframeWorkspace('planner', this)">Farm & trade</button>
         <button data-wf-tab="personal" onclick="setWarframeWorkspace('personal', this)">My collection</button>
       </div>
-      <section class="wf-workspace-pane" data-wf-workspace="overview">
+      <section class="wf-workspace-pane" data-wf-workspace="overview" hidden>
       <div class="wf-overview-layout">
         <div class="wf-overview-main">
         <div class="stat-card wf-market-hero">
@@ -1345,11 +1345,11 @@
         </div>
       </div>
       </section>
-      <section class="wf-workspace-pane" data-wf-workspace="planner" hidden>
+      <section class="wf-workspace-pane" data-wf-workspace="planner">
       <div class="wf-command-layout">
         <div class="wf-detail-main">
           <div class="wf-detail-card">
-            <div id="wf-detail-market"><div class="muted">Loading selected market item...</div></div>
+            <div id="wf-detail-market"><div class="wf-detail-head"><div class="wf-detail-identity"><div class="wf-detail-art wf-detail-art-placeholder">S</div><div><div class="wf-market-kicker">PC - MARKET DETAIL</div><div class="wf-detail-title">Saryn Prime Set</div><div class="wf-detail-sub">Market snapshot loading - local history will appear here</div></div></div><div class="wf-detail-actions"><button class="wf-market-action" disabled>Open Market</button><button class="wf-market-action" disabled>Track Item</button></div></div><div class="wf-detail-stats"><div class="wf-detail-stat"><span>Buy</span><strong>-</strong></div><div class="wf-detail-stat"><span>Sell</span><strong>-</strong></div><div class="wf-detail-stat"><span>Median</span><strong>-</strong></div><div class="wf-detail-stat"><span>Volume (48h)</span><strong>-</strong></div><div class="wf-detail-stat"><span>Trend</span><strong>-</strong></div></div></div>
             <div class="wf-detail-chart-head"><span>Price History</span><span class="tool-minor">Local snapshots + market statistics</span></div>
             <div id="wf-detail-chart" class="wf-detail-chart"><div class="muted">History will appear after the market snapshot loads.</div></div>
           </div>

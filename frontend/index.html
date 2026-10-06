@@ -15,6 +15,10 @@
     .shell-context{font-size:11px;color:var(--hh-accent);letter-spacing:.14em;text-transform:uppercase;font-weight:700}
     .shell-controls{display:flex;align-items:center;gap:8px}
     .shell-clock{font-size:11px;color:#94a3b8;letter-spacing:.04em;white-space:nowrap}
+    .shell-topnav{display:none;align-items:center;gap:5px;margin-left:auto;margin-right:16px}
+    .shell-top-tab{padding:8px 13px;border:1px solid transparent;border-radius:8px;background:transparent;color:#91a4bd;font-size:12px;cursor:pointer}
+    .shell-top-tab:hover,.shell-top-tab.active{color:#ecfeff;background:rgba(8,145,178,.14);border-color:rgba(34,211,238,.28)}
+    .shell-utility{width:31px;height:31px;padding:0;border-radius:50%;border-color:#29405f;background:#0b1627;color:#b6c8dc}
     .shell-nav-toggle{width:34px;height:34px;padding:0;border-radius:10px;color:var(--hh-accent);border-color:var(--hh-border);background:rgba(11,18,32,.82);font-size:16px;line-height:1}
     .shell-nav-toggle:hover{border-color:var(--hh-accent);background:rgba(17,31,56,.95)}
     .nav-collapsed .nav{display:none}
@@ -26,6 +30,8 @@
     .holocron-shell>.nav .nav-tab.active{border-color:rgba(56,189,248,.28);background:rgba(37,99,235,.22);color:#f8fafc}
     .nav-collapsed .holocron-shell>.nav{display:none}
     body[data-hub="f1"] .holocron-shell,body[data-hub="warframe"] .holocron-shell{grid-template-columns:1fr}
+    body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{display:flex}
+    body[data-hub="f1"] .holocron-shell>.nav,body[data-hub="warframe"] .holocron-shell>.nav{display:none!important}
     body[data-hub="f1"] .holocron-shell>.nav,body[data-hub="warframe"] .holocron-shell>.nav{grid-column:1;grid-row:2;position:static;display:flex;flex-direction:row;align-items:center;overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;margin:0 0 14px;padding:6px;border-radius:11px}
     body[data-hub="f1"] .holocron-shell>.nav .nav-tab,body[data-hub="warframe"] .holocron-shell>.nav .nav-tab{width:auto;flex:0 0 auto;text-align:center}
     body[data-hub="f1"] .holocron-content,body[data-hub="warframe"] .holocron-content{grid-column:1;grid-row:3}
@@ -35,7 +41,7 @@
     .nav-collapsed .holocron-content{grid-column:1/-1}
     *{box-sizing:border-box}
     body{font-family:"Segoe UI Variable","Avenir Next",system-ui,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 12% -8%,rgba(37,99,235,.22),transparent 34%),radial-gradient(circle at 92% 8%,rgba(14,165,233,.12),transparent 28%),var(--hh-bg);color:var(--hh-text);margin:0;background-attachment:fixed}
-    .wrap{max-width:1280px;margin:0 auto;padding:20px}
+    .wrap{max-width:1800px;width:100%;margin:0 auto;padding:20px clamp(16px,3.2vw,48px)}
     h1{margin:0 0 20px;font-size:1.4rem;color:#f1f5f9}
     h2{margin:0 0 10px;font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.07em}
     .card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;margin-bottom:16px}
@@ -604,6 +610,17 @@
     .home-quick-link{display:flex;flex-direction:column;gap:7px;align-items:center;justify-content:center;min-height:70px;border:1px solid #263b56;border-radius:9px;background:#101c2e;color:#dbeafe;font-size:11px;text-align:center;text-decoration:none}
     .home-quick-link:hover{border-color:#38bdf8;background:#142a43;text-decoration:none}
     .home-quick-icon{font-size:19px;color:#67e8f9}
+    .home-gauge-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+    .home-gauge{display:flex;flex-direction:column;align-items:center;gap:7px;color:#8ea0b7;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+    .home-gauge-ring{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#38bdf8 0 28%,#1c2b3d 28% 100%);position:relative}
+    .home-gauge-ring::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#0b1627;border:1px solid #253b55}
+    .home-gauge-ring span{position:relative;z-index:1;font-size:12px;color:#f1f5f9}
+    .home-media-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+    .home-media-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:60px;border:1px solid #263b56;border-radius:8px;background:#101c2e;color:#dbeafe;font-size:10px;text-transform:uppercase;letter-spacing:.05em;text-decoration:none}
+    .home-media-link:hover{border-color:#38bdf8;text-decoration:none}
+    .home-event-list{display:flex;flex-direction:column;gap:0}
+    .home-event{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(71,95,124,.24);font-size:11px;color:#c4d0df}
+    .home-event:last-child{border-bottom:0}.home-event-dot{width:7px;height:7px;border-radius:50%;background:#34d399;flex:0 0 auto}.home-event-dot.warn{background:#f59e0b}
     @media (max-width:900px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr 1fr}}
     @media (max-width:640px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-time{font-size:38px}}
     body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
@@ -632,6 +649,29 @@
     body[data-hub="warframe"] .wf-section-title{color:#9aabc1;letter-spacing:.12em}
     body[data-hub="warframe"] .tool-minor{color:#8495ad}
     body[data-hub="warframe"] .wf-market-hero,.wf-hot-panel{box-shadow:0 14px 30px rgba(2,6,23,.18)}
+    .wf-command-layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:12px;margin-bottom:14px;align-items:start}
+    .wf-detail-main{min-width:0}
+    .wf-detail-card{background:linear-gradient(145deg,#0d1c30,#091422);border:1px solid #2e4967;border-radius:12px;padding:14px;box-shadow:0 15px 35px rgba(2,6,23,.22)}
+    .wf-detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;border-bottom:1px solid rgba(71,95,124,.44);padding-bottom:12px}
+    .wf-detail-identity{display:flex;align-items:center;gap:12px;min-width:0}
+    .wf-detail-art{width:86px;height:86px;object-fit:contain;border-radius:10px;background:#07111e;border:1px solid #35506f;padding:6px;flex:0 0 auto}
+    .wf-detail-title{font-size:22px;font-weight:750;color:#f8fafc;letter-spacing:-.02em}
+    .wf-detail-sub{font-size:11px;color:#91a4bd;margin-top:5px}
+    .wf-detail-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+    .wf-detail-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;margin:14px 0 4px}
+    .wf-detail-stat{display:flex;flex-direction:column;gap:3px;padding:0 11px;border-right:1px solid rgba(71,95,124,.35)}
+    .wf-detail-stat:first-child{padding-left:0}.wf-detail-stat:last-child{border-right:0}
+    .wf-detail-stat span{font-size:10px;color:#91a4bd}.wf-detail-stat strong{font-size:17px;color:#f8fafc}
+    .wf-detail-chart-head{display:flex;justify-content:space-between;align-items:center;margin-top:13px;margin-bottom:5px;font-size:12px;color:#dbeafe}
+    .wf-detail-chart .chart-wrap{min-height:180px}
+    .wf-context-sidebar{display:flex;flex-direction:column;gap:10px}
+    .wf-context-card{background:linear-gradient(145deg,#0d1b2d,#0a1423);border:1px solid #2b4562;border-radius:11px;padding:11px}
+    .wf-context-card h3{margin:0 0 9px;font-size:11px;color:#c8d9ed;letter-spacing:.1em;text-transform:uppercase}
+    .wf-context-list{display:flex;flex-direction:column;gap:1px;max-height:165px;overflow:auto}
+    .wf-context-row{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid rgba(71,95,124,.28);font-size:11px;color:#d0dceb}
+    .wf-context-row:last-child{border-bottom:0}.wf-context-row span:last-child{color:#8297b1;text-align:right}
+    @media (max-width:980px){.wf-command-layout{grid-template-columns:1fr}.wf-context-sidebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.wf-context-card{min-width:0}}
+    @media (max-width:640px){.wf-context-sidebar{grid-template-columns:1fr}.wf-detail-head{flex-direction:column}.wf-detail-actions{justify-content:flex-start}.wf-detail-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.wf-detail-stat{border:0;padding:0}}
     @media (max-width:1100px){body[data-hub="warframe"] .wf-farm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media (max-width:640px){body[data-hub="warframe"] .wf-farm-grid{grid-template-columns:1fr}}
     .wf-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
@@ -738,8 +778,16 @@
 <div class="wrap holocron-shell">
   <div class="app-shell-header">
     <h1 class="holocron-brand">HolocronHub <span id="shell-context" class="shell-context">Tool Hub</span></h1>
+    <nav class="shell-topnav" aria-label="Primary workspace navigation">
+      <button class="shell-top-tab active" data-shell-tab="tools" onclick="showTab('tools',this)">Home</button>
+      <button class="shell-top-tab" data-shell-tab="f1" onclick="showTab('f1',this)">F1</button>
+      <button class="shell-top-tab" data-shell-tab="warframe" onclick="showTab('warframe',this)">Warframe</button>
+      <button class="shell-top-tab" data-shell-tab="markets" onclick="showTab('markets',this)">Markets</button>
+    </nav>
     <div class="shell-controls">
       <span id="shell-clock" class="shell-clock"></span>
+      <button class="shell-utility" onclick="showTab('settings')" title="Settings" aria-label="Settings">⚙</button>
+      <button class="shell-utility" title="Display options" aria-label="Display options">☼</button>
       <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" title="Toggle navigation">NAV</button>
     </div>
   </div>
@@ -802,6 +850,11 @@
           <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span id="home-dashboard-system-meta">Telemetry</span></div><div class="home-stat-row"><span>CPU / Memory</span><strong class="muted">Local adapter</strong></div><div class="home-stat-row"><span>Storage</span><strong class="muted">Local adapter</strong></div><div class="home-stat-row"><span>Last sync</span><strong id="home-dashboard-sync" class="muted">Waiting</strong></div></div>
           <div class="home-panel"><div class="home-panel-head"><span>Services</span><span id="home-dashboard-service-count">-- online</span></div><div id="home-dashboard-services" class="home-dashboard-service-list"><div class="muted">Loading service status.</div></div></div>
           <div class="home-panel"><div class="home-panel-head"><span>Quick Links</span><span>Launch</span></div><div id="home-dashboard-links" class="home-quick-grid"><div class="muted">Loading links.</div></div></div>
+        </div>
+        <div class="home-dashboard-grid wide">
+          <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span>Local telemetry</span></div><div class="home-gauge-grid"><div class="home-gauge"><div class="home-gauge-ring"><span>--</span></div>CPU</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#38bdf8 0 62%,#1c2b3d 62% 100%)"><span>--</span></div>RAM</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#f59e0b 0 38%,#1c2b3d 38% 100%)"><span>--</span></div>TEMP</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#34d399 0 18%,#1c2b3d 18% 100%)"><span>--</span></div>NET</div></div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Media Quick Launch</span><span>Services</span></div><div id="home-dashboard-media" class="home-media-grid"><a class="home-media-link" href="#" onclick="showTab('homelab');return false">▣<span>Media</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false">▶<span>Series</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false">♫<span>Music</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false">▤<span>Radio</span></a></div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Latest Events</span><span>Activity</span></div><div class="home-event-list"><div class="home-event"><span class="home-event-dot"></span><span>Homelab adapter ready</span></div><div class="home-event"><span class="home-event-dot"></span><span>Local tool registry loaded</span></div><div class="home-event"><span class="home-event-dot warn"></span><span>Live telemetry depends on configured adapters</span></div></div></div>
         </div>
       </section>
       <div class="home-welcome">
@@ -1271,6 +1324,21 @@
       </div>
       </section>
       <section class="wf-workspace-pane" data-wf-workspace="planner" hidden>
+      <div class="wf-command-layout">
+        <div class="wf-detail-main">
+          <div class="wf-detail-card">
+            <div id="wf-detail-market"><div class="muted">Loading selected market item...</div></div>
+            <div class="wf-detail-chart-head"><span>Price History</span><span class="tool-minor">Local snapshots + market statistics</span></div>
+            <div id="wf-detail-chart" class="wf-detail-chart"><div class="muted">History will appear after the market snapshot loads.</div></div>
+          </div>
+        </div>
+        <aside class="wf-context-sidebar">
+          <div class="wf-context-card"><h3>Void Fissures</h3><div id="wf-detail-fissures" class="wf-context-list"><div class="muted">Loading</div></div></div>
+          <div class="wf-context-card"><h3>World State</h3><div id="wf-detail-world" class="wf-context-list"><div class="muted">Loading</div></div></div>
+          <div class="wf-context-card"><h3>Alerts</h3><div id="wf-detail-alerts" class="wf-context-list"><div class="muted">Loading</div></div></div>
+          <div class="wf-context-card"><h3>Farm Right Now</h3><div id="wf-detail-farm" class="wf-context-list"><div class="muted">Loading</div></div></div>
+        </aside>
+      </div>
       <div class="stat-card">
         <div class="diag-head">
           <h2 style="margin:0">Market Pulse</h2>
@@ -1871,6 +1939,7 @@ function showTab(name, btn) {
   if (context) context.textContent = HUB_CONTEXT_LABELS[name] || name;
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('[data-shell-tab]').forEach(b => b.classList.toggle('active', b.dataset.shellTab === name));
   if (name !== 'f1') { clearF1SessionPolling(); clearF1ClockTicker(); }
   if (name !== 'warframe') clearWarframeAutoRefresh();
   document.getElementById(`tab-${name}`).style.display='';
@@ -5961,6 +6030,48 @@ function writeWarframeOverviewCache(cacheKey, data) {
   _warframeOverviewCache = { key: cacheKey, ts: Number(trimmed[cacheKey]?.ts || Date.now()), data };
 }
 
+function renderWarframeCommandDetail(data, item, platform) {
+  const detail = document.getElementById('wf-detail-market');
+  const chart = document.getElementById('wf-detail-chart');
+  const fissuresEl = document.getElementById('wf-detail-fissures');
+  const worldEl = document.getElementById('wf-detail-world');
+  const alertsEl = document.getElementById('wf-detail-alerts');
+  const farmEl = document.getElementById('wf-detail-farm');
+  if (!detail || !chart || !fissuresEl || !worldEl || !alertsEl || !farmEl) return;
+  const market = data?.market || {};
+  const name = market.canonical_name || market.item || item || 'Selected item';
+  const thumb = market.thumb || market.icon || '';
+  const trend = Number(market.price_change_pct);
+  const trendClass = !Number.isFinite(trend) ? 'flat' : trend >= 0 ? 'up' : 'down';
+  const history = Array.isArray(market.history) && market.history.length ? market.history : (market.local_history?.series || []);
+  detail.innerHTML = `
+    <div class="wf-detail-head">
+      <div class="wf-detail-identity">
+        ${thumb ? `<img class="wf-detail-art" src="${esc(thumb)}" alt="${esc(name)}" loading="lazy" />` : ''}
+        <div><div class="wf-market-kicker">${esc(String(platform || 'pc').toUpperCase())} · MARKET DETAIL</div><div class="wf-detail-title">${esc(name)}</div><div class="wf-detail-sub">Prices, demand, volume and local history snapshots</div></div>
+      </div>
+      <div class="wf-detail-actions"><a class="wf-market-action primary" href="https://warframe.market/items/${esc(market.slug || '')}" target="_blank" rel="noopener">Open Market</a><button class="wf-market-action" onclick="addCurrentWarframeItem()">Track Item</button></div>
+    </div>
+    <div class="wf-detail-stats">
+      <div class="wf-detail-stat"><span>Buy</span><strong>${market.best_buy != null ? fmtMarketNum(market.best_buy,0) + 'p' : '-'}</strong></div>
+      <div class="wf-detail-stat"><span>Sell</span><strong>${market.best_sell != null ? fmtMarketNum(market.best_sell,0) + 'p' : '-'}</strong></div>
+      <div class="wf-detail-stat"><span>Median</span><strong>${market.last_avg_price != null ? fmtMarketNum(market.last_avg_price,0) + 'p' : '-'}</strong></div>
+      <div class="wf-detail-stat"><span>Volume (48h)</span><strong>${fmtMarketNum(market.volume_total || 0,0)}</strong></div>
+      <div class="wf-detail-stat"><span>Trend</span><strong class="market-change ${trendClass}">${Number.isFinite(trend) ? `${trend >= 0 ? '+' : ''}${fmtMarketNum(trend,1)}%` : 'n/a'}</strong></div>
+    </div>`;
+  chart.innerHTML = history.length ? `${buildSparklineSvg(history)}<div class="sparkline-label"><span>${esc((market.history_period || 'history').replace('_', ' '))}</span><span>${esc(`${history.length} points`)}</span></div>` : '<div class="empty">Price history is warming up from the local snapshot store.</div>';
+  const world = data?.worldstate || {};
+  const rows = (items, empty, mapper) => items.length ? items.slice(0, 5).map(mapper).join('') : `<div class="muted">${empty}</div>`;
+  const fissures = Array.isArray(world.fissures) ? world.fissures : [];
+  fissuresEl.innerHTML = rows(fissures, 'No active fissures', f => `<div class="wf-context-row"><span>${esc(f.tier || 'Fissure')}</span><span>${esc(f.node || f.mission_type || '-')}</span></div>`);
+  const cycles = world.world_cycles && typeof world.world_cycles === 'object' ? Object.entries(world.world_cycles) : [];
+  worldEl.innerHTML = cycles.length ? rows(cycles, 'No cycle data', ([key, value]) => `<div class="wf-context-row"><span>${esc(key)}</span><span>${esc(value?.state || value?.eta || '-')}</span></div>`) : '<div class="muted">No world state data</div>';
+  const alerts = Array.isArray(world.alerts) ? world.alerts : [];
+  alertsEl.innerHTML = rows(alerts, 'No active alerts', a => `<div class="wf-context-row"><span>${esc(a.reward || a.type || 'Alert')}</span><span>${esc(a.node || formatTimeish(a.eta) || '-')}</span></div>`);
+  const top = Array.isArray(data?.top_sells) ? data.top_sells.slice(0, 1) : [];
+  farmEl.innerHTML = top.length ? `<div class="wf-context-row"><span>${esc(top[0].name || 'Top sell')}</span><span>${top[0].volume_total != null ? esc(fmtMarketNum(top[0].volume_total,0)) + ' vol' : 'watch'}</span></div>` : '<div class="muted">Waiting for market pulse</div>';
+}
+
 function renderWarframeOverview(data, item, platform, options = {}) {
   const metaEl = document.getElementById('wf-meta');
   const errEl = document.getElementById('wf-errors');
@@ -5988,6 +6099,7 @@ function renderWarframeOverview(data, item, platform, options = {}) {
   }
 
   const m = data.market || {};
+  renderWarframeCommandDetail(data, item, platform);
   const sourceMode = String(m.snapshot_source || 'unavailable');
   const sellLabel = sourceMode === 'statistics_fallback' ? 'Floor Est.' : 'Best Sell';
   const buyLabel = sourceMode === 'statistics_fallback' ? 'Best Buy' : 'Best Buy';

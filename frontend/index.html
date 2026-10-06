@@ -14,6 +14,7 @@
     .holocron-brand{margin:0;display:flex;align-items:baseline;gap:8px;font-size:1.4rem;letter-spacing:-.02em}
     .shell-context{font-size:11px;color:var(--hh-accent);letter-spacing:.14em;text-transform:uppercase;font-weight:700}
     .shell-controls{display:flex;align-items:center;gap:8px}
+    .shell-clock{font-size:11px;color:#94a3b8;letter-spacing:.04em;white-space:nowrap}
     .shell-nav-toggle{width:34px;height:34px;padding:0;border-radius:10px;color:var(--hh-accent);border-color:var(--hh-border);background:rgba(11,18,32,.82);font-size:16px;line-height:1}
     .shell-nav-toggle:hover{border-color:var(--hh-accent);background:rgba(17,31,56,.95)}
     .nav-collapsed .nav{display:none}
@@ -24,6 +25,12 @@
     .holocron-shell>.nav .nav-tab{width:100%;margin:0;text-align:left;border:1px solid transparent;border-radius:9px;padding:9px 11px}
     .holocron-shell>.nav .nav-tab.active{border-color:rgba(56,189,248,.28);background:rgba(37,99,235,.22);color:#f8fafc}
     .nav-collapsed .holocron-shell>.nav{display:none}
+    body[data-hub="f1"] .holocron-shell,body[data-hub="warframe"] .holocron-shell{grid-template-columns:1fr}
+    body[data-hub="f1"] .holocron-shell>.nav,body[data-hub="warframe"] .holocron-shell>.nav{grid-column:1;grid-row:2;position:static;display:flex;flex-direction:row;align-items:center;overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;margin:0 0 14px;padding:6px;border-radius:11px}
+    body[data-hub="f1"] .holocron-shell>.nav .nav-tab,body[data-hub="warframe"] .holocron-shell>.nav .nav-tab{width:auto;flex:0 0 auto;text-align:center}
+    body[data-hub="f1"] .holocron-content,body[data-hub="warframe"] .holocron-content{grid-column:1;grid-row:3}
+    body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(2),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(3),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(4),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(5),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(9),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(10),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(11),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(2),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(3),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(4),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(5),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(9),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(10),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(11){display:none}
+    body.nav-collapsed[data-hub="f1"] .holocron-shell>.nav,body.nav-collapsed[data-hub="warframe"] .holocron-shell>.nav{display:none}
     .holocron-content{grid-column:2;grid-row:2;min-width:0}
     .nav-collapsed .holocron-content{grid-column:1/-1}
     *{box-sizing:border-box}
@@ -561,11 +568,44 @@
     .f1-shell-kicker{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--hh-accent);font-weight:700;margin-bottom:4px}
     body[data-hub="f1"] .stat-card{border-color:rgba(56,189,248,.16)}
     body[data-hub="f1"] .f1-hero{border-color:rgba(56,189,248,.45);box-shadow:0 14px 35px rgba(2,132,199,.14)}
+    body[data-hub="f1"] .f1-hero{min-height:230px;justify-content:flex-end;padding:20px;background:linear-gradient(90deg,rgba(3,12,27,.98) 0%,rgba(3,12,27,.8) 42%,rgba(3,12,27,.28) 100%),linear-gradient(145deg,#0b1830,#102b48 52%,#071322);border-radius:12px;position:relative;overflow:hidden}
+    body[data-hub="f1"] .f1-hero::after{content:"";position:absolute;inset:auto 0 0;height:1px;background:linear-gradient(90deg,transparent,var(--hh-accent),transparent);opacity:.75}
+    body[data-hub="f1"] .f1-hero>*{position:relative;z-index:1;max-width:720px}
+    body[data-hub="f1"] .f1-hero-title{font-size:clamp(28px,4vw,48px);letter-spacing:.02em;text-transform:uppercase;text-shadow:0 5px 20px rgba(0,0,0,.45)}
+    body[data-hub="f1"] .f1-hero-sub{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#c8e7ff}
     body[data-hub="f1"] .f1-history-panel{border-color:rgba(56,189,248,.24)}
     .wf-shell-card{background:linear-gradient(150deg,#18263c 0%,#142137 48%,#101b2e 100%);border-color:#2e4664;border-radius:12px;box-shadow:0 20px 55px rgba(2,6,23,.22)}
     .wf-shell-card>h2{font-size:11px;letter-spacing:.14em;color:#8293ac;margin-bottom:9px}
     #tab-tools>.card,#tab-homelab>.card{background:linear-gradient(150deg,#18263c 0%,#142137 48%,#101b2e 100%);border-color:#2e4664;box-shadow:0 20px 55px rgba(2,6,23,.22)}
     #tab-tools>.card h2,#tab-homelab>.card h2{color:#8293ac}
+    #tab-tools>.card>.home-welcome{display:none}
+    .home-dashboard{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+    .home-dashboard-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;padding:4px 2px 8px;border-bottom:1px solid rgba(71,95,124,.45)}
+    .home-dashboard-title{font-size:18px;font-weight:750;letter-spacing:.03em;color:#f8fafc}
+    .home-dashboard-kicker{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#67e8f9;margin-bottom:4px;font-weight:700}
+    .home-dashboard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .home-dashboard-grid.wide{grid-template-columns:1.2fr 1fr 1fr}
+    .home-dashboard-grid.bottom{grid-template-columns:1.2fr 1fr 1fr}
+    .home-panel{background:linear-gradient(145deg,rgba(10,20,34,.96),rgba(8,15,27,.98));border:1px solid #263b56;border-radius:12px;padding:14px;min-height:150px;box-shadow:inset 0 1px rgba(148,163,184,.04)}
+    .home-panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px;color:#9cafc5;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+    .home-panel-head strong{color:#dbeafe;font-size:11px}
+    .home-time{font-size:44px;line-height:1;color:#dffbff;letter-spacing:-.05em;text-shadow:0 0 22px rgba(103,232,249,.2)}
+    .home-date{margin-top:8px;color:#9cafc5;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+    .home-weather-empty{display:flex;align-items:center;justify-content:center;min-height:84px;color:#8495ad;text-align:center;font-size:12px}
+    .home-network-status{display:flex;align-items:center;gap:9px;font-size:17px;color:#f8fafc;margin:8px 0}
+    .home-network-status .homelab-status-dot{width:10px;height:10px}
+    .home-stat-row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid rgba(71,95,124,.3);font-size:12px}
+    .home-stat-row:last-child{border-bottom:0}
+    .home-dashboard-service-list{display:flex;flex-direction:column;gap:1px;max-height:182px;overflow:auto}
+    .home-dashboard-service{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid rgba(71,95,124,.24);font-size:12px}
+    .home-dashboard-service:last-child{border-bottom:0}
+    .home-dashboard-service span:first-child{display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .home-quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .home-quick-link{display:flex;flex-direction:column;gap:7px;align-items:center;justify-content:center;min-height:70px;border:1px solid #263b56;border-radius:9px;background:#101c2e;color:#dbeafe;font-size:11px;text-align:center;text-decoration:none}
+    .home-quick-link:hover{border-color:#38bdf8;background:#142a43;text-decoration:none}
+    .home-quick-icon{font-size:19px;color:#67e8f9}
+    @media (max-width:900px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr 1fr}}
+    @media (max-width:640px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-time{font-size:38px}}
     body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
     body[data-hub="warframe"] .hub-subnav{margin-top:12px}
     body[data-hub="warframe"] .hub-subnav button{background:#16243a;border-color:#334a68;color:#b9c8db;padding:6px 12px}
@@ -574,6 +614,21 @@
     body[data-hub="warframe"] .wf-reco-card{background:linear-gradient(145deg,#101b2d,#0c1627);border-color:#334863;border-radius:11px;padding:12px;gap:8px;box-shadow:inset 0 1px rgba(148,163,184,.04)}
     body[data-hub="warframe"] .wf-reco-card strong{font-size:15px;color:#f1f5f9}
     body[data-hub="warframe"] .wf-meta-chip{background:#111c2e;border-color:#30425b;color:#c4d0df}
+    .wf-market-identity{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-bottom:12px;border-bottom:1px solid rgba(71,95,124,.46)}
+    .wf-market-item{display:flex;align-items:center;gap:12px;min-width:0}
+    .wf-market-art{width:70px;height:70px;object-fit:contain;border-radius:9px;background:#08111f;border:1px solid #334863;padding:5px;flex:0 0 auto}
+    .wf-market-name{font-size:20px;font-weight:750;color:#f8fafc;letter-spacing:-.02em;line-height:1.05}
+    .wf-market-sub{font-size:11px;color:#94a3b8;margin-top:5px}
+    .wf-market-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+    .wf-market-action{padding:7px 11px;border-radius:7px;font-size:11px;font-weight:700;background:#15253b;border:1px solid #3a526f;color:#dbeafe}
+    .wf-market-action.primary{background:#0b6b4f;border-color:#19b77e;color:#d1fae5}
+    .wf-market-stat-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;margin-top:12px}
+    .wf-market-stat{padding:0 10px;border-right:1px solid rgba(71,95,124,.38);display:flex;flex-direction:column;gap:3px;min-width:0}
+    .wf-market-stat:first-child{padding-left:0}.wf-market-stat:last-child{border-right:0}
+    .wf-market-stat span{font-size:10px;color:#8ea0b7}.wf-market-stat strong{font-size:16px;color:#f1f5f9}
+    .wf-market-chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;margin-bottom:4px}
+    .wf-market-chart-title{font-size:12px;font-weight:700;color:#dbeafe}
+    @media (max-width:640px){.wf-market-identity{align-items:flex-start;flex-direction:column}.wf-market-actions{justify-content:flex-start}.wf-market-stat-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.wf-market-stat{border-right:0;padding:0}.wf-market-name{font-size:17px}}
     body[data-hub="warframe"] .wf-section-title{color:#9aabc1;letter-spacing:.12em}
     body[data-hub="warframe"] .tool-minor{color:#8495ad}
     body[data-hub="warframe"] .wf-market-hero,.wf-hot-panel{box-shadow:0 14px 30px rgba(2,6,23,.18)}
@@ -684,12 +739,13 @@
   <div class="app-shell-header">
     <h1 class="holocron-brand">HolocronHub <span id="shell-context" class="shell-context">Tool Hub</span></h1>
     <div class="shell-controls">
+      <span id="shell-clock" class="shell-clock"></span>
       <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" title="Toggle navigation">NAV</button>
     </div>
   </div>
 
   <div class="nav" style="align-items:center">
-    <button class="nav-tab active" onclick="showTab('tools',this)">Tool Hub</button>
+    <button class="nav-tab active" onclick="showTab('tools',this)">Home</button>
     <button class="nav-tab" onclick="showTab('homelab',this)">Homelab</button>
     <button class="nav-tab" onclick="showTab('feed',this)">Feed</button>
     <button class="nav-tab" onclick="showTab('digest',this)">Morning Digest</button>
@@ -732,6 +788,22 @@
 
   <div id="tab-tools">
     <div class="card">
+      <section class="home-dashboard" aria-label="HolocronHub command center">
+        <div class="home-dashboard-head">
+          <div><div class="home-dashboard-kicker">Personal command center</div><div class="home-dashboard-title">HolocronHub Home</div></div>
+          <span class="tool-minor">Live local overview</span>
+        </div>
+        <div class="home-dashboard-grid wide">
+          <div class="home-panel"><div class="home-panel-head"><span>Time & Date</span><span>Local</span></div><div id="home-dashboard-time" class="home-time">--:--</div><div id="home-dashboard-date" class="home-date">Loading local time</div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Weather</span><span>Augsburg</span></div><div class="home-weather-empty">Weather adapter can be connected without blocking the command center.</div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Network</span><span>Homelab</span></div><div id="home-dashboard-network" class="home-network-status"><span class="homelab-status-dot unknown"></span>Checking services</div><div id="home-dashboard-network-meta" class="muted">Reachability data will appear here.</div></div>
+        </div>
+        <div class="home-dashboard-grid bottom">
+          <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span id="home-dashboard-system-meta">Telemetry</span></div><div class="home-stat-row"><span>CPU / Memory</span><strong class="muted">Local adapter</strong></div><div class="home-stat-row"><span>Storage</span><strong class="muted">Local adapter</strong></div><div class="home-stat-row"><span>Last sync</span><strong id="home-dashboard-sync" class="muted">Waiting</strong></div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Services</span><span id="home-dashboard-service-count">-- online</span></div><div id="home-dashboard-services" class="home-dashboard-service-list"><div class="muted">Loading service status.</div></div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Quick Links</span><span>Launch</span></div><div id="home-dashboard-links" class="home-quick-grid"><div class="muted">Loading links.</div></div></div>
+        </div>
+      </section>
       <div class="home-welcome">
         <div class="home-welcome-copy">
           <div class="home-welcome-kicker">Personal command center</div>
@@ -1764,6 +1836,21 @@ const HUB_CONTEXT_LABELS = {
   saved: 'Saved', sources: 'Sources', settings: 'Settings',
 };
 
+function updateShellClock() {
+  const clock = document.getElementById('shell-clock');
+  if (!clock) return;
+  const now = new Date();
+  clock.textContent = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(now);
+  const time = document.getElementById('home-dashboard-time');
+  const date = document.getElementById('home-dashboard-date');
+  if (time) time.textContent = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+  if (date) date.textContent = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' }).format(now);
+}
+updateShellClock();
+window.setInterval(updateShellClock, 30000);
+
 function setGlobalNavCollapsed(collapsed) {
   document.body.classList.toggle('nav-collapsed', collapsed === true);
   const toggle = document.getElementById('shell-nav-toggle');
@@ -2302,6 +2389,30 @@ function renderHomeLabOverview(data, errMsg='') {
     </div>`;
 }
 
+function renderHomeDashboard(data) {
+  const servicesEl = document.getElementById('home-dashboard-services');
+  const countEl = document.getElementById('home-dashboard-service-count');
+  const networkEl = document.getElementById('home-dashboard-network');
+  const networkMeta = document.getElementById('home-dashboard-network-meta');
+  const syncEl = document.getElementById('home-dashboard-sync');
+  const linksEl = document.getElementById('home-dashboard-links');
+  if (!servicesEl || !countEl || !networkEl || !linksEl) return;
+  const services = Array.isArray(data?.services) ? data.services : [];
+  const summary = data?.summary || {};
+  const online = Number(summary.online || 0);
+  const status = online > 0 && Number(summary.offline || 0) === 0 ? 'healthy' : (Number(summary.offline || 0) ? 'warning' : 'unknown');
+  networkEl.innerHTML = `<span class="homelab-status-dot ${status}"></span>${online ? `${online} service${online === 1 ? '' : 's'} online` : 'No telemetry yet'}`;
+  if (networkMeta) networkMeta.textContent = services.length ? `${summary.online || 0} online | ${summary.offline || 0} offline | ${summary.unknown || 0} unknown` : 'Reachability data will appear here.';
+  if (syncEl) syncEl.textContent = data?.generated_at ? `Updated ${relTime(data.generated_at)}` : 'Waiting';
+  countEl.textContent = `${online} online`;
+  servicesEl.innerHTML = services.length ? services.slice(0, 7).map(service => {
+    const serviceStatus = homelabStatusClass(service.status);
+    return `<div class="home-dashboard-service"><span><span class="homelab-status-dot ${serviceStatus}"></span>${esc(service.name || service.id || 'Service')}</span><span class="muted">${esc(homelabStatusLabel(service.status))}${service.latency_ms != null ? ` ${esc(String(service.latency_ms))}ms` : ''}</span></div>`;
+  }).join('') : '<div class="muted">No registered services yet.</div>';
+  const links = (_toolCache || []).filter(tool => tool.favorite || tool.pinned || isHomeTool(tool)).slice(0, 8);
+  linksEl.innerHTML = links.length ? links.map(tool => `<a class="home-quick-link" href="${esc(tool.link || '#')}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')"><span class="home-quick-icon">◈</span><span>${esc(tool.name || 'Tool')}</span></a>`).join('') : '<div class="muted">Pin tools to build quick links.</div>';
+}
+
 async function loadHomeLabOverview() {
   const requestId = ++_homeLabOverviewRequest;
   const el = document.getElementById('home-lab-overview');
@@ -2312,10 +2423,12 @@ async function loadHomeLabOverview() {
     const overrides = new Map((data.services || []).map(item => [item.id, item]));
     _toolCache = _toolCache.map(tool => overrides.has(tool.id) ? { ...tool, ...overrides.get(tool.id) } : tool);
     renderHomeLabOverview(data);
+    renderHomeDashboard(data);
     renderToolSections(_toolCache);
   } catch (e) {
     if (requestId !== _homeLabOverviewRequest) return;
     renderHomeLabOverview(null, e.message || 'Unknown error');
+    renderHomeDashboard(null);
   }
 }
 
@@ -4798,6 +4911,12 @@ function renderF1Hero(weekend) {
   }
 
   const meeting = weekend.meeting || {};
+  const heroImage = weekend.track?.image_url || meeting.circuit_image || '';
+  heroEl.style.backgroundImage = heroImage
+    ? `linear-gradient(90deg,rgba(3,12,27,.98) 0%,rgba(3,12,27,.78) 42%,rgba(3,12,27,.25) 100%),url("${heroImage}")`
+    : '';
+  heroEl.style.backgroundSize = heroImage ? 'cover' : '';
+  heroEl.style.backgroundPosition = heroImage ? 'center' : '';
   const phaseClass = f1StatusClass(weekend.phase);
   heroEl.innerHTML = `
     <div class="f1-hero-sub">
@@ -5882,19 +6001,27 @@ function renderWarframeOverview(data, item, platform, options = {}) {
   const localClass = !Number.isFinite(localChange) ? 'flat' : (localChange >= 0 ? 'up' : 'down');
   const liveOrderSummary = (m.sell_count_live || m.buy_count_live) ? `S${esc(m.sell_count_live ?? 0)} / B${esc(m.buy_count_live ?? 0)}` : 'n/a';
   const allOrderSummary = (m.sell_count_total || m.buy_count_total) ? `all S${esc(m.sell_count_total ?? 0)} / B${esc(m.buy_count_total ?? 0)}` : '';
+  const marketName = m.canonical_name || m.item || item;
+  const marketThumb = m.thumb || m.icon || '';
   marketEl.innerHTML = `
-    <div class="small-row"><span>Item</span><strong>${esc(m.canonical_name || m.item || item)}</strong></div>
-    <div class="small-row"><span>${sellLabel}</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
-    <div class="small-row"><span>${buyLabel}</span><strong>${m.best_buy != null ? fmtMarketNum(m.best_buy,0) + 'p' : '-'}</strong></div>
-    <div class="small-row"><span>Last Avg</span><strong>${m.last_avg_price != null ? fmtMarketNum(m.last_avg_price,0) + 'p' : '-'}</strong></div>
-    <div class="small-row"><span>48h Volume</span><strong>${fmtMarketNum(m.volume_total || 0,0)}</strong></div>
-    <div class="small-row"><span>Trend</span><span class="market-change ${trendClass}">${Number.isFinite(trendValue) ? `${trendValue >= 0 ? '+' : ''}${fmtMarketNum(trendValue,1)}%` : 'n/a'}</span></div>
-    <div class="small-row"><span>Rank</span><strong>${selectedRank}</strong></div>
-    <div class="small-row"><span>Source</span><strong>${sourceLabel}</strong></div>
-    <div class="small-row"><span>Local Hist</span><strong>${localSamples ? `${localSamples} cached` : 'warming up'}</strong></div>
-    <div class="small-row"><span>24h Local</span><span class="market-change ${localClass}">${Number.isFinite(localChange) ? `${localChange >= 0 ? '+' : ''}${fmtMarketNum(localChange,1)}%` : 'n/a'}</span></div>
-    <div class="small-row"><span>Live Orders</span><span class="muted wf-row-meta">${liveOrderSummary}${allOrderSummary ? ` | ${allOrderSummary}` : ''}</span></div>
-    <a href="https://warframe.market/items/${esc(m.slug || '')}" target="_blank" rel="noopener">Open on warframe.market</a>
+    <div class="wf-market-identity">
+      <div class="wf-market-item">
+        ${marketThumb ? `<img class="wf-market-art" src="${esc(marketThumb)}" alt="${esc(marketName)}" loading="lazy" />` : ''}
+        <div><div class="wf-market-name">${esc(marketName)}</div><div class="wf-market-sub">Warframe Market <span class="pill">${esc(sourceLabel)}</span></div></div>
+      </div>
+      <div class="wf-market-actions">
+        <a class="wf-market-action primary" href="https://warframe.market/items/${esc(m.slug || '')}" target="_blank" rel="noopener">Open Market</a>
+        <button class="wf-market-action" onclick='addCurrentWarframeItem()'>Track Item</button>
+      </div>
+    </div>
+    <div class="wf-market-stat-row">
+      <div class="wf-market-stat"><span>${sellLabel}</span><strong>${m.best_sell != null ? fmtMarketNum(m.best_sell,0) + 'p' : '-'}</strong></div>
+      <div class="wf-market-stat"><span>${buyLabel}</span><strong>${m.best_buy != null ? fmtMarketNum(m.best_buy,0) + 'p' : '-'}</strong></div>
+      <div class="wf-market-stat"><span>Median</span><strong>${m.last_avg_price != null ? fmtMarketNum(m.last_avg_price,0) + 'p' : '-'}</strong></div>
+      <div class="wf-market-stat"><span>Volume (48h)</span><strong>${fmtMarketNum(m.volume_total || 0,0)}</strong></div>
+      <div class="wf-market-stat"><span>Trend</span><strong class="market-change ${trendClass}">${Number.isFinite(trendValue) ? `${trendValue >= 0 ? '+' : ''}${fmtMarketNum(trendValue,1)}%` : 'n/a'}</strong></div>
+    </div>
+    <div class="wf-market-chart-head"><span class="wf-market-chart-title">Price History</span><span class="tool-minor">${localSamples ? `${localSamples} local snapshots` : 'History warming up'} · ${selectedRank}</span></div>
   `;
 
   if (marketChartEl) {

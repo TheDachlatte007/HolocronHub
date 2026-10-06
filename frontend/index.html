@@ -20,6 +20,12 @@
     .shell-top-tab:hover,.shell-top-tab.active{color:#ecfeff;background:rgba(8,145,178,.14);border-color:rgba(34,211,238,.28)}
     .shell-utility{width:31px;height:31px;padding:0;border-radius:50%;border-color:#29405f;background:#0b1627;color:#b6c8dc;display:grid;place-items:center}
     .shell-utility svg{width:16px;height:16px}
+    .shell-search{display:none;align-items:center;gap:9px;width:min(430px,34vw);height:38px;margin-left:auto;margin-right:18px;padding:0 13px;border:1px solid #29405f;border-radius:10px;background:#091525;color:#8ea0b7;font-size:12px}
+    .shell-search svg{width:15px;height:15px;color:#67e8f9;flex:0 0 auto}.shell-search kbd{margin-left:auto;border:1px solid #35506f;border-radius:5px;padding:2px 5px;color:#b7cadf;font-size:10px}
+    body[data-hub="tools"] .shell-search{display:flex}
+    body[data-hub="tools"] .shell-context{display:none}
+    body[data-hub="f1"] .shell-context,body[data-hub="warframe"] .shell-context,body[data-hub="f1"] .shell-utility,body[data-hub="warframe"] .shell-utility{display:none}
+    .nav-tab::before{content:attr(data-icon);display:inline-flex;align-items:center;justify-content:center;width:17px;margin-right:7px;color:#67e8f9;font-size:10px;font-weight:700;opacity:.9}
     .nav-glyph,.nav-glyph::before,.nav-glyph::after{display:block;width:13px;height:1px;background:currentColor;content:"";position:relative}
     .nav-glyph::before{position:absolute;top:-5px}.nav-glyph::after{position:absolute;top:5px}
     .shell-nav-toggle{width:34px;height:34px;padding:0;border-radius:10px;color:var(--hh-accent);border-color:var(--hh-border);background:rgba(11,18,32,.82);font-size:16px;line-height:1}
@@ -793,6 +799,7 @@
 <div class="wrap holocron-shell">
   <div class="app-shell-header">
     <h1 class="holocron-brand"><span class="holocron-mark" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><polygon points="16,1.8 28.5,9 28.5,23 16,30.2 3.5,23 3.5,9" fill="#071a2c" stroke="#39d9f3" stroke-width="1.3"/><polygon points="16,6 24,10.6 24,21.4 16,26 8,21.4 8,10.6" fill="none" stroke="#62e9fb" stroke-width="1"/><circle cx="16" cy="16" r="4.2" fill="#67e8f9" opacity=".9"/></svg></span><span class="holocron-wordmark">HolocronHub</span> <span id="shell-context" class="shell-context">Tool Hub</span></h1>
+    <div class="shell-search" role="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg><span>Search services, devices, or commands...</span><kbd>CTRL K</kbd></div>
     <nav class="shell-topnav" aria-label="Primary workspace navigation">
       <button class="shell-top-tab active" data-shell-tab="tools" onclick="showTab('tools',this)">Home</button>
       <button class="shell-top-tab" data-shell-tab="f1" onclick="showTab('f1',this)">F1</button>
@@ -808,17 +815,17 @@
   </div>
 
   <div class="nav" style="align-items:center">
-    <button class="nav-tab active" onclick="showTab('tools',this)">Home</button>
-    <button class="nav-tab" onclick="showTab('homelab',this)">Homelab</button>
-    <button class="nav-tab" onclick="showTab('feed',this)">Feed</button>
-    <button class="nav-tab" onclick="showTab('digest',this)">Morning Digest</button>
-    <button class="nav-tab" onclick="showTab('tldr',this)">TLDR</button>
-    <button class="nav-tab" onclick="showTab('markets',this)">Markets</button>
-    <button class="nav-tab" onclick="showTab('f1',this)">F1</button>
-    <button class="nav-tab" onclick="showTab('warframe',this)">Warframe</button>
-    <button class="nav-tab" onclick="showTab('saved',this)">Saved</button>
-    <button class="nav-tab" onclick="showTab('sources',this)">Sources</button>
-    <button class="nav-tab" onclick="showTab('settings',this)">Settings</button>
+    <button class="nav-tab active" data-icon="H" onclick="showTab('tools',this)">Home</button>
+    <button class="nav-tab" data-icon="S" onclick="showTab('homelab',this)">Homelab</button>
+    <button class="nav-tab" data-icon="F" onclick="showTab('feed',this)">Feed</button>
+    <button class="nav-tab" data-icon="D" onclick="showTab('digest',this)">Morning Digest</button>
+    <button class="nav-tab" data-icon="T" onclick="showTab('tldr',this)">TLDR</button>
+    <button class="nav-tab" data-icon="M" onclick="showTab('markets',this)">Markets</button>
+    <button class="nav-tab" data-icon="F1" onclick="showTab('f1',this)">F1</button>
+    <button class="nav-tab" data-icon="W" onclick="showTab('warframe',this)">Warframe</button>
+    <button class="nav-tab" data-icon="S" onclick="showTab('saved',this)">Saved</button>
+    <button class="nav-tab" data-icon="SRC" onclick="showTab('sources',this)">Sources</button>
+    <button class="nav-tab" data-icon="SET" onclick="showTab('settings',this)">Settings</button>
   </div>
 
   <!-- ═══ TOOLS ═══ -->
@@ -1259,7 +1266,7 @@
     <div class="card wf-shell-card">
       <h2>Warframe Hub</h2>
       <div class="row">
-        <input id="wf-item" placeholder="Item, e.g. arcane energize" style="flex:1;min-width:220px" />
+        <input id="wf-item" placeholder="Item, e.g. Saryn Prime Set" style="flex:1;min-width:220px" />
         <select id="wf-platform">
           <option value="pc">PC</option>
           <option value="ps4">PlayStation</option>
@@ -4259,7 +4266,7 @@ async function loadWarframeWorkspaceData(workspace, options = {}) {
   _warframeWorkspaceLoads[key] = true;
 
   if (target === 'planner') {
-    const item = document.getElementById('wf-item')?.value?.trim() || 'arcane energize';
+    const item = document.getElementById('wf-item')?.value?.trim() || 'saryn prime set';
     await Promise.allSettled([
       loadWarframePulse(),
       loadWarframeRadar(),
@@ -6023,7 +6030,7 @@ function toggleWarframePulseLane(kind) {
 }
 
 function makeWarframeOverviewCacheKey(item, platform) {
-  return `${String(platform || 'pc').toLowerCase()}::${normalizeTextKey(item || 'arcane energize')}`;
+  return `${String(platform || 'pc').toLowerCase()}::${normalizeTextKey(item || 'saryn prime set')}`;
 }
 
 function readWarframeOverviewCache(cacheKey) {
@@ -6288,7 +6295,7 @@ async function loadWarframe(options = {}) {
   if (errEl) errEl.innerHTML = '';
   if (force) resetWarframeWorkspaceLoads();
 
-  if (!itemInput.value.trim()) itemInput.value = 'arcane energize';
+  if (!itemInput.value.trim()) itemInput.value = 'saryn prime set';
   const item = itemInput.value.trim();
   const platform = platformSel.value || 'pc';
   const cacheKey = makeWarframeOverviewCacheKey(item, platform);

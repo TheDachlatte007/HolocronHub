@@ -549,6 +549,11 @@
     .home-holocron-mark::before,.home-holocron-mark::after{content:"";position:absolute;inset:12px;border:1px solid rgba(165,243,252,.65);border-radius:12px}
     .home-holocron-mark::after{inset:25px;border-radius:7px;background:rgba(125,211,252,.75);box-shadow:0 0 14px rgba(125,211,252,.9)}
     @media (max-width:640px){.home-welcome{align-items:flex-start;padding:15px}.home-holocron-mark{width:54px;height:54px;border-radius:16px}.home-holocron-mark::before{inset:9px}.home-holocron-mark::after{inset:19px}}
+    .f1-shell-card{background:linear-gradient(155deg,rgba(18,31,54,.98),rgba(10,18,31,.98));border-color:rgba(56,189,248,.2);box-shadow:var(--hh-shadow)}
+    .f1-shell-kicker{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--hh-accent);font-weight:700;margin-bottom:4px}
+    body[data-hub="f1"] .stat-card{border-color:rgba(56,189,248,.16)}
+    body[data-hub="f1"] .f1-hero{border-color:rgba(56,189,248,.45);box-shadow:0 14px 35px rgba(2,132,199,.14)}
+    body[data-hub="f1"] .f1-history-panel{border-color:rgba(56,189,248,.24)}
     .wf-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
     .wf-frame-card{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
@@ -989,10 +994,11 @@
   <!-- ═══ SAVED ═══ -->
   <!-- F1 -->
   <div id="tab-f1" style="display:none">
-    <div class="card">
+    <div class="card f1-shell-card">
       <div class="diag-head" style="margin-bottom:10px">
         <div>
-          <h2 style="margin:0 0 6px">Formula 1 Weekend Hub</h2>
+          <div class="f1-shell-kicker">Race control / season workspace</div>
+          <h2 style="margin:0 0 6px;color:#f8fafc;font-size:1.1rem;letter-spacing:.02em;text-transform:none">Formula 1 Weekend Hub</h2>
           <div id="f1-meta" class="muted"></div>
         </div>
         <div class="row" style="margin:0">

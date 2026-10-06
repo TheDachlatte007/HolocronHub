@@ -101,14 +101,16 @@ def _uptime_kuma() -> dict[str, Any] | None:
     snapshot = _empty_snapshot("uptime_kuma")
     headers: dict[str, str] = {"Accept": "text/plain"}
     api_key = _env("UPTIME_KUMA_API_KEY")
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-        headers["X-API-Key"] = api_key
     auth = None
-    username = _env("UPTIME_KUMA_USERNAME")
-    password = _env("UPTIME_KUMA_PASSWORD")
-    if username:
-        auth = (username, password)
+    if api_key:
+        # Kuma API keys authenticate the metrics endpoint as HTTP Basic Auth:
+        # the username is ignored and the key is the password.
+        auth = ("", api_key)
+    else:
+        username = _env("UPTIME_KUMA_USERNAME")
+        password = _env("UPTIME_KUMA_PASSWORD")
+        if username:
+            auth = (username, password)
     response = _request("GET", f"{base}/metrics", headers=headers, auth=auth)
     monitors: dict[str, dict[str, Any]] = {}
     for metric, labels, value in _parse_prometheus(response.text):
@@ -153,7 +155,12 @@ def _beszel() -> dict[str, Any] | None:
     if token:
         headers["Authorization"] = f"Bearer {token}"
     auth = (username, password) if username else None
-    health = _request("GET", f"{base}/health", headers=headers, auth=auth)
+    try:
+        health = _request("GET", f"{base}/api/health", headers=headers, auth=auth)
+    except requests.HTTPError as first_error:
+        if getattr(first_error.response, "status_code", None) != 404:
+            raise
+        health = _request("GET", f"{base}/health", headers=headers, auth=auth)
     try:
         health_payload = health.json()
     except ValueError:

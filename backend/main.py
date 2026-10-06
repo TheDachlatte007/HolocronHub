@@ -7690,19 +7690,45 @@ def homelab_command_center_overview(force: bool = False):
 
     # Kuma is the canonical health source when configured. Registry probes
     # remain useful for services that have not been added to Kuma yet.
-    kuma_services = list((provider_snapshots.get("uptime_kuma") or {}).get("services") or [])
-    registry_by_name = {
-        str(service.get("name") or "").strip().lower(): service
-        for service in services
-        if str(service.get("name") or "").strip()
-    }
+    kuma_services = [
+        monitor for monitor in ((provider_snapshots.get("uptime_kuma") or {}).get("services") or [])
+        if str(monitor.get("type") or "").lower() != "group"
+        and str(monitor.get("url") or "").strip() not in {"", "https://", "http://"}
+    ]
+
+    def normalized_match_value(value: Any) -> str:
+        return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
+    def matches_kuma_monitor(service: dict[str, Any], monitor: dict[str, Any]) -> bool:
+        service_name = normalized_match_value(service.get("name"))
+        monitor_name = normalized_match_value(monitor.get("name"))
+        if service_name and monitor_name and (
+            service_name == monitor_name
+            or (len(service_name) >= 5 and service_name in monitor_name)
+            or (len(monitor_name) >= 5 and monitor_name in service_name)
+        ):
+            return True
+        try:
+            service_host = (urlparse(str(service.get("link") or "")).hostname or "").lower()
+            monitor_host = (urlparse(str(monitor.get("url") or "")).hostname or "").lower()
+            return bool(service_host and monitor_host and service_host == monitor_host)
+        except Exception:
+            return False
+
+    matched_registry_ids: set[str] = set()
     for monitor in kuma_services:
-        registry = registry_by_name.get(str(monitor.get("name") or "").strip().lower())
+        registry = next((
+            candidate for candidate in services
+            if matches_kuma_monitor(candidate, monitor)
+        ), None)
         if registry:
+            matched_registry_ids.add(str(registry.get("id") or ""))
             registry["status"] = monitor.get("status", registry.get("status"))
             registry["latency_ms"] = monitor.get("latency_ms")
             registry["status_source"] = "uptime_kuma"
             registry["status_checked_at"] = (provider_snapshots.get("uptime_kuma") or {}).get("checked_at")
+            if registry.get("status") in {"online", "healthy"}:
+                registry.pop("error", None)
         else:
             services.append({
                 "id": f"kuma:{monitor.get('id') or monitor.get('name')}",
@@ -7715,6 +7741,16 @@ def homelab_command_center_overview(force: bool = False):
                 "status_source": "uptime_kuma",
                 "status_checked_at": (provider_snapshots.get("uptime_kuma") or {}).get("checked_at"),
             })
+
+    hidden_unmonitored = []
+    if (provider_snapshots.get("uptime_kuma") or {}).get("status") == "healthy":
+        visible_services = []
+        for service in services:
+            if service.get("status") == "offline" and str(service.get("id") or "") not in matched_registry_ids:
+                hidden_unmonitored.append(service.get("name") or service.get("id"))
+                continue
+            visible_services.append(service)
+        services = visible_services
 
     registry_summary = {
         "total": len(services),
@@ -7790,6 +7826,7 @@ def homelab_command_center_overview(force: bool = False):
         "media": buckets["media"],
         "monitoring": buckets["monitoring"],
         "providers": provider_snapshots,
+        "hidden_unmonitored": hidden_unmonitored,
         "source": "provider_adapters_and_tool_registry",
     }
 

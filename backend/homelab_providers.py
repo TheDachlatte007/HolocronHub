@@ -71,7 +71,10 @@ def _empty_snapshot(provider: str) -> dict[str, Any]:
 
 def _error_snapshot(provider: str, error: Exception) -> dict[str, Any]:
     snapshot = _empty_snapshot(provider)
-    snapshot["status"] = "warning"
+    response = getattr(error, "response", None)
+    # A 404 usually means an optional adapter endpoint differs by version;
+    # keep it visible as unknown without making the whole command center red.
+    snapshot["status"] = "unknown" if getattr(response, "status_code", None) == 404 else "warning"
     snapshot["errors"] = [f"{type(error).__name__}: {str(error)[:240]}"]
     return snapshot
 

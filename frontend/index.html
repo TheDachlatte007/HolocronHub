@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2360a5fa'/%3E%3Cstop offset='1' stop-color='%231d4ed8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='16,2 28,9 28,23 16,30 4,23 4,9' fill='url(%23g)'/%3E%3Cpolygon points='16,6 24,11 24,21 16,26 8,21 8,11' fill='none' stroke='%23bfdbfe' stroke-width='1'/%3E%3Cpolygon points='16,10 21,13 21,19 16,22 11,19 11,13' fill='%23bfdbfe' opacity='0.25'/%3E%3Cline x1='16' y1='2' x2='16' y2='10' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='16' y1='22' x2='16' y2='30' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='4' y1='9' x2='11' y2='13' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='21' y1='19' x2='28' y2='23' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='28' y1='9' x2='21' y2='13' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='11' y1='19' x2='4' y2='23' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3C/svg%3E" />
   <style>
     *{box-sizing:border-box}
-    body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0}
+    body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 12% -8%,rgba(37,99,235,.22),transparent 34%),radial-gradient(circle at 92% 8%,rgba(14,165,233,.12),transparent 28%),#080d1a;color:#e2e8f0;margin:0;background-attachment:fixed}
     .wrap{max-width:1280px;margin:0 auto;padding:20px}
     h1{margin:0 0 20px;font-size:1.4rem;color:#f1f5f9}
     h2{margin:0 0 10px;font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.07em}
@@ -105,17 +105,20 @@
     .home-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}
     .home-overview-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
     .home-overview-card strong{font-size:14px;color:#f8fafc}
-    .homelab-command-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+    #tab-homelab>.card{position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(24,39,68,.96),rgba(8,14,28,.98));border-color:#29456e;box-shadow:0 18px 50px rgba(2,6,23,.28)}
+    #tab-homelab>.card:before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,#38bdf8,#2563eb,transparent);opacity:.9}
+    .homelab-command-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;position:relative}
+    .homelab-kicker{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#38bdf8;margin-bottom:7px;font-weight:700}
     .homelab-command-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
     .homelab-command-tab{border:1px solid #334155;background:#0b1220;color:#94a3b8;border-radius:8px;padding:7px 11px;cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
-    .homelab-command-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
+    .homelab-command-tab.active{background:linear-gradient(135deg,#2563eb,#0ea5e9);border-color:#38bdf8;color:#fff;box-shadow:0 0 18px rgba(14,165,233,.18)}
     .homelab-status{display:flex;align-items:center;gap:8px;font-size:12px;color:#94a3b8}
     .homelab-status-dot{width:9px;height:9px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px rgba(100,116,139,.12)}
     .homelab-status-dot.healthy{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.12)}
     .homelab-status-dot.warning,.homelab-status-dot.degraded{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.12)}
     .homelab-status-dot.critical{background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
     .homelab-command-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
-    .homelab-command-card{background:linear-gradient(145deg,#111827,#0b1220);border:1px solid #334155;border-radius:12px;padding:12px;min-height:100px}
+    .homelab-command-card{background:linear-gradient(145deg,rgba(17,31,56,.92),rgba(8,14,28,.94));border:1px solid #29405f;border-radius:12px;padding:12px;min-height:100px;box-shadow:inset 0 1px 0 rgba(148,163,184,.04)}
     .homelab-command-card h3{margin:0 0 9px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
     .homelab-alert{border-left:3px solid #f59e0b;padding:7px 9px;background:#1c1917;border-radius:6px;margin-top:6px;font-size:12px}
     .homelab-alert.critical{border-left-color:#ef4444;background:#1f1115}
@@ -631,7 +634,8 @@
     <div class="card">
       <div class="homelab-command-head">
         <div>
-          <h2 style="margin:0">Homelab Command Center</h2>
+          <div class="homelab-kicker">Local Operations / Live Fabric</div>
+          <h2 style="margin:0;color:#f8fafc;font-size:1.1rem;letter-spacing:.02em;text-transform:none">HolocronHub Homelab</h2>
           <div class="tool-hub-strap">A compact health overview built from your registered services. Holocron aggregates status and links; the original tools remain the source of truth.</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">

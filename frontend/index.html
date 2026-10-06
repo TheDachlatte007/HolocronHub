@@ -528,6 +528,27 @@
     .f1-history-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:0 0 auto}
     .f1-history-actions .pill{white-space:nowrap}
     .wf-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+    .wf-overview-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.78fr);gap:12px;align-items:start;margin-bottom:12px}
+    .wf-overview-main,.wf-utility-stack{display:flex;flex-direction:column;gap:10px;min-width:0}
+    .wf-market-hero{background:linear-gradient(145deg,rgba(16,35,49,.96),rgba(9,18,30,.98));border-color:rgba(74,222,128,.28);box-shadow:var(--hh-shadow)}
+    .wf-market-hero .chart-wrap{min-height:170px;margin-top:12px}
+    .wf-market-kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--hh-accent);font-weight:700}
+    .wf-utility-card{background:rgba(9,18,30,.78);padding:12px}
+    .wf-utility-card h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--hh-muted)}
+    .wf-utility-card .small-list{max-height:190px;overflow:auto;padding-right:4px}
+    .wf-hot-panel{background:linear-gradient(145deg,rgba(19,29,45,.98),rgba(9,18,30,.98));border-color:rgba(96,165,250,.28)}
+    .wf-hot-panel .wf-top-grid{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+    .wf-section-divider{display:flex;align-items:center;gap:10px;margin:2px 0 8px;color:var(--hh-muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+    .wf-section-divider::after{content:"";height:1px;background:var(--hh-border);flex:1}
+    .home-welcome{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:14px;padding:18px 20px;border:1px solid rgba(96,165,250,.28);border-radius:16px;background:radial-gradient(circle at 8% 50%,rgba(56,189,248,.16),transparent 30%),linear-gradient(135deg,rgba(15,23,42,.98),rgba(8,18,31,.96));box-shadow:var(--hh-shadow);overflow:hidden}
+    .home-welcome-copy{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .home-welcome-kicker{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--hh-accent);font-weight:700}
+    .home-welcome-title{font-size:clamp(22px,3vw,32px);line-height:1.05;font-weight:750;color:#f8fafc}
+    .home-welcome-sub{font-size:12px;color:var(--hh-muted);max-width:560px}
+    .home-holocron-mark{position:relative;flex:0 0 auto;width:72px;height:72px;border:1px solid rgba(125,211,252,.65);border-radius:22px;transform:rotate(30deg);background:linear-gradient(145deg,rgba(56,189,248,.24),rgba(37,99,235,.08));box-shadow:0 0 28px rgba(56,189,248,.24),inset 0 0 18px rgba(125,211,252,.12)}
+    .home-holocron-mark::before,.home-holocron-mark::after{content:"";position:absolute;inset:12px;border:1px solid rgba(165,243,252,.65);border-radius:12px}
+    .home-holocron-mark::after{inset:25px;border-radius:7px;background:rgba(125,211,252,.75);box-shadow:0 0 14px rgba(125,211,252,.9)}
+    @media (max-width:640px){.home-welcome{align-items:flex-start;padding:15px}.home-holocron-mark{width:54px;height:54px;border-radius:16px}.home-holocron-mark::before{inset:9px}.home-holocron-mark::after{inset:19px}}
     .wf-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
     .wf-frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
     .wf-frame-card{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
@@ -594,7 +615,7 @@
       .nav{overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;padding-bottom:6px;gap:6px}
       .nav-tab{flex:0 0 auto;border:1px solid #334155;border-radius:8px;margin-bottom:0}
       .nav-tab.active{background:#1d4ed8;border-color:#2563eb;color:#fff}
-      .grid,.overview-grid,.wf-grid-3,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-group-grid,.ai-layout,.market-layout,.ai-task-grid,.tldr-shell{grid-template-columns:1fr}
+      .grid,.overview-grid,.wf-grid-3,.wf-overview-layout,.f1-driver-cards,.digest-grid,.f1-weekend-grid,.f1-driver-panels,.tool-group-grid,.ai-layout,.market-layout,.ai-task-grid,.tldr-shell{grid-template-columns:1fr}
       .tldr-issue-list{max-height:none;overflow:visible;padding-right:0}
       .tldr-reader-frame{height:68vh;min-height:460px}
       .row>input,.row>select,.row>button{flex:1 1 100%;min-width:0 !important;width:100%}
@@ -675,6 +696,14 @@
 
   <div id="tab-tools">
     <div class="card">
+      <div class="home-welcome">
+        <div class="home-welcome-copy">
+          <div class="home-welcome-kicker">Personal command center</div>
+          <div class="home-welcome-title">Welcome back.</div>
+          <div class="home-welcome-sub">Your fastest route to the tools, services and systems you use every day.</div>
+        </div>
+        <div class="home-holocron-mark" aria-hidden="true"></div>
+      </div>
       <div class="tool-hub-top">
         <div>
           <h2>HolocronHub Tool Hub</h2>
@@ -1083,20 +1112,43 @@
         <button data-wf-tab="personal" onclick="setWarframeWorkspace('personal', this)">My collection</button>
       </div>
       <section class="wf-workspace-pane" data-wf-workspace="overview">
-      <div class="wf-grid-3" style="margin-bottom:10px">
-        <div class="stat-card">
-          <h2 style="margin:0 0 6px">Market Snapshot</h2>
+      <div class="wf-overview-layout">
+        <div class="wf-overview-main">
+        <div class="stat-card wf-market-hero">
+          <div class="wf-market-kicker">Current market intelligence</div>
+          <h2 style="margin:4px 0 6px">Market Snapshot</h2>
           <div id="wf-market" class="small-list"></div>
           <div id="wf-market-chart" class="chart-wrap"></div>
         </div>
-        <div class="stat-card">
-          <h2 style="margin:0 0 6px">Active Alerts</h2>
-          <div id="wf-alerts" class="small-list"></div>
+        <div class="wf-section-divider">Trade signals</div>
+        <div class="stat-card wf-hot-panel">
+          <div class="diag-head">
+            <div>
+              <div class="wf-market-kicker">Market pulse</div>
+              <h2 style="margin:3px 0 0">Top Sells Right Now</h2>
+            </div>
+            <div class="row" style="margin:0">
+              <span id="wf-hot-meta" class="tool-minor">48h volume across curated mods, arcanes and sets</span>
+              <button id="wf-hot-toggle" class="sm" onclick="toggleWarframeHot()" hidden>See more</button>
+            </div>
+          </div>
+          <div id="wf-hot" class="wf-top-grid"></div>
         </div>
-        <div class="stat-card">
-          <h2 style="margin:0 0 6px">Void Fissures</h2>
-          <div id="wf-fissures" class="small-list"></div>
         </div>
+        <aside class="wf-utility-stack">
+          <div class="stat-card wf-utility-card">
+            <h2 style="margin:0 0 6px">Active Alerts</h2>
+            <div id="wf-alerts" class="small-list"></div>
+          </div>
+          <div class="stat-card wf-utility-card">
+            <h2 style="margin:0 0 6px">Void Fissures</h2>
+            <div id="wf-fissures" class="small-list"></div>
+          </div>
+          <div class="stat-card wf-utility-card">
+            <h2 style="margin:0 0 6px">World State</h2>
+            <div id="wf-world" class="small-list"></div>
+          </div>
+        </aside>
       </div>
       <div class="wf-grid-3" style="margin-bottom:10px">
         <div class="stat-card">
@@ -1104,23 +1156,9 @@
           <div id="wf-invasions" class="small-list"></div>
         </div>
         <div class="stat-card">
-          <h2 style="margin:0 0 6px">World State</h2>
-          <div id="wf-world" class="small-list"></div>
-        </div>
-        <div class="stat-card">
           <h2 style="margin:0 0 6px">Warframe News & Highlights</h2>
           <div id="wf-news" class="small-list"></div>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="diag-head">
-          <h2 style="margin:0">Top Sells Right Now</h2>
-          <div class="row" style="margin:0">
-            <span id="wf-hot-meta" class="tool-minor">48h volume across curated mods, arcanes and sets</span>
-            <button id="wf-hot-toggle" class="sm" onclick="toggleWarframeHot()" hidden>See more</button>
-          </div>
-        </div>
-        <div id="wf-hot" class="wf-top-grid"></div>
       </div>
       </section>
       <section class="wf-workspace-pane" data-wf-workspace="planner" hidden>

@@ -27,11 +27,15 @@
     body[data-hub="tools"] .shell-search{display:flex}
     body[data-hub="tools"] .shell-context{display:none}
     body[data-hub="f1"] .shell-context,body[data-hub="warframe"] .shell-context,body[data-hub="f1"] .shell-utility,body[data-hub="warframe"] .shell-utility{display:none}
-    .nav-tab::before{content:attr(data-icon);display:inline-flex;align-items:center;justify-content:center;width:17px;margin-right:7px;color:#67e8f9;font-size:10px;font-weight:700;opacity:.9}
+    .nav-tab::before{content:attr(data-icon);display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;flex:0 0 19px;margin-right:9px;border:1px solid rgba(56,189,248,.16);border-radius:6px;background:rgba(8,145,178,.08);color:#67e8f9;font-size:10px;font-weight:700;opacity:.94;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}
+    .nav-tab:hover::before,.nav-tab.active::before{border-color:rgba(34,211,238,.42);background:rgba(8,145,178,.18);box-shadow:0 0 12px rgba(34,211,238,.12)}
     .nav-glyph,.nav-glyph::before,.nav-glyph::after{display:block;width:13px;height:1px;background:currentColor;content:"";position:relative}
     .nav-glyph::before{position:absolute;top:-5px}.nav-glyph::after{position:absolute;top:5px}
     .shell-nav-toggle{width:34px;height:34px;padding:0;border-radius:10px;color:var(--hh-accent);border-color:var(--hh-border);background:rgba(11,18,32,.82);font-size:16px;line-height:1}
     .shell-nav-toggle:hover{border-color:var(--hh-accent);background:rgba(17,31,56,.95)}
+    .shell-nav-toggle svg{display:block;width:17px;height:17px;margin:auto;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;fill:none}
+    .brand-home-button{display:inline-flex;align-items:center;gap:9px;padding:0;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer}
+    .brand-home-button:focus-visible,.shell-nav-toggle:focus-visible{outline:2px solid #67e8f9;outline-offset:3px}
     .nav-collapsed .nav{display:none}
     .nav-collapsed .app-shell-header{margin-bottom:20px}
     .holocron-shell{display:grid;grid-template-columns:178px minmax(0,1fr);column-gap:18px;align-items:start}
@@ -570,6 +574,11 @@
     .f1-history-copy{font-size:12px;color:#94a3b8;line-height:1.45}
     .f1-history-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:0 0 auto}
     .f1-history-actions .pill{white-space:nowrap}
+    .f1-history-picker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:10px;border:1px solid rgba(56,189,248,.18);border-radius:10px;background:rgba(6,15,28,.7)}
+    .f1-history-picker select{flex:1;min-width:240px}
+    .f1-tyre-visual{display:inline-flex;align-items:center;gap:7px;color:#e2e8f0;font-size:12px;font-weight:650}
+    .f1-tyre-visual svg{width:22px;height:22px;flex:0 0 auto;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--tyre-color) 55%,transparent))}
+    .f1-tyre-visual small{color:#94a3b8;font-size:10px;font-weight:500}
     .wf-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
     .wf-overview-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.78fr);gap:12px;align-items:start;margin-bottom:12px}
     .wf-overview-main,.wf-utility-stack{display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -647,6 +656,7 @@
     @media (max-width:900px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr 1fr}}
     @media (max-width:640px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-time{font-size:38px}}
     @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}.app-shell-header{gap:8px}.shell-search{display:none!important}.shell-controls{margin-left:auto}.mobile-search-trigger{display:grid;place-items:center}}
+    @media(max-width:640px){.shell-clock,.shell-back,.shell-utility[aria-label="Display options"]{display:none!important}.shell-controls{gap:6px}.app-shell-header{justify-content:flex-start}}
     body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
     body[data-hub="warframe"] .hub-subnav{margin-top:12px}
     body[data-hub="warframe"] .hub-subnav button{background:#16243a;border-color:#334a68;color:#b9c8db;padding:6px 12px}
@@ -846,13 +856,22 @@
     .wf-detail-art-fallback svg{width:44px;height:44px}
     @media(max-width:900px){.wrap{padding:10px 12px 24px}.holocron-shell{display:block}.holocron-shell>.nav{display:none!important}.holocron-content{grid-column:auto}.wf-page-hero{min-height:230px}}
     @media(max-width:640px){.wf-page-hero{align-items:flex-start;flex-direction:column;justify-content:flex-end;min-height:235px;padding:20px}.wf-page-hero-status{align-self:flex-start}.app-shell-header{padding-bottom:7px}.holocron-brand{font-size:1.05rem}.f1-hero-meta .pill{max-width:100%}}
+    body[data-hub="warframe"]{--hh-bg:#050912;--hh-surface:#080f1b;--hh-text:#e8f1fb;--hh-muted:#8395ad;background:radial-gradient(ellipse at 50% -25%,rgba(12,48,76,.34),transparent 57%),#050912}
+    body[data-hub="warframe"] .wf-shell-card{background:linear-gradient(180deg,#090f1a 0%,#060b14 100%);border-color:#19324a}
+    body[data-hub="warframe"] .wf-detail-card,body[data-hub="warframe"] .wf-reco-card,body[data-hub="warframe"] .market-card,body[data-hub="warframe"] .wf-context-card{background:linear-gradient(155deg,#0a1422,#070d17);border-color:#1c354d;box-shadow:0 12px 32px rgba(0,0,0,.3)}
+    body[data-hub="warframe"] .wf-market-chart-head{border-color:#19324a}
+    body[data-hub="warframe"] .sparkline.wf-price-history .sparkline-point{opacity:.72;filter:drop-shadow(0 0 1.5px currentColor)}
+    body[data-hub="warframe"] .sparkline.wf-price-history:hover .sparkline-point{opacity:.95}
+    body[data-hub="warframe"] .sparkline.wf-price-history:hover .sparkline-point{transform:none}
+    @media(max-width:700px){.f1-history-picker select{min-width:0;width:100%}.f1-history-picker button{flex:1}}
 
   </style>
 </head>
 <body data-hub="tools">
 <div class="wrap holocron-shell">
   <div class="app-shell-header">
-    <h1 class="holocron-brand"><span class="holocron-mark" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><polygon points="16,1.8 28.5,9 28.5,23 16,30.2 3.5,23 3.5,9" fill="#071a2c" stroke="#39d9f3" stroke-width="1.3"/><polygon points="16,6 24,10.6 24,21.4 16,26 8,21.4 8,10.6" fill="none" stroke="#62e9fb" stroke-width="1"/><circle cx="16" cy="16" r="4.2" fill="#67e8f9" opacity=".9"/></svg></span><span class="holocron-wordmark">HolocronHub</span> <span id="shell-context" class="shell-context">Tool Hub</span></h1>
+    <h1 class="holocron-brand"><button class="brand-home-button" type="button" onclick="goHomeDashboard()" aria-label="HolocronHub Home" title="Back to dashboard"><span class="holocron-mark" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><polygon points="16,1.8 28.5,9 28.5,23 16,30.2 3.5,23 3.5,9" fill="#071a2c" stroke="#39d9f3" stroke-width="1.3"/><polygon points="16,6 24,10.6 24,21.4 16,26 8,21.4 8,10.6" fill="none" stroke="#62e9fb" stroke-width="1"/><circle cx="16" cy="16" r="4.2" fill="#67e8f9" opacity=".9"/></svg></span><span class="holocron-wordmark">HolocronHub</span></button> <span id="shell-context" class="shell-context">Tool Hub</span></h1>
+    <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" aria-expanded="true" title="Hide navigation"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16M13 9l-2 3 2 3"/></svg></button>
     <button class="shell-search" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Search services, devices, or commands"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg><span>Search services, devices, or commands...</span><kbd>CTRL K</kbd></button>
     <button class="mobile-search-trigger" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Open search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg></button>
     <nav class="shell-topnav" aria-label="Primary workspace navigation">
@@ -864,9 +883,8 @@
     <div class="shell-controls">
       <span id="shell-clock" class="shell-clock"></span>
       <button class="shell-back" onclick="goBackInHub()" title="Back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
-      <button class="shell-utility" onclick="showTab('settings')" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.99l.06.06-1.8 1.8-.06-.06a1.8 1.8 0 0 0-1.99-.36 1.8 1.8 0 0 0-1.09 1.65V20.2h-2.56v-.12a1.8 1.8 0 0 0-1.09-1.65 1.8 1.8 0 0 0-1.99.36l-.06.06-1.8-1.8.06-.06A1.8 1.8 0 0 0 7.8 15a1.8 1.8 0 0 0-1.65-1.09h-.12v-2.56h.12A1.8 1.8 0 0 0 7.8 10.26a1.8 1.8 0 0 0-.36-1.99l-.06-.06 1.8-1.8.06.06a1.8 1.8 0 0 0 1.99.36 1.8 1.8 0 0 0 1.09-1.65v-.12h2.56v.12a1.8 1.8 0 0 0 1.09 1.65 1.8 1.8 0 0 0 1.99-.36l.06-.06 1.8 1.8-.06.06a1.8 1.8 0 0 0-.36 1.99 1.8 1.8 0 0 0 1.65 1.09h.12v2.56h-.12A1.8 1.8 0 0 0 19.4 15Z"/></svg></button>
+      <button class="shell-utility" onclick="showTab('settings')" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15.1a1.7 1.7 0 0 0 .34 1.88l.06.06-1.9 1.9-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56v.08h-2.68v-.08a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.9-1.9.06-.06a1.7 1.7 0 0 0 .34-1.88 1.7 1.7 0 0 0-1.56-1.03h-.08v-2.68h.08a1.7 1.7 0 0 0 1.56-1.03 1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.9-1.9.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56v-.08h2.68v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.9 1.9-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03h.08v2.68h-.08a1.7 1.7 0 0 0-1.56 1.03Z"/></svg></button>
       <button class="shell-utility" title="Display options" aria-label="Display options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></button>
-      <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" title="Toggle navigation"><span class="nav-glyph" aria-hidden="true"></span></button>
     </div>
   </div>
 
@@ -1299,6 +1317,11 @@
               <input id="f1-history-q" placeholder="Search sessions, e.g. australia 2025 quali" style="flex:1;min-width:240px" />
               <button class="primary" onclick="loadF1History({ force: true })">Search archive</button>
               <button onclick="openF1CurrentHistoryQuery()">Use current weekend</button>
+            </div>
+            <div class="f1-history-picker">
+              <label for="f1-history-race" class="tool-minor">Past race</label>
+              <select id="f1-history-race" aria-label="Choose a past race" onchange="document.getElementById('f1-history-race-open').disabled=!this.value"><option value="">Choose a stored Grand Prix</option></select>
+              <button id="f1-history-race-open" onclick="openSelectedF1HistoryRace()" disabled>Open race tyre data</button>
             </div>
             <div id="f1-history-summary" class="f1-history-summary"></div>
             <div id="f1-history-results" class="f1-history-results" style="margin-top:10px"></div>
@@ -2044,10 +2067,12 @@ window.setInterval(updateShellClock, 30000);
 
 function setGlobalNavCollapsed(collapsed) {
   document.body.classList.toggle('nav-collapsed', collapsed === true);
+  try { localStorage.setItem('holocronhub.nav-collapsed.v1', collapsed === true ? '1' : '0'); } catch {}
   const toggle = document.getElementById('shell-nav-toggle');
   if (toggle) {
     toggle.title = collapsed ? 'Show navigation' : 'Hide navigation';
     toggle.setAttribute('aria-label', toggle.title);
+    toggle.setAttribute('aria-expanded', String(!collapsed));
     toggle.classList.toggle('is-open', !collapsed);
   }
 }
@@ -2069,6 +2094,11 @@ function goBackInHub() {
   else showTab('tools');
 }
 
+function goHomeDashboard() {
+  showTab('tools');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function showTab(name, btn, options = {}) {
   if (!HUB_TABS.has(name)) name = 'tools';
   if (!options.fromHistory && window.location.hash !== `#${name}`) {
@@ -2077,6 +2107,8 @@ function showTab(name, btn, options = {}) {
   }
   document.body.dataset.hub = name;
   document.body.classList.remove('nav-menu-open');
+  const navToggle = document.getElementById('shell-nav-toggle');
+  if (navToggle) navToggle.setAttribute('aria-expanded', String(!['f1', 'warframe'].includes(name) && !document.body.classList.contains('nav-collapsed')));
   const context = document.getElementById('shell-context');
   if (context) context.textContent = HUB_CONTEXT_LABELS[name] || name;
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
@@ -2134,6 +2166,8 @@ window.addEventListener('popstate', event => {
 
 const initialHub = window.location.hash.slice(1);
 const startupHub = HUB_TABS.has(initialHub) ? initialHub : 'tools';
+try { document.body.classList.toggle('nav-collapsed', localStorage.getItem('holocronhub.nav-collapsed.v1') === '1'); } catch {}
+setGlobalNavCollapsed(document.body.classList.contains('nav-collapsed'));
 if (!HUB_TABS.has(initialHub)) window.history.replaceState({ tab: 'tools' }, '', '#tools');
 window.setTimeout(() => showTab(startupHub, null, { fromHistory: true }), 0);
 
@@ -3752,7 +3786,7 @@ function buildSparklineSvg(points, cls = '', isUp = null, theme = 'default') {
       : `fill:#f8fafc;stroke:${lineColor};stroke-width:1.5`;
     return `<g>
       <circle class="sparkline-hit" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="9" onmouseenter='showSparklineTooltip(event, ${JSON.stringify(label)})' onmousemove='showSparklineTooltip(event, ${JSON.stringify(label)})' onmouseleave="hideSparklineTooltip()"></circle>
-      <circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.4" style="${dotStyle}"><title>${esc(label)}</title></circle>
+      <circle class="sparkline-point" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${neon ? '1.5' : '2.4'}" style="${dotStyle}"><title>${esc(label)}</title></circle>
     </g>`;
   }).join('');
 
@@ -4599,6 +4633,7 @@ function renderF1HistoryResults(results, query = '') {
   const el = document.getElementById('f1-history-results');
   if (!el) return;
   _f1HistoryResults = Array.isArray(results) ? results : [];
+  renderF1HistoryRacePicker(_f1HistoryResults);
   if (!_f1HistoryResults.length) {
     el.innerHTML = `<div class="muted">${query ? `No stored sessions match "${esc(query)}".` : 'Recent stored sessions will appear here once the history store has data.'}</div>`;
     return;
@@ -4623,6 +4658,35 @@ function renderF1HistoryResults(results, query = '') {
   `).join('');
 }
 
+function renderF1HistoryRacePicker(results) {
+  const select = document.getElementById('f1-history-race');
+  const openButton = document.getElementById('f1-history-race-open');
+  if (!select || !openButton) return;
+  const races = [];
+  const seen = new Set();
+  (Array.isArray(results) ? results : []).forEach((item, index) => {
+    if (f1SessionFamily(item) !== 'race') return;
+    const raceKey = `${item.year || item.season || ''}:${item.round || ''}:${item.meeting_name || item.circuit || ''}`.toLowerCase();
+    if (seen.has(raceKey)) return;
+    seen.add(raceKey);
+    races.push({ item, index });
+  });
+  select.innerHTML = `<option value="">${races.length ? 'Choose a stored Grand Prix' : 'No archived race sessions found'}</option>${races.map(({ item, index }) => {
+    const title = `${item.meeting_name || item.circuit || 'Grand Prix'} · ${item.year || item.season || '?'}${item.round ? ` · R${item.round}` : ''}`;
+    return `<option value="${index}">${esc(title)}</option>`;
+  }).join('')}`;
+  openButton.disabled = true;
+}
+
+function openSelectedF1HistoryRace() {
+  const select = document.getElementById('f1-history-race');
+  const selected = String(select?.value || '');
+  if (!selected) return;
+  const index = Number(selected);
+  if (!Number.isInteger(index) || !_f1HistoryResults[index]) return;
+  void openF1HistoryResult(_f1HistoryResults[index]);
+}
+
 async function loadF1History(options = {}) {
   const cfg = options && typeof options === 'object' ? options : {};
   const input = document.getElementById('f1-history-q');
@@ -4632,7 +4696,7 @@ async function loadF1History(options = {}) {
   const resultsEl = document.getElementById('f1-history-results');
   if (resultsEl && !cfg.background) resultsEl.innerHTML = '<div class="muted">Loading history vault...</div>';
   try {
-    const summary = await fetchJson(`${API}/f1/history/summary?limit=6`);
+    const summary = await fetchJson(`${API}/f1/history/summary?limit=12`);
     renderF1HistorySummary(summary);
     if (query) {
       const params = new URLSearchParams({ q: query, limit: '10' });
@@ -4657,7 +4721,9 @@ function openF1CurrentHistoryQuery() {
 async function openF1HistoryResult(result) {
   const archivedSession = makeF1ArchivedSession(result);
   if (!archivedSession) return;
+  const isRace = f1SessionFamily(archivedSession) === 'race';
   _f1Sessions[String(archivedSession.session_key)] = archivedSession;
+  if (isRace) _f1BoardMode = 'tyre';
   const family = f1SessionFamily(archivedSession);
   if (_f1SessionFilter !== 'all' && family !== 'other' && _f1SessionFilter !== family) _f1SessionFilter = family;
   rememberF1Preferences();
@@ -4695,6 +4761,18 @@ function f1BoardModeLabel(mode) {
     tyre: 'Tyres',
     championship: 'Standings',
   }[mode] || 'Board';
+}
+
+function renderF1TyreVisual(compound, stint) {
+  const raw = String(compound || '').trim();
+  if (!raw) return '<span class="muted">Tyres unavailable for this stored session</span>';
+  const label = raw.toLowerCase();
+  const color = label.includes('soft') ? '#f04452'
+    : label.includes('medium') ? '#facc15'
+      : label.includes('hard') ? '#f8fafc'
+        : label.includes('inter') ? '#22c55e'
+          : label.includes('wet') ? '#38bdf8' : '#a78bfa';
+  return `<span class="f1-tyre-visual" style="--tyre-color:${color}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#111827" stroke="var(--tyre-color)" stroke-width="2.4"/><circle cx="12" cy="12" r="4.3" fill="#0b1220" stroke="#64748b" stroke-width="1.3"/><path d="M7.2 5.8 9 7m6-1.2L13.4 7m6 4.3-2.2.1m-10.4 0-2.2-.1m2.6 6.7 1.7-1.2m7.4 1.2-1.7-1.2" stroke="var(--tyre-color)" stroke-width="1.3" stroke-linecap="round"/></svg><span>${esc(raw)}</span>${stint ? `<small>Stint ${esc(stint)}</small>` : ''}</span>`;
 }
 
 function getF1BoardModes(session) {
@@ -5446,7 +5524,7 @@ function renderF1SessionBoard(detail) {
         <span class="muted">${esc(mode === 'championship' ? `P${row.position || idx + 1}` : `P${row.position || idx + 1}`)}</span>
         <strong>${esc(row.driver || row.code || 'Driver')}</strong>
         <span class="muted">${esc(row.team || 'Unknown team')}</span>
-        <span>${esc(stat)}</span>
+        <span>${mode === 'tyre' ? renderF1TyreVisual(row.current_tyre, row.stint) : esc(stat)}</span>
       </div>
     `;
   }).join('');
@@ -5491,7 +5569,7 @@ function renderF1SessionBoard(detail) {
           </div>
           <div class="f1-stat-stack">
             <span>${esc(mode === 'championship' ? `Wins ${row.wins || 0}` : (row.code || `#${row.driver_number || '?'}`))}</span>
-            <span class="muted">${esc(statA)}</span>
+            <span class="muted">${mode === 'tyre' ? renderF1TyreVisual(row.current_tyre, row.stint) : esc(statA)}</span>
           </div>
           <div class="f1-stat-stack">
             <span>${esc(statB)}</span>

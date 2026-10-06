@@ -18,13 +18,20 @@
     .shell-topnav{display:none;align-items:center;gap:5px;margin-left:auto;margin-right:16px}
     .shell-top-tab{padding:8px 13px;border:1px solid transparent;border-radius:8px;background:transparent;color:#91a4bd;font-size:12px;cursor:pointer}
     .shell-top-tab:hover,.shell-top-tab.active{color:#ecfeff;background:rgba(8,145,178,.14);border-color:rgba(34,211,238,.28)}
-    .shell-utility{width:31px;height:31px;padding:0;border-radius:50%;border-color:#29405f;background:#0b1627;color:#b6c8dc}
+    .shell-utility{width:31px;height:31px;padding:0;border-radius:50%;border-color:#29405f;background:#0b1627;color:#b6c8dc;display:grid;place-items:center}
+    .shell-utility svg{width:16px;height:16px}
+    .nav-glyph,.nav-glyph::before,.nav-glyph::after{display:block;width:13px;height:1px;background:currentColor;content:"";position:relative}
+    .nav-glyph::before{position:absolute;top:-5px}.nav-glyph::after{position:absolute;top:5px}
     .shell-nav-toggle{width:34px;height:34px;padding:0;border-radius:10px;color:var(--hh-accent);border-color:var(--hh-border);background:rgba(11,18,32,.82);font-size:16px;line-height:1}
     .shell-nav-toggle:hover{border-color:var(--hh-accent);background:rgba(17,31,56,.95)}
     .nav-collapsed .nav{display:none}
     .nav-collapsed .app-shell-header{margin-bottom:20px}
     .holocron-shell{display:grid;grid-template-columns:178px minmax(0,1fr);column-gap:18px;align-items:start}
     .holocron-shell>.app-shell-header{grid-column:1/-1}
+    .holocron-brand{gap:9px}
+    .holocron-mark{width:28px;height:28px;display:grid;place-items:center;flex:0 0 auto;filter:drop-shadow(0 0 8px rgba(34,211,238,.35))}
+    .holocron-mark svg{width:100%;height:100%;display:block}
+    .holocron-wordmark{letter-spacing:-.03em;font-weight:780}
     .holocron-shell>.nav{grid-column:1;grid-row:2;position:sticky;top:18px;display:flex;flex-direction:column;align-items:stretch;gap:5px;margin:0;border:1px solid var(--hh-border);border-radius:14px;padding:9px;background:rgba(7,14,27,.74);box-shadow:var(--hh-shadow)}
     .holocron-shell>.nav .nav-tab{width:100%;margin:0;text-align:left;border:1px solid transparent;border-radius:9px;padding:9px 11px}
     .holocron-shell>.nav .nav-tab.active{border-color:rgba(56,189,248,.28);background:rgba(37,99,235,.22);color:#f8fafc}
@@ -43,6 +50,7 @@
     body[data-hub="f1"] .f1-shell-card,body[data-hub="warframe"] .wf-shell-card{border-left:0;border-right:0;border-radius:0;margin:0;background:linear-gradient(150deg,#18263c 0%,#142137 48%,#101b2e 100%);box-shadow:none;padding:18px 24px 26px}
     body[data-hub="f1"] .f1-shell-card>*,body[data-hub="warframe"] .wf-shell-card>*{max-width:1540px;margin-left:auto;margin-right:auto}
     body[data-hub="f1"] .f1-shell-card>h2,body[data-hub="warframe"] .wf-shell-card>h2{max-width:1540px}
+    body[data-hub="f1"] .app-shell-header,body[data-hub="warframe"] .app-shell-header{flex-wrap:wrap}
     .holocron-content{grid-column:2;grid-row:2;min-width:0}
     .nav-collapsed .holocron-content{grid-column:1/-1}
     *{box-sizing:border-box}
@@ -629,6 +637,7 @@
     .home-event:last-child{border-bottom:0}.home-event-dot{width:7px;height:7px;border-radius:50%;background:#34d399;flex:0 0 auto}.home-event-dot.warn{background:#f59e0b}
     @media (max-width:900px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr 1fr}}
     @media (max-width:640px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-time{font-size:38px}}
+    @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}}
     body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
     body[data-hub="warframe"] .hub-subnav{margin-top:12px}
     body[data-hub="warframe"] .hub-subnav button{background:#16243a;border-color:#334a68;color:#b9c8db;padding:6px 12px}
@@ -783,7 +792,7 @@
 <body data-hub="tools">
 <div class="wrap holocron-shell">
   <div class="app-shell-header">
-    <h1 class="holocron-brand">HolocronHub <span id="shell-context" class="shell-context">Tool Hub</span></h1>
+    <h1 class="holocron-brand"><span class="holocron-mark" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><polygon points="16,1.8 28.5,9 28.5,23 16,30.2 3.5,23 3.5,9" fill="#071a2c" stroke="#39d9f3" stroke-width="1.3"/><polygon points="16,6 24,10.6 24,21.4 16,26 8,21.4 8,10.6" fill="none" stroke="#62e9fb" stroke-width="1"/><circle cx="16" cy="16" r="4.2" fill="#67e8f9" opacity=".9"/></svg></span><span class="holocron-wordmark">HolocronHub</span> <span id="shell-context" class="shell-context">Tool Hub</span></h1>
     <nav class="shell-topnav" aria-label="Primary workspace navigation">
       <button class="shell-top-tab active" data-shell-tab="tools" onclick="showTab('tools',this)">Home</button>
       <button class="shell-top-tab" data-shell-tab="f1" onclick="showTab('f1',this)">F1</button>
@@ -792,9 +801,9 @@
     </nav>
     <div class="shell-controls">
       <span id="shell-clock" class="shell-clock"></span>
-      <button class="shell-utility" onclick="showTab('settings')" title="Settings" aria-label="Settings">⚙</button>
-      <button class="shell-utility" title="Display options" aria-label="Display options">☼</button>
-      <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" title="Toggle navigation">NAV</button>
+      <button class="shell-utility" onclick="showTab('settings')" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm9 3.5-2-.7a7.3 7.3 0 0 0-.7-1.7l.9-1.9-1.9-1.9-1.9.9a7.3 7.3 0 0 0-1.7-.7L13 4h-2l-.7 2a7.3 7.3 0 0 0-1.7.7l-1.9-.9-1.9 1.9.9 1.9a7.3 7.3 0 0 0-.7 1.7L3 12v2l2 .7c.2.6.4 1.2.7 1.7l-.9 1.9 1.9 1.9 1.9-.9c.5.3 1.1.5 1.7.7l.7 2h2l.7-2c.6-.2 1.2-.4 1.7-.7l1.9.9 1.9-1.9-.9-1.9c.3-.5.5-1.1.7-1.7l2-.7v-2Z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+      <button class="shell-utility" title="Display options" aria-label="Display options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" stroke="currentColor" stroke-width="1.3"/></svg></button>
+      <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" title="Toggle navigation"><span class="nav-glyph" aria-hidden="true"></span></button>
     </div>
   </div>
 
@@ -849,16 +858,16 @@
         </div>
         <div class="home-dashboard-grid wide">
           <div class="home-panel"><div class="home-panel-head"><span>Time & Date</span><span>Local</span></div><div id="home-dashboard-time" class="home-time">--:--</div><div id="home-dashboard-date" class="home-date">Loading local time</div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Weather</span><span>Augsburg</span></div><div class="home-weather-empty">Weather adapter can be connected without blocking the command center.</div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Weather</span><span>Augsburg</span></div><div class="home-weather-empty"><span style="font-size:28px;color:#cbd5e1;margin-right:10px">~</span><span>Local weather source<br><strong style="color:#dbeafe">not configured</strong></span></div></div>
           <div class="home-panel"><div class="home-panel-head"><span>Network</span><span>Homelab</span></div><div id="home-dashboard-network" class="home-network-status"><span class="homelab-status-dot unknown"></span>Checking services</div><div id="home-dashboard-network-meta" class="muted">Reachability data will appear here.</div></div>
         </div>
         <div class="home-dashboard-grid bottom">
           <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span id="home-dashboard-system-meta">Telemetry</span></div><div class="home-stat-row"><span>CPU / Memory</span><strong class="muted">Local adapter</strong></div><div class="home-stat-row"><span>Storage</span><strong class="muted">Local adapter</strong></div><div class="home-stat-row"><span>Last sync</span><strong id="home-dashboard-sync" class="muted">Waiting</strong></div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Services</span><span id="home-dashboard-service-count">-- online</span></div><div id="home-dashboard-services" class="home-dashboard-service-list"><div class="muted">Loading service status.</div></div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Services</span><span id="home-dashboard-service-count">waiting</span></div><div id="home-dashboard-services" class="home-dashboard-service-list"><div class="muted">Awaiting reachability snapshot.</div></div></div>
           <div class="home-panel"><div class="home-panel-head"><span>Quick Links</span><span>Launch</span></div><div id="home-dashboard-links" class="home-quick-grid"><div class="muted">Loading links.</div></div></div>
         </div>
         <div class="home-dashboard-grid wide">
-          <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span>Local telemetry</span></div><div class="home-gauge-grid"><div class="home-gauge"><div class="home-gauge-ring"><span>--</span></div>CPU</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#38bdf8 0 62%,#1c2b3d 62% 100%)"><span>--</span></div>RAM</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#f59e0b 0 38%,#1c2b3d 38% 100%)"><span>--</span></div>TEMP</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#34d399 0 18%,#1c2b3d 18% 100%)"><span>--</span></div>NET</div></div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span>Local telemetry</span></div><div class="home-gauge-grid"><div class="home-gauge"><div class="home-gauge-ring"><span>N/A</span></div>CPU</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#38bdf8 0 62%,#1c2b3d 62% 100%)"><span>N/A</span></div>RAM</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#f59e0b 0 38%,#1c2b3d 38% 100%)"><span>N/A</span></div>TEMP</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#34d399 0 18%,#1c2b3d 18% 100%)"><span>N/A</span></div>NET</div></div></div>
           <div class="home-panel"><div class="home-panel-head"><span>Media Quick Launch</span><span>Services</span></div><div id="home-dashboard-media" class="home-media-grid"><a class="home-media-link" href="#" onclick="showTab('homelab');return false">▣<span>Media</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false">▶<span>Series</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false">♫<span>Music</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false">▤<span>Radio</span></a></div></div>
           <div class="home-panel"><div class="home-panel-head"><span>Latest Events</span><span>Activity</span></div><div class="home-event-list"><div class="home-event"><span class="home-event-dot"></span><span>Homelab adapter ready</span></div><div class="home-event"><span class="home-event-dot"></span><span>Local tool registry loaded</span></div><div class="home-event"><span class="home-event-dot warn"></span><span>Live telemetry depends on configured adapters</span></div></div></div>
         </div>
@@ -1929,9 +1938,9 @@ function setGlobalNavCollapsed(collapsed) {
   document.body.classList.toggle('nav-collapsed', collapsed === true);
   const toggle = document.getElementById('shell-nav-toggle');
   if (toggle) {
-    toggle.textContent = collapsed ? 'OPEN' : 'NAV';
     toggle.title = collapsed ? 'Show navigation' : 'Hide navigation';
     toggle.setAttribute('aria-label', toggle.title);
+    toggle.classList.toggle('is-open', !collapsed);
   }
 }
 
@@ -2718,6 +2727,7 @@ async function loadTools() {
 
   try {
     _toolCache = await fetch(`${API}/tools?${params}`).then(r=>r.json());
+    renderHomeDashboard({ services: [] });
     renderToolSections(_toolCache);
     if (_toolCache.some(t => isAiTool(t) && !isHomeTool(t))) loadAiRadar();
     else { _aiFeedCache = []; renderAiOverview(_toolCache); renderAiRail(_toolCache); }
@@ -4227,7 +4237,8 @@ function setWarframeWorkspace(workspace, btn) {
 }
 
 function restoreWarframeWorkspace() {
-  const workspace = safeLocalGet(WARFRAME_WORKSPACE_KEY, 'planner');
+  const saved = safeLocalGet(WARFRAME_WORKSPACE_KEY, 'planner');
+  const workspace = saved === 'overview' ? 'planner' : saved;
   setWarframeWorkspace(workspace);
 }
 

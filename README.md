@@ -9,6 +9,7 @@ HolocronHub is a local single-user dashboard for curated AI tools, home lab serv
 - F1 weekend, live timing, and local history views
 - Warframe market, world state, planner, and watchlist views
 - TLDR Gmail reader with local SQLite-backed issue storage
+- Learning workspace for daily Engineering English review with persistent progress
 - Settings for ingest, API keys, Gmail bridge, and local runtime behavior
 - FastAPI backend with local JSON/SQLite data storage
 
@@ -49,6 +50,16 @@ Optional env vars (for finance API sources):
 You can copy `backend/.env.example` to `backend/.env` for local development.
 
 You can also manage API keys directly in the app under `Settings` -> `API`.
+
+## Learning
+
+Open `Learning` from navigation or go directly to `/#learning`. The starter deck contains exactly 120 English-only Engineering English cards, with 30 cards in each category: `Measurement & Data`, `Engineering Practice`, `Sustainable Systems`, and `Academic Communication`. Prompts, answers, examples, explanations, and category labels are all English.
+
+Choose a category and click `Start session` to review due cards first, followed by new cards. Use `Reveal answer` (or `Space`) to see the answer, example, and explanation, then rate your recall with `Again`, `Hard`, `Good`, or `Easy` (keyboard `1`–`4`). Ratings schedule the next review and save progress. You can also browse cards using search, category, and scheduling-status filters.
+
+Card content, scheduling progress, and append-only review history persist in `data/learning.db`, including across reloads and container restarts when the data volume is retained. Seed content updates preserve existing progress and review history. Both **Download Data Backup** and **Full Migration Backup** include this database.
+
+Learning v1 requires an online connection to the Holocron backend and follows the existing trusted-network, single-user boundary. It does not provide offline review or multi-user accounts.
 
 ## F1 SignalR Sidecar
 
@@ -157,6 +168,7 @@ Notes:
 - Warframe market history DB: `data/warframe_market_history.db`
 - Warframe world-state history DB: `data/warframe_worldstate.db`
 - TLDR issue DB: `data/tldr_issues.db`
+- Learning content, progress, and review history DB: `data/learning.db`
 
 ## Homelab Command Center
 

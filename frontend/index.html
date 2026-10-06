@@ -631,7 +631,7 @@
     .home-quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
     .home-quick-link{display:flex;flex-direction:column;gap:7px;align-items:center;justify-content:center;min-height:70px;border:1px solid #263b56;border-radius:9px;background:#101c2e;color:#dbeafe;font-size:11px;text-align:center;text-decoration:none}
     .home-quick-link:hover{border-color:#38bdf8;background:#142a43;text-decoration:none}
-    .home-quick-icon{font-size:19px;color:#67e8f9}
+    .home-quick-icon{width:20px;height:20px;object-fit:contain;border-radius:5px;border:1px solid #29405f;background:#091525;padding:2px}
     .home-gauge-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
     .home-gauge{display:flex;flex-direction:column;align-items:center;gap:7px;color:#8ea0b7;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
     .home-gauge-ring{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#38bdf8 0 28%,#1c2b3d 28% 100%);position:relative}
@@ -2523,7 +2523,7 @@ function renderHomeDashboard(data) {
     return `<div class="home-dashboard-service"><span><span class="homelab-status-dot ${serviceStatus}"></span>${esc(service.name || service.id || 'Service')}</span><span class="muted">${esc(homelabStatusLabel(service.status))}${service.latency_ms != null ? ` ${esc(String(service.latency_ms))}ms` : ''}</span></div>`;
   }).join('') : '<div class="muted">No registered services yet.</div>';
   const links = (_toolCache || []).filter(tool => tool.favorite || tool.pinned || isHomeTool(tool)).slice(0, 8);
-  linksEl.innerHTML = links.length ? links.map(tool => `<a class="home-quick-link" href="${esc(tool.link || '#')}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')"><span class="home-quick-icon">◈</span><span>${esc(tool.name || 'Tool')}</span></a>`).join('') : '<div class="muted">Pin tools to build quick links.</div>';
+  linksEl.innerHTML = links.length ? links.map(tool => `<a class="home-quick-link" href="${esc(tool.link || '#')}" target="_blank" rel="noopener" onclick="markToolUsed('${esc(tool.id)}')"><img class="home-quick-icon" src="${esc(tool.icon_url || deriveToolIcon(tool.link))}" alt="" loading="lazy" onerror="this.style.display='none'" /><span>${esc(tool.name || 'Tool')}</span></a>`).join('') : '<div class="muted">Pin tools to build quick links.</div>';
 }
 
 async function loadHomeLabOverview() {

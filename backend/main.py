@@ -7682,11 +7682,11 @@ def home_lab_overview():
 
 
 @app.get("/api/homelab/overview")
-def homelab_command_center_overview():
+def homelab_command_center_overview(force: bool = False):
     """Aggregate registry reachability and optional provider snapshots."""
     base = home_lab_overview()
     services = list(base.get("services") or [])
-    provider_snapshots = collect_provider_snapshots(HOMELAB_PROVIDER_CACHE_FILE)
+    provider_snapshots = collect_provider_snapshots(HOMELAB_PROVIDER_CACHE_FILE, force=force)
 
     # Kuma is the canonical health source when configured. Registry probes
     # remain useful for services that have not been added to Kuma yet.

@@ -634,7 +634,10 @@
           <h2 style="margin:0">Homelab Command Center</h2>
           <div class="tool-hub-strap">A compact health overview built from your registered services. Holocron aggregates status and links; the original tools remain the source of truth.</div>
         </div>
-        <div id="homelab-overall-status" class="homelab-status"><span class="homelab-status-dot"></span><span>Loading health</span></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="sm" id="homelab-refresh" onclick="refreshHomelabCommandCenter()">Refresh</button>
+          <div id="homelab-overall-status" class="homelab-status"><span class="homelab-status-dot"></span><span>Loading health</span></div>
+        </div>
       </div>
       <div id="homelab-command-tabs" class="homelab-command-tabs">
         <button class="homelab-command-tab active" data-homelab-view="overview" onclick="setHomelabView('overview',this)">Overview</button>
@@ -2273,6 +2276,31 @@ async function loadHomelabCommandCenter() {
     renderHomelabCommandCenter();
   } catch (error) {
     if (content) content.innerHTML = `<div class="empty">Homelab overview unavailable: ${esc(error.message || 'Unknown error')}</div>`;
+  }
+}
+
+async function refreshHomelabCommandCenter() {
+  const button = document.getElementById('homelab-refresh');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Refreshing...';
+  }
+  try {
+    const content = document.getElementById('homelab-command-content');
+    if (content) content.innerHTML = '<div class="empty">Refreshing Homelab providers...</div>';
+    _homelabCommandData = await fetch(`${API}/homelab/overview?force=true&_=${Date.now()}`).then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    });
+    renderHomelabCommandCenter();
+  } catch (error) {
+    const content = document.getElementById('homelab-command-content');
+    if (content) content.innerHTML = `<div class="empty">Homelab refresh failed: ${esc(error.message || 'Unknown error')}</div>`;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Refresh';
+    }
   }
 }
 

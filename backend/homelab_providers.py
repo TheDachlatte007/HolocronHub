@@ -195,7 +195,7 @@ def _write_cache(cache_file: Path, cache: dict[str, Any]) -> None:
             os.unlink(temporary)
 
 
-def collect_provider_snapshots(cache_file: Path) -> dict[str, Any]:
+def collect_provider_snapshots(cache_file: Path, *, force: bool = False) -> dict[str, Any]:
     """Fetch configured providers while preserving the last good snapshot."""
     cache = _read_cache(cache_file)
     results: dict[str, Any] = {}
@@ -204,7 +204,7 @@ def collect_provider_snapshots(cache_file: Path) -> dict[str, Any]:
             continue
         cached = cache.get(provider) if isinstance(cache.get(provider), dict) else None
         try:
-            if cached and time.time() - float(cached.get("stored_at", 0)) < _CACHE_TTL_SECONDS:
+            if cached and not force and time.time() - float(cached.get("stored_at", 0)) < _CACHE_TTL_SECONDS:
                 snapshot = dict(cached.get("snapshot") or {})
                 snapshot["cached"] = True
             else:

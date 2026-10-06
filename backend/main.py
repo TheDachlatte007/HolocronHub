@@ -239,6 +239,7 @@ _WARFRAME_MARKET_MIN_REQUEST_INTERVAL = 1.1
 _last_good_lock = Lock()
 _f1_snapshot_lock = Lock()
 _f1_archive_lock = Lock()
+_dashboard_weather_lock = Lock()
 
 _PROVIDER_BREAKERS: dict[str, dict[str, Any]] = {
     "openf1": {"fail_count": 0, "open_until": 0.0, "last_error": None},
@@ -811,6 +812,9 @@ _DEFAULT_SETTINGS = {
         "alecaframe_public_token": "",
     },
     "homelab": {
+        "weather_location": "Augsburg",
+        "weather_latitude": 48.3705,
+        "weather_longitude": 10.8978,
         "uptime_kuma_url": "",
         "uptime_kuma_api_key": "",
         "uptime_kuma_username": "",
@@ -836,6 +840,9 @@ _ALLOWED_SETTINGS_PATCH = {
         "alecaframe_public_token",
     },
     "homelab": {
+        "weather_location",
+        "weather_latitude",
+        "weather_longitude",
         "uptime_kuma_url",
         "uptime_kuma_api_key",
         "uptime_kuma_username",
@@ -2635,7 +2642,7 @@ def _fetch_open_meteo_weather(latitude: Optional[float], longitude: Optional[flo
         params={
             "latitude": latitude,
             "longitude": longitude,
-            "current": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,surface_pressure",
+            "current": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,surface_pressure,weather_code,is_day,apparent_temperature",
             "timezone": "auto",
         },
         timeout=12,
@@ -2653,6 +2660,9 @@ def _fetch_open_meteo_weather(latitude: Optional[float], longitude: Optional[flo
         "wind_direction": None,
         "wind_speed": current.get("wind_speed_10m"),
         "pressure": current.get("surface_pressure"),
+        "weather_code": current.get("weather_code"),
+        "is_day": current.get("is_day"),
+        "feels_like": current.get("apparent_temperature"),
         "date": current.get("time"),
         "source": "open_meteo",
         "utc_offset_seconds": data.get("utc_offset_seconds") if isinstance(data, dict) else None,
@@ -6149,6 +6159,16 @@ def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
     for key in _API_KEY_ENV_MAP:
         cfg["api_keys"][key] = str(cfg["api_keys"].get(key, "")).strip()
 
+    cfg["homelab"]["weather_location"] = str(cfg["homelab"].get("weather_location") or "Augsburg").strip()[:80]
+    for key, limit in (("weather_latitude", 90), ("weather_longitude", 180)):
+        try:
+            value = float(cfg["homelab"][key])
+            if not math.isfinite(value) or abs(value) > limit:
+                raise ValueError("Invalid weather coordinate")
+            cfg["homelab"][key] = value
+        except (TypeError, ValueError, OverflowError):
+            cfg["homelab"][key] = _DEFAULT_SETTINGS["homelab"][key]
+
     return cfg
 
 
@@ -7889,6 +7909,91 @@ def home_lab_overview():
         "groups": group_counts,
         "service_kinds": kind_counts,
         "services": results,
+    }
+
+
+def _refresh_dashboard_weather(key: str, location: str, latitude: float, longitude: float) -> None:
+    if not _dashboard_weather_lock.acquire(blocking=False):
+        return
+    try:
+        weather, error = _fetch_open_meteo_weather(latitude, longitude)
+        try:
+            temperature = float(weather["air_temperature"])
+            if not math.isfinite(temperature):
+                raise ValueError("Non-finite weather temperature")
+            offset = timezone(timedelta(seconds=int(weather.get("utc_offset_seconds") or 0)))
+            measured_at = datetime.fromisoformat(weather["date"]).replace(tzinfo=offset).isoformat()
+        except (KeyError, TypeError, ValueError, OverflowError):
+            error = error or "open_meteo:invalid_payload"
+        if error or weather.get("air_temperature") is None:
+            previous, age = _get_last_good(key, max_age_seconds=86400)
+            _cache_set(f"{key}:retry", {
+                **(previous or {"location": location}), "stale": bool(previous),
+                "stale_age_seconds": age, "loading": False, "refreshing": False,
+                "error": "Weather is temporarily unavailable. Try again shortly.",
+            })
+            return
+        payload = {
+            **weather, "date": measured_at, "location": location,
+            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "data_as_of": measured_at, "stale": False, "loading": False,
+            "refreshing": False, "error": None,
+        }
+        _cache_set(key, payload)
+        _set_last_good(key, payload)
+        _API_CACHE.pop(f"{key}:retry", None)
+    finally:
+        _dashboard_weather_lock.release()
+
+
+@app.get("/api/dashboard/weather")
+def dashboard_weather(background_tasks: BackgroundTasks, force: bool = False):
+    config = _load_settings()["homelab"]
+    location = config["weather_location"]
+    latitude, longitude = config["weather_latitude"], config["weather_longitude"]
+    key = f"dashboard:weather:{latitude}:{longitude}"
+    cached = _cache_get(key, 900)
+    if cached and not force:
+        return {**cached, "location": location, "cached": True}
+    retry = _cache_get(f"{key}:retry", 60)
+    if retry and not force:
+        return {**retry, "location": location, "cached": True}
+    saved, age = _get_last_good(key, max_age_seconds=86400)
+    if saved and age < 900 and not force:
+        _API_CACHE[key] = {"ts": time.time() - age, "value": deepcopy(saved)}
+        return {**saved, "location": location, "cached": True}
+    background_tasks.add_task(_refresh_dashboard_weather, key, location, latitude, longitude)
+    return {
+        **(cached or saved or {}), "location": location,
+        "loading": not bool(cached or saved), "refreshing": True,
+        "cached": bool(cached or saved), "stale": bool(saved and age >= 900),
+        "stale_age_seconds": age, "error": None,
+    }
+
+
+@app.get("/api/dashboard/kuma")
+def dashboard_kuma(force: bool = False):
+    snapshots = collect_provider_snapshots(HOMELAB_PROVIDER_CACHE_FILE, force=force, providers=("uptime_kuma",))
+    snapshot = snapshots.get("uptime_kuma") or {}
+    services = [monitor for monitor in (snapshot.get("services") or [])
+                if str(monitor.get("type") or "").lower() != "group"]
+    configured_url = os.getenv("UPTIME_KUMA_URL", "").strip().rstrip("/")
+    parsed = urlparse(configured_url)
+    dashboard_url = configured_url if parsed.path.startswith("/dashboard") else f"{configured_url}/dashboard"
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        dashboard_url = "http://192.168.178.32:31050/dashboard"
+    return {
+        "configured": bool(configured_url), "dashboard_url": dashboard_url,
+        "status": snapshot.get("status", "unknown"), "checked_at": snapshot.get("checked_at"),
+        "stale": bool(snapshot.get("stale")), "cached": bool(snapshot.get("cached")),
+        "summary": {
+            "total": len(services),
+            "online": sum(monitor.get("status") == "online" for monitor in services),
+            "offline": sum(monitor.get("status") == "offline" for monitor in services),
+        },
+        "services": [{key: monitor.get(key) for key in ("name", "status", "latency_ms")}
+                     for monitor in sorted(services, key=lambda m: (m.get("status") == "online", str(m.get("name") or "")))[:3]],
+        "unavailable": bool(snapshot.get("errors")),
     }
 
 

@@ -13,6 +13,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 
@@ -21,6 +22,7 @@ import requests
 
 _STATUS_ORDER = {"unknown": 0, "healthy": 1, "degraded": 2, "warning": 3, "critical": 4}
 _CACHE_TTL_SECONDS = 30
+_CACHE_LOCK = Lock()
 _LABEL_RE = re.compile(r'([a-zA-Z_][a-zA-Z0-9_]*)="((?:\\.|[^"\\])*)"')
 
 
@@ -205,11 +207,20 @@ def _write_cache(cache_file: Path, cache: dict[str, Any]) -> None:
             os.unlink(temporary)
 
 
-def collect_provider_snapshots(cache_file: Path, *, force: bool = False) -> dict[str, Any]:
+def collect_provider_snapshots(cache_file: Path, *, force: bool = False,
+                               providers: tuple[str, ...] | None = None) -> dict[str, Any]:
     """Fetch configured providers while preserving the last good snapshot."""
+    with _CACHE_LOCK:
+        return _collect_provider_snapshots(cache_file, force=force, providers=providers)
+
+
+def _collect_provider_snapshots(cache_file: Path, *, force: bool,
+                                providers: tuple[str, ...] | None) -> dict[str, Any]:
     cache = _read_cache(cache_file)
     results: dict[str, Any] = {}
     for provider, fetcher in _provider_fetchers().items():
+        if providers is not None and provider not in providers:
+            continue
         if not _url("UPTIME_KUMA_URL" if provider == "uptime_kuma" else "BESZEL_URL"):
             continue
         cached = cache.get(provider) if isinstance(cache.get(provider), dict) else None
@@ -226,7 +237,7 @@ def collect_provider_snapshots(cache_file: Path, *, force: bool = False) -> dict
             snapshot = dict((cached or {}).get("snapshot") or _error_snapshot(provider, exc))
             snapshot["stale"] = bool(cached)
             snapshot["cached"] = bool(cached)
-            snapshot.setdefault("errors", []).append(f"stale provider data: {str(exc)[:180]}")
+            snapshot["errors"] = [f"stale provider data: {str(exc)[:180]}"]
             if not cached:
                 snapshot = _error_snapshot(provider, exc)
         results[provider] = snapshot

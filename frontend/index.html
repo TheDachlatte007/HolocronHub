@@ -798,8 +798,6 @@
     .home-dashboard-grid:nth-of-type(4) .home-panel{animation-delay:320ms}
     @media(prefers-reduced-motion:reduce){.home-dashboard.home-arriving .home-panel{animation:none;opacity:1;transform:none}}
     #tab-tools>.card,#tab-homelab>.card{background:linear-gradient(155deg,#0c1725 0%,#09121e 58%,#070e18 100%);border-color:#20364d;box-shadow:0 20px 55px rgba(0,0,0,.35)}
-    body[data-hub="tools"].search-open .shell-search,body[data-hub="tools"].search-open .mobile-search-trigger{display:none!important}
-    body[data-hub="tools"].search-open #tool-search-panel{display:flex!important}
     body[data-hub="f1"] .holocron-shell>.nav,body[data-hub="warframe"] .holocron-shell>.nav{display:none!important}
     body.nav-menu-open[data-hub="f1"] .holocron-shell>.nav,body.nav-menu-open[data-hub="warframe"] .holocron-shell>.nav{position:fixed!important;z-index:1000;top:58px;right:14px;left:auto;display:flex!important;flex-direction:column!important;align-items:stretch!important;width:min(300px,calc(100vw - 28px));max-height:calc(100vh - 76px);overflow:auto;margin:0!important;padding:12px!important;border:1px solid #244761!important;border-radius:14px!important;background:rgba(5,12,22,.97)!important;box-shadow:0 22px 70px rgba(0,0,0,.62)!important;backdrop-filter:blur(18px)}
     body.nav-menu-open[data-hub="f1"] .holocron-shell>.nav .nav-tab,body.nav-menu-open[data-hub="warframe"] .holocron-shell>.nav .nav-tab{display:flex!important;width:100%;text-align:left}
@@ -924,6 +922,96 @@
     @media(max-width:420px){.home-welcome{flex-direction:column}.home-hero-time{width:100%;display:flex;align-items:baseline;justify-content:space-between;padding:12px 0 0;border-top:1px solid rgba(112,157,187,.26);border-left:0;text-align:left}.home-date{max-width:none}.home-quick-copy strong{font-size:11px}}
     @media(prefers-reduced-motion:reduce){.home-holocron-mark{animation:none}.home-dashboard.home-arriving .home-welcome,.home-dashboard.home-arriving .home-panel{animation:none;opacity:1;transform:none}.home-quick-link{transition:none}}
 
+    .home-dashboard{margin-bottom:20px;background:transparent!important}
+    .home-dashboard-grid{grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);align-items:start}
+    .home-side-stack{display:grid;gap:12px;min-width:0}
+    .home-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+    .home-panel-head .home-panel-actions{flex-direction:row;gap:12px}
+    .home-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .home-quick-wrap{position:relative;min-width:0}
+    .home-quick-wrap .home-quick-link{box-sizing:border-box;height:100%;border:1px solid #203b51}
+    .home-panel{border:1px solid #20364d}
+    #tools-quick{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+    .tool-card-quick{min-height:0;box-sizing:border-box;padding:0;background:#091827;border-color:#244155}
+    .quick-launch-inline{display:flex;align-items:center;gap:10px;min-width:0;min-height:64px;padding:12px;color:#dceef7;text-decoration:none;border-radius:13px;box-sizing:border-box}
+    .quick-launch-inline:hover{background:#102a3c;text-decoration:none}
+    .quick-launch-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .quick-launch-copy strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .quick-launch-copy small{font-size:10px;color:#829caf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .quick-launch-inline .tool-icon-wrap{width:30px;height:30px;border-radius:9px}
+    .quick-launch-inline .tool-icon{width:21px;height:21px}
+    .quick-launch-inline:focus-visible,.tool-search-input:focus-visible{outline:2px solid #67e8f9;outline-offset:2px}
+    .home-service-edit{position:absolute;top:5px;right:5px;width:28px;height:28px;padding:5px;display:none;place-items:center;border-color:#32617a;background:#102437;color:#a5f3fc;border-radius:8px}
+    .home-service-edit svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    .home-services-editing .home-service-edit{display:grid}
+    .home-services-editing .home-quick-link{padding-right:31px}
+    .home-kuma-panel{min-height:0;gap:12px;padding:16px}
+    .home-kuma-panel .home-panel-head{margin-bottom:0}
+    .home-kuma-summary{display:flex;align-items:baseline;gap:9px;color:#96aabd;font-size:11px}
+    .home-kuma-summary strong{font-size:17px;color:#d8f9ed}
+    .home-kuma-rows{display:grid;gap:7px}
+    .home-kuma-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px}
+    .home-kuma-row>span:first-child{display:flex;align-items:center;gap:7px;min-width:0}
+    .home-kuma-row .home-monitor-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .home-widget-meta{font-size:10px;color:#7e99ad;line-height:1.5}
+    .home-widget-meta a{color:#93c9dc}
+    .home-weather-body{display:flex;align-items:center;gap:16px}
+    .home-weather-icon{width:56px;height:56px;flex:0 0 56px;color:#9cf2ff;filter:drop-shadow(0 0 9px rgba(34,211,238,.16))}
+    .home-weather-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round}
+    .home-weather-main{min-width:0;flex:1}
+    .home-weather-temp{font-size:38px;line-height:1.05;letter-spacing:-.05em;font-variant-numeric:tabular-nums;color:#edfbff}
+    .home-weather-condition{font-size:11px;color:#a9c1d0;margin-top:4px}
+    .home-weather-facts{display:flex;flex-wrap:wrap;gap:6px 13px;margin-top:13px;padding-top:10px;border-top:1px solid #1c344a;color:#91aabc;font-size:11px}
+    .home-weather-facts strong{color:#d3e4ef;font-weight:550}
+    .home-weather-panel .home-widget-meta{margin-top:8px}
+    .home-library{margin-top:18px;border:1px solid #20364d;border-radius:13px;background:#08131e;overflow:hidden}
+    .home-library>summary,.home-library-sub>summary{display:flex;align-items:center;gap:12px;list-style:none;cursor:pointer;padding:16px 18px;color:#d4e9f2;font-size:13px}
+    .home-library summary::-webkit-details-marker{display:none}
+    .home-library>summary:before,.home-library-sub>summary:before{content:'';width:7px;height:7px;flex:0 0 7px;border-right:1.5px solid #67e8f9;border-bottom:1.5px solid #67e8f9;transform:rotate(-45deg);transition:transform .15s}
+    .home-library[open]>summary:before,.home-library-sub[open]>summary:before{transform:rotate(45deg)}
+    .home-library>summary small{margin-left:auto;color:#7994a8;font-size:11px}
+    .home-library-body{padding:0 18px 16px}
+    .home-library-sub{border-top:1px solid #1c344a;margin-top:14px}
+    .home-library-sub>summary{padding:14px 0}
+    .home-library-sub>summary small{color:#7994a8;font-size:11px}
+    .home-library summary:focus-visible{outline:2px solid #67e8f9;outline-offset:-3px}
+    dialog.tool-search-panel,dialog.service-editor{position:fixed;inset:0;box-sizing:border-box;width:min(680px,calc(100vw - 32px));max-height:min(680px,calc(100dvh - 48px));margin:auto;padding:22px;background:linear-gradient(150deg,#0c1b29,#07101a);border:1px solid #2a586d;border-radius:18px;color:#dcecf5;box-shadow:0 28px 100px rgba(0,0,0,.65);overflow:auto}
+    dialog.tool-search-panel:not([open]),dialog.service-editor:not([open]){display:none!important}
+    dialog.tool-search-panel[open]{display:flex;gap:14px}
+    dialog::backdrop{background:rgba(2,7,13,.76);backdrop-filter:blur(7px)}
+    body.search-open{overflow:hidden}
+    #tool-search-trigger{display:none}
+    .tool-search-head strong{font-size:17px;color:#e6f7ff}
+    .tool-search-head{align-items:center}
+    .tool-search-input{width:100%;box-sizing:border-box;min-height:46px;font-size:14px;border-color:#2d5971;background:#06111c}
+    .tool-search-results{display:grid;gap:4px;max-height:340px;overflow:auto;overscroll-behavior:contain}
+    .tool-search-result{display:flex;align-items:center;gap:12px;padding:10px 12px;min-width:0;border:1px solid transparent;border-radius:10px;text-decoration:none;color:#deedf6}
+    .tool-search-result:hover,.tool-search-result.selected{border-color:#27546b;background:#10283b;text-decoration:none}
+    .tool-search-result-copy{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+    .tool-search-result-copy strong{font-size:13px}
+    .tool-search-result-copy small{font-size:11px;color:#8faabb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tool-search-result>span:last-child{font-size:12px;color:#6ce2ef}
+    .tool-search-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:12px;border-top:1px solid #20364d}
+    .tool-search-foot select{min-width:0;flex:1}
+    .tool-search-help{font-size:11px;color:#86a0b2}
+    .service-editor-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:17px}
+    .service-editor-head h2{margin:0;font-size:19px;text-transform:none;color:#e4f8ff}
+    .service-editor-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .service-editor-field{display:flex;flex-direction:column;gap:6px;min-width:0;color:#9cb6c7;font-size:12px}
+    .service-editor-field input{box-sizing:border-box;width:100%;min-width:0}
+    .service-editor-field.wide{grid-column:1/-1}
+    .icon-picker{margin:15px 0}
+    .icon-picker summary{cursor:pointer;font-size:12px;color:#a5d8e9;padding:8px 0}
+    .icon-picker-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:6px;padding:8px 0}
+    .icon-choice{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;min-height:64px;padding:9px 5px;font-size:10px;border-radius:10px;color:#a6c3d5}
+    .icon-choice img{width:24px;height:24px;object-fit:contain}
+    .icon-choice.active{background:#103148;border-color:#44bfd9;color:#d6f9ff}
+    .icon-picker-current{display:flex;gap:8px;align-items:center;margin-top:7px;min-height:28px;font-size:11px;color:#8ba5b8}
+    .icon-picker-current img{width:24px;height:24px;object-fit:contain}
+    .service-editor-actions{display:flex;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+    @media(max-width:1100px){.home-dashboard-grid{grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr)}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:780px){.home-dashboard-grid{grid-template-columns:1fr}.home-side-stack{grid-template-columns:1fr 1fr}.home-panel-head{flex-wrap:wrap}}
+    @media(max-width:540px){.home-side-stack{grid-template-columns:1fr}.home-library>summary{flex-wrap:wrap;gap:9px}.home-library>summary small{width:100%;margin-left:19px}.service-editor-fields{grid-template-columns:1fr}.service-editor-field.wide{grid-column:auto}.home-quick-link{padding:10px;gap:9px}dialog.tool-search-panel,dialog.service-editor{width:calc(100vw - 20px);max-height:calc(100dvh - 24px);padding:16px}.tool-search-foot{gap:6px}.tool-search-foot select{flex-basis:100%}}
   </style>
 </head>
 <body data-hub="tools">
@@ -954,7 +1042,7 @@
     <button class="nav-tab" onclick="showTab('digest',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h5M8 16h3"/><path d="M7 3v4M17 3v4"/></svg><span>Morning Digest</span></button>
     <button class="nav-tab" onclick="showTab('tldr',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6M8 10l-4 5M16 10l4 5"/></svg><span>TLDR</span></button>
     <button class="nav-tab" onclick="showTab('markets',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7"/><path d="M16 6h4v4"/></svg><span>Markets</span></button>
-    <button class="nav-tab" onclick="showTab('f1',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M6 18l2-8h8l2 8M9 10l1-4h5l2 4M5 18l-2 2M19 18l2 2M10 14h.01M15 14h.01"/></svg><span>F1</span></button>
+    <button class="nav-tab" onclick="showTab('f1',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="16" r="2.5"/><circle cx="18" cy="16" r="2.5"/><path d="M3.5 15H2v-4h4l3 3h5l2-3 6 3v2h-1.5M8.5 16h7M10 14v-3h3l2 3M3 8h4v3M20 11V9h2"/></svg><span>F1</span></button>
     <button class="nav-tab" onclick="showTab('warframe',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 8 4v7c0 4.5-3.4 7.5-8 9-4.6-1.5-8-4.5-8-9V6z"/><path d="m9 12 2 2 4-5"/></svg><span>Warframe</span></button>
     <button class="nav-tab" onclick="showTab('saved',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg><span>Saved</span></button>
     <button class="nav-tab" onclick="showTab('sources',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.5-3.6M8.2 13.2l7.5 3.6"/></svg><span>Sources</span></button>
@@ -1005,17 +1093,20 @@
         </header>
         <div class="home-dashboard-grid">
           <section class="home-panel home-launch-panel">
-            <div class="home-panel-head"><div><span>Quick Launch</span><small>Home Lab services</small></div><div class="home-panel-actions"><button class="home-text-link" onclick="showTab('homelab')">All services <span aria-hidden="true">↗</span></button></div></div>
+            <div class="home-panel-head"><div><span>Quick Launch</span><small>Home Lab services</small></div><div class="home-panel-actions"><button class="home-text-link" id="home-edit-services" onclick="toggleHomeServiceEditing()" aria-pressed="false">Edit services</button><button class="home-text-link" onclick="showTab('homelab')">All services <span aria-hidden="true">↗</span></button></div></div>
             <div id="home-dashboard-links" class="home-quick-grid"><div class="home-dashboard-empty">Loading your services...</div></div>
           </section>
-          <section class="home-panel home-kuma-panel">
-            <div>
-              <div class="home-panel-head"><div><span>Monitoring</span><small>Uptime Kuma</small></div></div>
-              <div class="home-kuma-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h4l2.2-6 4.1 12 2.1-6H21"/><path d="M4 4h16v16H4z" opacity=".35"/></svg></div>
-              <div class="home-kuma-copy"><strong>Service status</strong><span>Open Kuma for the current, authoritative status of your services.</span></div>
-            </div>
-            <a class="home-kuma-link" href="http://192.168.178.32:31050/dashboard" target="_blank" rel="noopener noreferrer">Open Uptime Kuma <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
-          </section>
+          <div class="home-side-stack">
+            <section class="home-panel home-weather-panel" aria-label="Local weather">
+              <div class="home-panel-head"><div><span>Weather</span><small id="home-weather-location">Augsburg</small></div><button class="home-text-link" onclick="loadDashboardWeather(true)" aria-label="Refresh weather">Refresh</button></div>
+              <div id="home-weather-content" aria-live="polite"><div class="home-widget-meta">Loading local weather...</div></div>
+            </section>
+            <section class="home-panel home-kuma-panel" aria-label="Uptime Kuma snapshot">
+              <div class="home-panel-head"><div><span>Monitoring</span><small>Uptime Kuma</small></div><button class="home-text-link" onclick="loadDashboardKuma(true)" aria-label="Refresh Kuma snapshot">Refresh</button></div>
+              <div id="home-kuma-content" aria-live="polite"><div class="home-widget-meta">Loading Kuma snapshot...</div></div>
+              <a id="home-kuma-link" class="home-kuma-link" href="http://192.168.178.32:31050/dashboard" target="_blank" rel="noopener noreferrer">Open Uptime Kuma <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
+            </section>
+          </div>
         </div>
       </section>
       <div class="tool-hub-top">
@@ -1026,24 +1117,6 @@
         <div class="toolhub-actions">
           <button class="sm" id="tool-search-trigger" onclick="toggleToolSearchPanel()">Search</button>
           <button class="sm" id="manage-tools-toggle" onclick="toggleManageTools()">Manage Tools</button>
-        </div>
-      </div>
-      <div class="row" id="cat-tabs"><button class="active" onclick="setCategory('',this)">All</button></div>
-      <div id="tool-search-panel" class="tool-search-panel" hidden>
-        <div class="tool-search-head">
-          <div class="tool-search-copy">Search by name, tags, provider, group, host, AI task or shortcut hint. Keyboard: <code>Ctrl/Cmd+K</code> or <code>/</code>.</div>
-          <button class="sm" onclick="toggleToolSearchPanel(false)">Close</button>
-        </div>
-        <div class="row">
-          <input id="q" placeholder="Search name, tags, provider, group, host…" style="flex:1;min-width:220px" />
-          <select id="tool-sort">
-          <option value="">Default order</option>
-          <option value="favorites">Favorites first</option>
-          <option value="popular">Most used</option>
-          <option value="last_used">Recently used</option>
-        </select>
-          <button class="primary" onclick="applyToolSearch()">Apply</button>
-          <button onclick="clearToolSearch()">Clear</button>
         </div>
       </div>
 
@@ -1057,15 +1130,20 @@
         <div id="tools-quick" class="grid"><div class="empty">No favorites yet.</div></div>
       </div>
 
+      <details id="tool-library" class="home-library">
+        <summary><strong>Browse tool library</strong><small>AI by task, Home Lab and more</small></summary>
+        <div class="home-library-body">
+        <div class="row" id="cat-tabs"><button class="active" onclick="setCategory('',this)">All</button></div>
+        <div id="tool-filter-status" class="tool-section-sub" hidden></div>
       <div id="ai-tools-section" class="tool-section">
         <div class="tool-section-head">
           <div>
             <div class="tool-section-title">AI Tools</div>
-            <div class="tool-section-sub">Task-first picks up top, compact grouped directory underneath. Built for fast launch, not a wall of widgets.</div>
+            <div class="tool-section-sub">Choose a task to find the right tool. More picks and editing are available in the full directory.</div>
           </div>
         </div>
         <div id="ai-overview-grid" class="ai-task-grid"><div class="ai-overview-card"><strong>AI workspace</strong><span class="muted">Task-first picks will appear here after the tool list loads.</span></div></div>
-        <div class="ai-layout">
+        <details class="home-library-sub"><summary>Full AI directory <small>All links and editing</small></summary><div class="ai-layout">
           <div>
             <div id="tools-ai" class="ai-directory-sections"><div class="empty">No AI tools.</div></div>
           </div>
@@ -1084,19 +1162,14 @@
               </div>
             </details>
           </div>
-        </div>
+        </div></details>
       </div>
 
-      <div id="home-tools-section" class="tool-section">
-        <div class="tool-section-head">
-          <div>
-            <div class="tool-section-title">Home Lab</div>
-            <div class="tool-section-sub">Canonical launcher for local services with groups, friendly hostnames, and optional deep links.</div>
-          </div>
-        </div>
+      <details id="home-tools-section" class="tool-section home-library-sub">
+        <summary>Home Lab directory <small>Groups, deep links and details</small></summary>
         <div id="home-group-tabs" class="tool-group-tabs"><button class="tool-group-tab active" onclick="setHomeGroup('',this)">All services</button></div>
         <div id="tools-home" class="home-groups"><div class="empty">No Home Lab services.</div></div>
-      </div>
+      </details>
 
       <div id="other-tools-section" class="tool-section" hidden>
         <div class="tool-section-head">
@@ -1107,6 +1180,8 @@
         </div>
         <div id="tools-other" class="grid"></div>
       </div>
+        </div>
+      </details>
     </div>
     <div id="manage-tools-panel" class="card tool-manage-panel" hidden>
       <h2>Manage Tools</h2>
@@ -1118,12 +1193,13 @@
         <input id="new_link" placeholder="https://…" style="flex:2;min-width:180px" />
       </div>
       <div class="row">
-        <input id="new_icon" placeholder="icon URL (optional)" style="flex:1" />
+        <input id="new_icon" placeholder="icon URL (optional)" style="flex:1" aria-label="Custom icon URL" oninput="syncIconPicker('new_icon')" />
         <input id="new_tags" placeholder="tags, comma-separated" style="flex:1" />
         <select id="new_loc"><option value="cloud">cloud</option><option value="local">local</option></select>
         <select id="new_auth"><option value="none">none</option><option value="api-key">api-key</option><option value="oauth">oauth</option><option value="subscription">subscription</option><option value="token">token</option><option value="local">local</option></select>
         <input id="new_cost" placeholder="cost" style="width:90px" />
       </div>
+      <div id="new-icon-picker"></div>
       <div class="row">
         <input id="new_group" placeholder="group (Media, Infra, Storage…)" style="flex:1" />
         <input id="new_service_kind" placeholder="service kind" style="flex:1" />
@@ -1867,6 +1943,9 @@
 
       <div id="settings-panel-homelab" class="settings-panel">
         <div class="settings-grid">
+          <div class="settings-field"><label for="set-weather-location">Weather location</label><input id="set-weather-location" placeholder="Augsburg" /></div>
+          <div class="settings-field"><label for="set-weather-latitude">Latitude</label><input id="set-weather-latitude" type="number" min="-90" max="90" step="any" placeholder="48.3705" /></div>
+          <div class="settings-field"><label for="set-weather-longitude">Longitude</label><input id="set-weather-longitude" type="number" min="-180" max="180" step="any" placeholder="10.8978" /></div>
           <div class="settings-field">
             <label>Uptime Kuma URL</label>
             <input id="set-homelab-kuma-url" type="url" placeholder="http://192.168.x.x:3001" />
@@ -1924,6 +2003,31 @@
 
 </div>
 
+<dialog id="tool-search-panel" class="tool-search-panel" aria-labelledby="tool-search-title">
+  <div class="tool-search-head"><strong id="tool-search-title">Find and launch</strong><button class="sm" onclick="toggleToolSearchPanel(false)" aria-label="Close search">Esc</button></div>
+  <input id="q" class="tool-search-input" placeholder="Search tools, services, tasks or hosts..." aria-label="Search tools and services" autocomplete="off" />
+  <div id="tool-search-results" class="tool-search-results" aria-label="Matching tools"></div>
+  <div id="tool-search-help" class="tool-search-help" aria-live="polite">Type to search. Arrow keys to select, Enter to launch.</div>
+  <div class="tool-search-foot">
+    <select id="tool-sort" aria-label="Sort tools"><option value="">Default order</option><option value="favorites">Favorites first</option><option value="popular">Most used</option><option value="last_used">Recently used</option></select>
+    <button class="primary" onclick="applyToolSearch()">Filter directory</button><button onclick="clearToolSearch()">Clear</button>
+  </div>
+</dialog>
+<dialog id="service-editor" class="service-editor" aria-labelledby="service-editor-title">
+  <form id="service-editor-form" onsubmit="saveHomeService(event)">
+    <div class="service-editor-head"><h2 id="service-editor-title">Edit service</h2><button type="button" class="sm" onclick="document.getElementById('service-editor').close()" aria-label="Close service editor">Close</button></div>
+    <div class="service-editor-fields">
+      <label class="service-editor-field">Name<input id="service-name" required /></label>
+      <label class="service-editor-field">Group<input id="service-group" placeholder="Media, Infra, Storage..." /></label>
+      <label class="service-editor-field wide">Service URL or domain<input id="service-link" type="url" placeholder="https://jellyfin.example.com" required /></label>
+      <label class="service-editor-field wide">Custom icon URL (optional)<input id="service-icon" oninput="syncIconPicker('service-icon')" placeholder="Automatic icon, or select one below" /></label>
+    </div>
+    <div id="service-icon-picker"></div>
+    <div id="service-editor-status" class="home-widget-meta" role="status"></div>
+    <div class="service-editor-actions"><button id="service-save" type="submit" class="primary">Save service</button><button type="button" onclick="document.getElementById('service-editor').close()">Cancel</button></div>
+  </form>
+</dialog>
+<script src="assets/tool-icons.js"></script>
 <script src="assets/warframe-chart.js"></script>
 <script>
 const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8787' : window.location.origin;
@@ -2052,7 +2156,7 @@ function toolBrandSlug(tool, hostname = '') {
     'claude': 'anthropic', 'gemini': 'googlegemini', 'perplexity': 'perplexity',
     'cursor': 'cursor', 'replicate': 'replicate', 'elevenlabs': 'elevenlabs', 'huggingface': 'huggingface',
     'ollama': 'ollama', 'pihole': 'pihole', 'homeassistant': 'homeassistant', 'jellyfin': 'jellyfin',
-    'portainer': 'portainer', 'truenas': 'truenas', 'proxmox': 'proxmox', 'grafana': 'grafana',
+    'portainer': 'portainer', 'truenas': 'truenas', 'proxmox': 'proxmox', 'proxmoxve': 'proxmox', 'grafana': 'grafana',
     'uptimekuma': 'uptimekuma', 'lmstudio': 'lmstudio'
   };
   return nameSlugs[name] || '';
@@ -2143,24 +2247,29 @@ window.setInterval(updateShellClock, 30000);
 function setGlobalNavCollapsed(collapsed) {
   document.body.classList.toggle('nav-collapsed', collapsed === true);
   try { localStorage.setItem('holocronhub.nav-collapsed.v1', collapsed === true ? '1' : '0'); } catch {}
-  const toggle = document.getElementById('shell-nav-toggle');
-  if (toggle) {
-    toggle.title = collapsed ? 'Show navigation' : 'Hide navigation';
-    toggle.setAttribute('aria-label', toggle.title);
-    toggle.setAttribute('aria-expanded', String(!collapsed));
-    toggle.classList.toggle('is-open', !collapsed);
-  }
+  syncGlobalNavToggle();
 }
+
+function syncGlobalNavToggle() {
+  const toggle = document.getElementById('shell-nav-toggle');
+  if (!toggle) return;
+  const menuMode = ['f1', 'warframe'].includes(document.body.dataset.hub) || window.matchMedia('(max-width: 900px)').matches;
+  const expanded = menuMode ? document.body.classList.contains('nav-menu-open') : !document.body.classList.contains('nav-collapsed');
+  toggle.title = expanded ? 'Hide navigation' : 'Show navigation';
+  toggle.setAttribute('aria-label', toggle.title);
+  toggle.setAttribute('aria-expanded', String(expanded));
+  toggle.classList.toggle('is-open', expanded);
+}
+
+window.matchMedia('(max-width: 900px)').addEventListener('change', () => {
+  document.body.classList.remove('nav-menu-open');
+  syncGlobalNavToggle();
+});
 
 function toggleGlobalNav() {
   if (['f1', 'warframe'].includes(document.body.dataset.hub) || window.matchMedia('(max-width: 900px)').matches) {
-    const open = document.body.classList.toggle('nav-menu-open');
-    const toggle = document.getElementById('shell-nav-toggle');
-    if (toggle) {
-      toggle.setAttribute('aria-expanded', String(open));
-      toggle.setAttribute('aria-label', open ? 'Hide navigation' : 'Show navigation');
-      toggle.title = open ? 'Hide navigation' : 'Show navigation';
-    }
+    document.body.classList.toggle('nav-menu-open');
+    syncGlobalNavToggle();
     return;
   }
   setGlobalNavCollapsed(!document.body.classList.contains('nav-collapsed'));
@@ -2205,18 +2314,11 @@ function showTab(name, btn, options = {}) {
   }
   document.body.dataset.hub = name;
   document.body.classList.remove('nav-menu-open');
-  const navToggle = document.getElementById('shell-nav-toggle');
-  if (navToggle) {
-    const menuMode = ['f1', 'warframe'].includes(name) || window.matchMedia('(max-width: 900px)').matches;
-    const expanded = menuMode ? false : !document.body.classList.contains('nav-collapsed');
-    navToggle.setAttribute('aria-expanded', String(expanded));
-    navToggle.setAttribute('aria-label', expanded ? 'Hide navigation' : 'Show navigation');
-    navToggle.title = expanded ? 'Hide navigation' : 'Show navigation';
-  }
+  syncGlobalNavToggle();
   const context = document.getElementById('shell-context');
   if (context) context.textContent = HUB_CONTEXT_LABELS[name] || name;
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
-  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.getAttribute('onclick')?.includes(`showTab('${name}'`)));
   document.querySelectorAll('[data-shell-tab]').forEach(b => b.classList.toggle('active', b.dataset.shellTab === name));
   if (name !== 'f1') { clearF1SessionPolling(); clearF1ClockTicker(); }
   if (name !== 'warframe') clearWarframeAutoRefresh();
@@ -2306,6 +2408,9 @@ let _homeLabOverviewRequest = 0;
 let _aiRadarRequest = 0;
 let _toolSearchOpen = false;
 let _manageToolsOpen = false;
+let _toolFilterQuery = '';
+let _toolSearchSelection = 0;
+let _homeServiceEditMode = false;
 
 const AI_TASK_ORDER = [
   { id: 'summaries', title: 'Summaries', hint: 'Fast briefs, PDFs, article digestion and notes.' },
@@ -2362,7 +2467,7 @@ function setHomeGroup(group, btn) {
   activeHomeGroup = group;
   document.querySelectorAll('#home-group-tabs .tool-group-tab').forEach(b=>b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  renderToolSections(_toolCache);
+  renderToolSections(filteredToolCatalog());
 }
 
 function toggleToolSearchPanel(force) {
@@ -2370,21 +2475,34 @@ function toggleToolSearchPanel(force) {
   const trigger = document.getElementById('tool-search-trigger');
   if (!panel) return;
   _toolSearchOpen = typeof force === 'boolean' ? force : !_toolSearchOpen;
-  panel.hidden = !_toolSearchOpen;
+  if (_toolSearchOpen) {
+    document.getElementById('q').value = _toolFilterQuery;
+    renderToolSearchResults();
+    if (!panel.open) panel.showModal();
+  } else if (panel.open) panel.close();
   document.body.classList.toggle('search-open', _toolSearchOpen);
   if (trigger) trigger.classList.toggle('active', _toolSearchOpen);
   if (_toolSearchOpen) window.setTimeout(() => document.getElementById('q')?.focus(), 0);
 }
 
 function applyToolSearch() {
+  _toolFilterQuery = document.getElementById('q').value.trim();
+  activeCategory = '';
+  activeHomeGroup = '';
+  document.querySelectorAll('#cat-tabs button').forEach((button, index) => button.classList.toggle('active', index === 0));
+  showTab('tools');
+  document.getElementById('tool-library').open = true;
+  document.getElementById('home-tools-section').open = true;
   loadTools();
   toggleToolSearchPanel(false);
+  document.getElementById('tool-library').scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 function clearToolSearch() {
   const qEl = document.getElementById('q');
   const sortEl = document.getElementById('tool-sort');
   if (qEl) qEl.value = '';
+  _toolFilterQuery = '';
   if (sortEl) sortEl.value = '';
   loadTools();
   toggleToolSearchPanel(false);
@@ -2399,6 +2517,48 @@ function toggleManageTools(force) {
   if (btn) {
     btn.classList.toggle('active', _manageToolsOpen);
     btn.textContent = _manageToolsOpen ? 'Close Manage' : 'Manage Tools';
+  }
+  if (_manageToolsOpen) {
+    document.getElementById('tool-library').open = true;
+    document.getElementById('new-icon-picker').innerHTML = iconLibraryMarkup('new_icon');
+    syncIconPicker('new_icon');
+    panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+}
+
+function toolMatchesQuery(tool, query) {
+  const text = [tool.name, tool.provider, tool.category, tool.group, tool.host, tool.link,
+    tool.short_hint, tool.service_kind, ...(tool.tags || []), ...getToolAiTasks(tool)].join(' ').toLowerCase();
+  return query.toLowerCase().split(/\s+/).filter(Boolean).every(word => text.includes(word));
+}
+
+function renderToolSearchResults() {
+  const query = document.getElementById('q').value.trim();
+  const sort = document.getElementById('tool-sort').value;
+  const matches = _toolCache.filter(tool => toolMatchesQuery(tool, query)).sort((a,b) =>
+    (sort === 'popular' ? (b.usage_count || 0) - (a.usage_count || 0) : 0) ||
+    (sort === 'last_used' ? String(b.last_used || '').localeCompare(String(a.last_used || '')) : 0) ||
+    Number(Boolean(b.pinned || b.favorite)) - Number(Boolean(a.pinned || a.favorite)) ||
+    (b.usage_count || 0) - (a.usage_count || 0) || String(a.name).localeCompare(String(b.name)));
+  _toolSearchSelection = 0;
+  document.getElementById('tool-search-results').innerHTML = matches.slice(0, 12).map((tool, index) => `
+    <a class="tool-search-result${index === 0 ? ' selected' : ''}" href="${esc(tool.link)}" target="_blank" rel="noopener noreferrer" data-tool-id="${esc(tool.id)}" onclick="markToolUsed(this.dataset.toolId);toggleToolSearchPanel(false)">
+      ${toolIconMarkup(tool)}<span class="tool-search-result-copy"><strong>${esc(tool.name)}</strong><small>${esc(isHomeTool(tool) ? (tool.group || 'Home Lab') : getToolShortHint(tool))}${tool.host ? ` · ${esc(tool.host)}` : ''}</small></span><span aria-hidden="true">↗</span>
+    </a>`).join('') || '<div class="empty">No matching tools or services.</div>';
+  document.getElementById('tool-search-help').textContent = `${matches.length} match${matches.length === 1 ? '' : 'es'}${matches.length > 12 ? ' · top 12 shown' : ''}. Arrow keys to select, Enter to launch.`;
+}
+
+function handleToolSearchKeys(event) {
+  const results = Array.from(document.querySelectorAll('#tool-search-results .tool-search-result'));
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    results[_toolSearchSelection]?.click();
+  } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    if (!results.length) return;
+    _toolSearchSelection = (_toolSearchSelection + (event.key === 'ArrowDown' ? 1 : -1) + results.length) % results.length;
+    results.forEach((result, index) => result.classList.toggle('selected', index === _toolSearchSelection));
+    results[_toolSearchSelection].scrollIntoView({ block: 'nearest' });
   }
 }
 
@@ -2420,7 +2580,7 @@ function handleToolHubShortcuts(e) {
   if (e.key === 'Escape' && _toolSearchOpen) toggleToolSearchPanel(false);
   if (e.key === 'Escape' && document.body.classList.contains('nav-menu-open')) {
     document.body.classList.remove('nav-menu-open');
-    document.getElementById('shell-nav-toggle')?.setAttribute('aria-expanded', 'false');
+    syncGlobalNavToggle();
   }
 }
 
@@ -2721,8 +2881,8 @@ async function loadAiRadar() {
     if (requestId !== _aiRadarRequest) return;
     _aiFeedCache = [];
   }
-  renderAiOverview(_toolCache);
-  renderAiRail(_toolCache);
+  renderAiOverview(filteredToolCatalog());
+  renderAiRail(filteredToolCatalog());
 }
 
 function renderHomeDashboard() {
@@ -2733,8 +2893,139 @@ function renderHomeDashboard() {
     const group = normalizeToolCategory(tool.group || tool.service_kind || tool.category || 'Service');
     const href = String(tool.link || '').trim();
     const safeHref = /^https?:\/\//i.test(href) ? href : '#';
-    return `<a class="home-quick-link" href="${esc(safeHref)}" target="_blank" rel="noopener" title="Open ${esc(tool.name || 'service')}" onclick="markToolUsed('${esc(tool.id)}')">${homeDashboardIconMarkup(tool)}<span class="home-quick-copy"><strong>${esc(tool.name || 'Service')}</strong><small>${esc(group)}</small></span></a>`;
+    return `<div class="home-quick-wrap"><a class="home-quick-link" href="${esc(safeHref)}" target="_blank" rel="noopener" title="Open ${esc(tool.name || 'service')}" onclick="markToolUsed('${esc(tool.id)}')">${homeDashboardIconMarkup(tool)}<span class="home-quick-copy"><strong>${esc(tool.name || 'Service')}</strong><small>${esc(group)}</small></span></a><button class="home-service-edit" type="button" data-service-id="${esc(tool.id)}" onclick="openHomeServiceEditor(this.dataset.serviceId)" aria-label="Edit ${esc(tool.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 5 5M3 21l5-1L21 7l-5-5L3 15z"/></svg></button></div>`;
   }).join('') : '<div class="home-dashboard-empty">No Home Lab services in your tool catalog yet. Add services from Manage Tools.</div>';
+}
+
+function toggleHomeServiceEditing() {
+  _homeServiceEditMode = !_homeServiceEditMode;
+  document.querySelector('.home-launch-panel').classList.toggle('home-services-editing', _homeServiceEditMode);
+  const button = document.getElementById('home-edit-services');
+  button.textContent = _homeServiceEditMode ? 'Done editing' : 'Edit services';
+  button.setAttribute('aria-pressed', String(_homeServiceEditMode));
+}
+
+function openHomeServiceEditor(toolId) {
+  const tool = _toolCache.find(item => item.id === toolId);
+  if (!tool) return;
+  const dialog = document.getElementById('service-editor');
+  dialog.dataset.toolId = toolId;
+  document.getElementById('service-name').value = tool.name || '';
+  document.getElementById('service-group').value = tool.group || '';
+  document.getElementById('service-link').value = tool.link || '';
+  document.getElementById('service-icon').value = tool.icon_url || '';
+  document.getElementById('service-icon-picker').innerHTML = iconLibraryMarkup('service-icon', true);
+  document.getElementById('service-editor-status').textContent = '';
+  syncIconPicker('service-icon');
+  dialog.showModal();
+}
+
+async function saveHomeService(event) {
+  event.preventDefault();
+  const dialog = document.getElementById('service-editor');
+  const button = document.getElementById('service-save');
+  const status = document.getElementById('service-editor-status');
+  if (!document.getElementById('service-name').value.trim()) {
+    status.textContent = 'Enter a service name.';
+    return;
+  }
+  let url;
+  try {
+    url = new URL(document.getElementById('service-link').value.trim());
+    if (!/^https?:$/.test(url.protocol)) throw new Error();
+  } catch {
+    status.textContent = 'Enter a complete http:// or https:// service URL.';
+    return;
+  }
+  button.disabled = true;
+  status.textContent = 'Saving...';
+  try {
+    await fetchJson(`${API}/tools/${encodeURIComponent(dialog.dataset.toolId)}`, {
+      method: 'PATCH', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name: document.getElementById('service-name').value.trim(),
+        group: document.getElementById('service-group').value.trim(), link: url.href,
+        host: url.hostname, port: url.port ? Number(url.port) : null,
+        icon_url: document.getElementById('service-icon').value.trim() }),
+    });
+    dialog.close();
+    await loadTools();
+  } catch (error) { status.textContent = `Could not save: ${error.message}`; }
+  finally { button.disabled = false; }
+}
+
+let _dashboardWeatherRequest = 0;
+let _dashboardKumaRequest = 0;
+let _dashboardWeatherTimer = null;
+let _dashboardWeatherData = null;
+
+function dashboardWeatherCondition(code, isDay) {
+  const cloud = '<path d="M6 17a4 4 0 0 1 0-8 6 6 0 0 1 11-2 5 5 0 0 1 1 10Z"/>';
+  if (code === 0) return isDay === 0
+    ? { label: 'Clear night', glyph: '<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z"/>' }
+    : { label: 'Clear sky', glyph: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>' };
+  if ([1,2,3].includes(code)) return { label: code === 3 ? 'Overcast' : 'Partly cloudy', glyph: cloud };
+  if ([45,48].includes(code)) return { label: 'Fog', glyph: cloud + '<path d="M4 20h16M7 23h10"/>' };
+  if ([71,73,75,77,85,86].includes(code)) return { label: 'Snow', glyph: cloud + '<path d="M7 20h.01M12 22h.01M17 20h.01"/>' };
+  if ([95,96,99].includes(code)) return { label: 'Thunderstorm', glyph: cloud + '<path d="m13 17-3 4h4l-2 3"/>' };
+  if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return { label: 'Rain', glyph: cloud + '<path d="m7 20-1 2m6-2-1 2m6-2-1 2"/>' };
+  return { label: 'Current conditions', glyph: cloud };
+}
+
+function renderDashboardWeather(data) {
+  document.getElementById('home-weather-location').textContent = data.location || 'Local weather';
+  const target = document.getElementById('home-weather-content');
+  if (data.air_temperature == null) {
+    target.innerHTML = `<div class="home-widget-meta">${esc(data.loading ? 'Fetching local weather...' : (data.error || 'Weather is temporarily unavailable.'))}</div>`;
+    return;
+  }
+  const condition = dashboardWeatherCondition(data.weather_code, data.is_day);
+  const number = (value, digits = 0) => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toFixed(digits);
+  target.innerHTML = `<div class="home-weather-body"><div class="home-weather-icon" aria-hidden="true"><svg viewBox="0 0 24 24">${condition.glyph}</svg></div><div class="home-weather-main"><div class="home-weather-temp">${number(data.air_temperature)}°</div><div class="home-weather-condition">${esc(condition.label)}${data.feels_like != null ? ` · feels ${number(data.feels_like)}°` : ''}</div></div></div>
+    <div class="home-weather-facts"><span>Wind <strong>${number(data.wind_speed, 1)} km/h</strong></span><span>Humidity <strong>${number(data.humidity)}%</strong></span><span>Rain <strong>${number(data.rainfall, 1)} mm</strong></span></div>
+    <div class="home-widget-meta"><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · ${data.stale ? 'Saved reading' : 'Updated'} ${esc(relTime(data.data_as_of || data.date))}${data.refreshing ? ' · refreshing' : ''}${data.error ? ' · retry available' : ''}</div>`;
+}
+
+async function loadDashboardWeather(force = false, attempt = 0) {
+  const request = ++_dashboardWeatherRequest;
+  window.clearTimeout(_dashboardWeatherTimer);
+  try {
+    const data = await fetchJson(`${API}/dashboard/weather${force ? '?force=true' : ''}`);
+    if (request !== _dashboardWeatherRequest) return;
+    _dashboardWeatherData = data;
+    renderDashboardWeather(data);
+    if (data.refreshing && attempt < 15) _dashboardWeatherTimer = window.setTimeout(() => loadDashboardWeather(false, attempt + 1), 2000);
+  } catch {
+    if (request !== _dashboardWeatherRequest) return;
+    const target = document.getElementById('home-weather-content');
+    if (_dashboardWeatherData?.air_temperature != null) renderDashboardWeather({..._dashboardWeatherData, stale: true, refreshing: false, error: 'Refresh unavailable'});
+    else target.innerHTML = '<div class="home-widget-meta">Weather is temporarily unavailable. Use Refresh to retry.</div>';
+  }
+}
+
+async function loadDashboardKuma(force = false) {
+  const request = ++_dashboardKumaRequest;
+  const target = document.getElementById('home-kuma-content');
+  try {
+    const data = await fetchJson(`${API}/dashboard/kuma${force ? '?force=true' : ''}`);
+    if (request !== _dashboardKumaRequest) return;
+    if (/^https?:\/\//i.test(data.dashboard_url || '')) document.getElementById('home-kuma-link').href = data.dashboard_url;
+    if (!data.summary?.total) {
+      target.innerHTML = `<div class="home-widget-meta">${data.configured ? 'No monitor snapshot available. Open Kuma for live status or check the connection in Settings.' : 'Open Kuma for live status. Add the Kuma connection in Settings to show a snapshot here.'}</div>`;
+      return;
+    }
+    target.innerHTML = `<div class="home-kuma-summary"><strong>${data.summary.online} / ${data.summary.total} online</strong>${data.summary.offline ? `<span>${data.summary.offline} offline</span>` : ''}</div>
+      <div class="home-kuma-rows">${(data.services || []).map(service => `<div class="home-kuma-row"><span><span class="homelab-status-dot ${homelabStatusClass(service.status)}"></span><span class="home-monitor-name">${esc(service.name)}</span></span><span class="home-widget-meta">${esc(homelabStatusLabel(service.status))}</span></div>`).join('')}</div>
+      <div class="home-widget-meta">${data.stale ? 'Saved snapshot' : 'Kuma snapshot'} · ${esc(relTime(data.checked_at))}${data.unavailable ? ' · refresh unavailable' : ''}</div>`;
+  } catch {
+    if (request !== _dashboardKumaRequest) return;
+    const saved = target.querySelector(':scope > .home-widget-meta');
+    if (target.querySelector('.home-kuma-summary') && saved) saved.textContent = 'Saved snapshot · refresh unavailable. Open Kuma for live status.';
+    else target.innerHTML = '<div class="home-widget-meta">Snapshot is temporarily unavailable. Open Uptime Kuma for live status.</div>';
+  }
+}
+
+function filteredToolCatalog() {
+  return _toolCache.filter(tool => (!activeCategory || tool.category === activeCategory) && toolMatchesQuery(tool, _toolFilterQuery));
 }
 
 let _homelabCommandData = null;
@@ -2934,11 +3225,8 @@ function renderToolSections(tools) {
 }
 
 async function loadTools() {
-  const q = document.getElementById('q').value.trim();
   const sort = document.getElementById('tool-sort').value;
   const params = new URLSearchParams();
-  if (q) params.set('q', q);
-  if (activeCategory) params.set('category', activeCategory);
   if (sort) params.set('sort', sort);
 
   document.getElementById('tools-ai').innerHTML = '<div class="empty">Loading...</div>';
@@ -2947,11 +3235,15 @@ async function loadTools() {
   document.getElementById('tools-quick').innerHTML = '';
 
   try {
-    _toolCache = await fetch(`${API}/tools?${params}`).then(r=>r.json());
-    renderToolSections(_toolCache);
+    _toolCache = await fetchJson(`${API}/tools?${params}`);
+    renderToolSections(filteredToolCatalog());
+    const filterStatus = document.getElementById('tool-filter-status');
+    filterStatus.hidden = !_toolFilterQuery;
+    filterStatus.innerHTML = `Filtered by: ${esc(_toolFilterQuery)} <button class="home-text-link" onclick="clearToolSearch()">Clear filter</button>`;
     if (_toolCache.some(t => isAiTool(t) && !isHomeTool(t))) loadAiRadar();
-    else { _aiFeedCache = []; renderAiOverview(_toolCache); renderAiRail(_toolCache); }
+    else { _aiFeedCache = []; renderAiOverview(filteredToolCatalog()); renderAiRail(filteredToolCatalog()); }
     renderHomeDashboard();
+    if (_toolSearchOpen) renderToolSearchResults();
   } catch(e) {
     document.getElementById('tools-ai').innerHTML = `<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;
     document.getElementById('tools-home').innerHTML = '';
@@ -2964,6 +3256,10 @@ function buildToolCard(t, variant='default') {
   d.className = `tool-card tool-card-${variant}`;
   d.dataset.id = t.id;
   d.dataset.toolAnchor = t.id;
+  if (variant === 'quick') {
+    d.innerHTML = `<a class="quick-launch-inline" href="${esc(t.link)}" target="_blank" rel="noopener noreferrer" data-tool-id="${esc(t.id)}" onclick="markToolUsed(this.dataset.toolId)" title="${esc(getToolShortHint(t))}">${toolIconMarkup(t)}<span class="quick-launch-copy"><strong>${esc(t.name)}</strong><small>${esc(t.provider || getToolShortHint(t))}</small></span></a>`;
+    return d;
+  }
   const category = normalizeToolCategory(t.category);
   const group = normalizeToolGroup(t.group);
   const summary = (t.notes || '').trim() || `${category} tool`;
@@ -3070,7 +3366,7 @@ function showEditForm(toolId) {
       </div>
       <div class="row">
         <input id="e_link" value="${esc(t.link)}" placeholder="https://…" style="flex:2;min-width:180px"/>
-        <input id="e_icon" value="${esc(t.icon_url||'')}" placeholder="icon URL" style="flex:1"/>
+        <input id="e_icon" value="${esc(t.icon_url||'')}" placeholder="icon URL" style="flex:1" aria-label="Custom icon URL" oninput="syncIconPicker('e_icon')"/>
         <input id="e_tags" value="${esc((t.tags||[]).join(', '))}" placeholder="tags" style="flex:1"/>
         <select id="e_loc">${locOpts}</select>
         <select id="e_auth">${authOpts}</select>
@@ -3094,6 +3390,7 @@ function showEditForm(toolId) {
         <input id="e_short_hint" value="${esc(t.short_hint || '')}" placeholder="short hint" style="flex:1"/>
         <input id="e_featured_rank" value="${esc(t.featured_rank ?? '')}" type="number" min="1" placeholder="rank" style="width:90px"/>
       </div>
+      ${iconLibraryMarkup('e_icon')}
       <textarea id="e_notes" placeholder="Notes…">${esc(t.notes||'')}</textarea>
       <div class="row">
         <button class="primary" onclick="saveEdit('${esc(toolId)}')">Save</button>
@@ -3101,6 +3398,8 @@ function showEditForm(toolId) {
       </div>
       <div id="edit-result-${esc(toolId)}" class="muted"></div>`;
     card.insertAdjacentElement('afterend', form);
+    syncIconPicker('e_icon');
+    form.scrollIntoView({ block: 'center', behavior: 'smooth' });
   });
 }
 
@@ -7803,7 +8102,26 @@ async function addSource() {
 }
 
 // ══ keyboard shortcuts ════════════════════════════════════════
-document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')loadTools();});
+document.getElementById('q').addEventListener('keydown', handleToolSearchKeys);
+document.getElementById('q').addEventListener('input', renderToolSearchResults);
+document.getElementById('tool-sort').addEventListener('change', renderToolSearchResults);
+document.getElementById('tool-search-panel').addEventListener('cancel', event => {
+  event.preventDefault();
+  toggleToolSearchPanel(false);
+});
+document.getElementById('tool-search-panel').addEventListener('close', () => {
+  _toolSearchOpen = false;
+  document.body.classList.remove('search-open');
+  document.getElementById('tool-search-trigger').classList.remove('active');
+});
+['tool-search-panel','service-editor'].forEach(id => {
+  const dialog = document.getElementById(id);
+  dialog.addEventListener('click', event => {
+    if (event.target !== dialog) return;
+    const bounds = dialog.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+  });
+});
 document.getElementById('feed-q').addEventListener('keydown',e=>{if(e.key==='Enter')loadFeed();});
 document.getElementById('f1-season')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1({ force: true });});
 document.getElementById('f1-history-q')?.addEventListener('keydown',e=>{if(e.key==='Enter')loadF1History({ force: true });});
@@ -7843,6 +8161,9 @@ const DEFAULT_SETTINGS = {
     alecaframe_public_token: '',
   },
   homelab: {
+    weather_location: 'Augsburg',
+    weather_latitude: 48.3705,
+    weather_longitude: 10.8978,
     uptime_kuma_url: '',
     uptime_kuma_api_key: '',
     uptime_kuma_username: '',
@@ -8015,6 +8336,9 @@ function populateSettingsForm(cfg) {
   toggleApiKeyVisibility();
 
   const homelab = cfg.homelab || {};
+  document.getElementById('set-weather-location').value = homelab.weather_location || 'Augsburg';
+  document.getElementById('set-weather-latitude').value = homelab.weather_latitude ?? 48.3705;
+  document.getElementById('set-weather-longitude').value = homelab.weather_longitude ?? 10.8978;
   document.getElementById('set-homelab-kuma-url').value = homelab.uptime_kuma_url || '';
   document.getElementById('set-homelab-kuma-key').value = homelab.uptime_kuma_api_key || '';
   document.getElementById('set-homelab-kuma-user').value = homelab.uptime_kuma_username || '';
@@ -8172,9 +8496,18 @@ async function saveSettingsApi() {
 }
 
 async function saveSettingsHomelab() {
+  const latitude = document.getElementById('set-weather-latitude');
+  const longitude = document.getElementById('set-weather-longitude');
+  if (!latitude.value || !longitude.value || !latitude.reportValidity() || !longitude.reportValidity()) {
+    setSettingsStatus('homelab', 'Enter valid latitude and longitude for the weather location.', true);
+    return;
+  }
   try {
     await patchSettings({
       homelab: {
+        weather_location: document.getElementById('set-weather-location').value.trim() || 'Augsburg',
+        weather_latitude: Number(latitude.value),
+        weather_longitude: Number(longitude.value),
         uptime_kuma_url: document.getElementById('set-homelab-kuma-url').value.trim(),
         uptime_kuma_api_key: document.getElementById('set-homelab-kuma-key').value.trim(),
         uptime_kuma_username: document.getElementById('set-homelab-kuma-user').value.trim(),
@@ -8186,6 +8519,8 @@ async function saveSettingsHomelab() {
       },
     });
     setSettingsStatus('homelab', 'Saved. Refresh the Homelab view to check connections.');
+    loadDashboardWeather(true);
+    loadDashboardKuma(true);
   } catch (e) {
     setSettingsStatus('homelab', `Save failed: ${e.message}`, true);
   }
@@ -8195,7 +8530,14 @@ async function saveSettingsHomelab() {
 fetchSettings().catch(()=>{}).finally(() => {
   restoreWarframeWorkspace();
   loadCategories().then(()=>loadTools());
+  loadDashboardWeather();
+  loadDashboardKuma();
 });
+window.setInterval(() => {
+  if (document.body.dataset.hub !== 'tools' || document.hidden) return;
+  loadDashboardWeather();
+  loadDashboardKuma();
+}, 60000);
 </script>
 </body>
 </html>

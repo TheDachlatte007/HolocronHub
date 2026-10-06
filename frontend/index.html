@@ -636,14 +636,14 @@
     .home-gauge-ring::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#0b1627;border:1px solid #253b55}
     .home-gauge-ring span{position:relative;z-index:1;font-size:12px;color:#f1f5f9}
     .home-media-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
-    .home-media-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:60px;border:1px solid #263b56;border-radius:8px;background:#101c2e;color:transparent;font-size:0;text-transform:uppercase;letter-spacing:.05em;text-decoration:none}.home-media-link>span{font-size:10px;color:#dbeafe}.home-media-link::before{display:grid;place-items:center;width:24px;height:24px;border:1px solid #35506f;border-radius:7px;color:#67e8f9;font-size:10px;font-weight:700}.home-media-link:nth-child(1)::before{content:'M'}.home-media-link:nth-child(2)::before{content:'S'}.home-media-link:nth-child(3)::before{content:'A'}.home-media-link:nth-child(4)::before{content:'R'}
+    .home-media-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:60px;border:1px solid #263b56;border-radius:8px;background:#101c2e;color:#dbeafe;font-size:10px;text-transform:uppercase;letter-spacing:.05em;text-decoration:none}.home-media-link .media-icon{width:24px;height:24px;padding:4px;border:1px solid #35506f;border-radius:7px;color:#67e8f9;fill:none;stroke:currentColor;stroke-width:1.6}
     .home-media-link:hover{border-color:#38bdf8;text-decoration:none}
     .home-event-list{display:flex;flex-direction:column;gap:0}
     .home-event{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(71,95,124,.24);font-size:11px;color:#c4d0df}
     .home-event:last-child{border-bottom:0}.home-event-dot{width:7px;height:7px;border-radius:50%;background:#34d399;flex:0 0 auto}.home-event-dot.warn{background:#f59e0b}
     @media (max-width:900px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr 1fr}}
     @media (max-width:640px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-time{font-size:38px}}
-    @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}}
+    @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}.app-shell-header{gap:8px}.shell-search{order:3;flex-basis:100%;width:auto;margin:4px 0 0}.shell-controls{margin-left:auto}}
     body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
     body[data-hub="warframe"] .hub-subnav{margin-top:12px}
     body[data-hub="warframe"] .hub-subnav button{background:#16243a;border-color:#334a68;color:#b9c8db;padding:6px 12px}
@@ -875,7 +875,7 @@
         </div>
         <div class="home-dashboard-grid wide">
           <div class="home-panel"><div class="home-panel-head"><span>System Status</span><span>Local telemetry</span></div><div class="home-gauge-grid"><div class="home-gauge"><div class="home-gauge-ring"><span>N/A</span></div>CPU</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#38bdf8 0 62%,#1c2b3d 62% 100%)"><span>N/A</span></div>RAM</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#f59e0b 0 38%,#1c2b3d 38% 100%)"><span>N/A</span></div>TEMP</div><div class="home-gauge"><div class="home-gauge-ring" style="background:conic-gradient(#34d399 0 18%,#1c2b3d 18% 100%)"><span>N/A</span></div>NET</div></div></div>
-          <div class="home-panel"><div class="home-panel-head"><span>Media Quick Launch</span><span>Services</span></div><div id="home-dashboard-media" class="home-media-grid"><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><span class="media-icon" aria-hidden="true">M</span><span>Media</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><span class="media-icon" aria-hidden="true">S</span><span>Series</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><span class="media-icon" aria-hidden="true">A</span><span>Music</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><span class="media-icon" aria-hidden="true">R</span><span>Radio</span></a></div></div>
+          <div class="home-panel"><div class="home-panel-head"><span>Media Quick Launch</span><span>Services</span></div><div id="home-dashboard-media" class="home-media-grid"><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m9 9 6 3-6 3Z"/></svg><span>Media</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="m10 9 5 3-5 3Z"/></svg><span>Series</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V7l9-2v11"/><circle cx="7" cy="18" r="2"/><circle cx="16" cy="16" r="2"/></svg><span>Music</span></a><a class="home-media-link" href="#" onclick="showTab('homelab');return false"><svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 0 1 16 0M7 13a5 5 0 0 1 10 0M10 16a2 2 0 0 1 4 0"/><path d="M12 20v.1"/></svg><span>Radio</span></a></div></div>
           <div class="home-panel"><div class="home-panel-head"><span>Latest Events</span><span>Activity</span></div><div class="home-event-list"><div class="home-event"><span class="home-event-dot"></span><span>Homelab adapter ready</span></div><div class="home-event"><span class="home-event-dot"></span><span>Local tool registry loaded</span></div><div class="home-event"><span class="home-event-dot warn"></span><span>Live telemetry depends on configured adapters</span></div></div></div>
         </div>
       </section>
@@ -1264,9 +1264,10 @@
   <!-- WARFRAME -->
   <div id="tab-warframe" style="display:none">
     <div class="card wf-shell-card">
-      <h2>Warframe Hub</h2>
+      <div class="wf-market-kicker">Warframe / Market Intelligence</div>
+      <h2>Market Hub</h2>
       <div class="row">
-        <input id="wf-item" value="saryn prime set" placeholder="Item, e.g. Saryn Prime Set" style="flex:1;min-width:220px" />
+        <input id="wf-item" value="Saryn Prime Set" placeholder="Item, e.g. Saryn Prime Set" style="flex:1;min-width:220px" />
         <select id="wf-platform">
           <option value="pc">PC</option>
           <option value="ps4">PlayStation</option>
@@ -5001,7 +5002,7 @@ function renderF1FallbackHero(message = 'Weekend data will appear after the next
   heroEl.style.backgroundImage = 'radial-gradient(circle at 78% 28%,rgba(14,165,233,.28),transparent 34%),linear-gradient(110deg,rgba(3,12,27,.98),rgba(8,36,63,.78) 48%,rgba(5,14,29,.92)),repeating-linear-gradient(145deg,rgba(56,189,248,.12) 0 1px,transparent 1px 24px)';
   heroEl.style.backgroundSize = 'cover';
   heroEl.style.backgroundPosition = 'center';
-  heroEl.innerHTML = `<div class="f1-hero-sub"><span class="f1-status-pill scheduled">F1 WEEKEND HUB</span><span class="pill">LIVE DATA</span></div><div class="f1-hero-title">Race control workspace</div><div class="f1-hero-sub">${esc(message)}</div><div class="f1-hero-meta"><span class="pill">Sessions</span><span class="pill">Timing</span><span class="pill">Track conditions</span></div>`;
+  heroEl.innerHTML = `<div class="f1-hero-sub"><span class="f1-status-pill scheduled">F1 / ROUND 18</span><span class="pill">LIVE DATA</span></div><div class="f1-hero-title">Singapore Grand Prix</div><div class="f1-hero-sub">Marina Bay Street Circuit</div><div class="f1-hero-meta"><span class="pill">${esc(message)}</span><span class="pill">Sessions</span><span class="pill">Timing</span><span class="pill">Track conditions</span></div>`;
 }
 
 function renderF1Hero(weekend) {

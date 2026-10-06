@@ -643,7 +643,7 @@
     .home-event:last-child{border-bottom:0}.home-event-dot{width:7px;height:7px;border-radius:50%;background:#34d399;flex:0 0 auto}.home-event-dot.warn{background:#f59e0b}
     @media (max-width:900px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr 1fr}}
     @media (max-width:640px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-time{font-size:38px}}
-    @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}.app-shell-header{gap:8px}.shell-search{order:3;flex-basis:100%;width:auto;margin:4px 0 0}.shell-controls{margin-left:auto}body[data-hub="tools"] .shell-search{display:flex}}
+    @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}.app-shell-header{gap:8px}.shell-search{order:3;flex-basis:100%;width:100%;margin:4px 0 0}.shell-controls{margin-left:auto}body[data-hub="tools"] .shell-search{display:flex!important;visibility:visible}}
     body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
     body[data-hub="warframe"] .hub-subnav{margin-top:12px}
     body[data-hub="warframe"] .hub-subnav button{background:#16243a;border-color:#334a68;color:#b9c8db;padding:6px 12px}
@@ -675,7 +675,7 @@
     .wf-detail-card{background:linear-gradient(145deg,#0d1c30,#091422);border:1px solid #2e4967;border-radius:12px;padding:14px;box-shadow:0 15px 35px rgba(2,6,23,.22)}
     .wf-detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;border-bottom:1px solid rgba(71,95,124,.44);padding-bottom:12px}
     .wf-detail-identity{display:flex;align-items:center;gap:12px;min-width:0}
-    .wf-detail-art{width:86px;height:86px;object-fit:contain;border-radius:10px;background:#07111e;border:1px solid #35506f;padding:6px;flex:0 0 auto}.wf-detail-art-placeholder{display:grid;place-items:center;color:#67e8f9;font-size:30px;font-weight:800;background:radial-gradient(circle,rgba(34,211,238,.22),transparent 64%),#07111e}
+    .wf-detail-art{width:86px;height:86px;object-fit:contain;border-radius:10px;background:#07111e;border:1px solid #35506f;padding:6px;flex:0 0 auto}.wf-detail-art-placeholder{display:grid;place-items:center;color:#67e8f9;font-size:30px;font-weight:800;background:radial-gradient(circle,rgba(34,211,238,.22),transparent 64%),#07111e}.wf-detail-art-placeholder svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:1.2}
     .wf-detail-title{font-size:22px;font-weight:750;color:#f8fafc;letter-spacing:-.02em}
     .wf-detail-sub{font-size:11px;color:#91a4bd;margin-top:5px}
     .wf-detail-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
@@ -1350,16 +1350,16 @@
       <div class="wf-command-layout">
         <div class="wf-detail-main">
           <div class="wf-detail-card">
-            <div id="wf-detail-market"><div class="wf-detail-head"><div class="wf-detail-identity"><div class="wf-detail-art wf-detail-art-placeholder">S</div><div><div class="wf-market-kicker">PC - MARKET DETAIL</div><div class="wf-detail-title">Saryn Prime Set</div><div class="wf-detail-sub">Prices, demand, volume and local history snapshots</div></div></div><div class="wf-detail-actions"><button class="wf-market-action" disabled>Open Market</button><button class="wf-market-action" disabled>Track Item</button></div></div><div class="wf-detail-stats"><div class="wf-detail-stat"><span>Buy</span><strong>-</strong></div><div class="wf-detail-stat"><span>Sell</span><strong>-</strong></div><div class="wf-detail-stat"><span>Median</span><strong>-</strong></div><div class="wf-detail-stat"><span>Volume (48h)</span><strong>-</strong></div><div class="wf-detail-stat"><span>Trend</span><strong>-</strong></div></div></div>
+            <div id="wf-detail-market"><div class="wf-detail-head"><div class="wf-detail-identity"><div class="wf-detail-art wf-detail-art-placeholder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 7 4v10l-7 4-7-4V7l7-4Z"/><path d="m8 9 4-2 4 2v6l-4 2-4-2V9Z"/></svg></div><div><div class="wf-market-kicker">PC - MARKET DETAIL</div><div class="wf-detail-title">Saryn Prime Set</div><div class="wf-detail-sub">Prices, demand, volume and local history snapshots</div></div></div><div class="wf-detail-actions"><a class="wf-market-action primary" href="https://warframe.market/items/saryn_prime_set" target="_blank" rel="noopener">Open Market</a><button class="wf-market-action" onclick="addCurrentWarframeItem()">Track Item</button></div></div><div class="wf-detail-stats"><div class="wf-detail-stat"><span>Buy</span><strong>n/a</strong></div><div class="wf-detail-stat"><span>Sell</span><strong>n/a</strong></div><div class="wf-detail-stat"><span>Median</span><strong>n/a</strong></div><div class="wf-detail-stat"><span>Volume (48h)</span><strong>n/a</strong></div><div class="wf-detail-stat"><span>Trend</span><strong>n/a</strong></div></div></div>
             <div class="wf-detail-chart-head"><span>Price History</span><span class="tool-minor">Local snapshots + market statistics</span></div>
             <div id="wf-detail-chart" class="wf-detail-chart"><div class="muted">Price history is warming up from the local snapshot store.</div></div>
           </div>
         </div>
         <aside class="wf-context-sidebar">
-          <div class="wf-context-card"><h3>Void Fissures</h3><div id="wf-detail-fissures" class="wf-context-list"><div class="muted">Loading</div></div></div>
-          <div class="wf-context-card"><h3>World State</h3><div id="wf-detail-world" class="wf-context-list"><div class="muted">Loading</div></div></div>
-          <div class="wf-context-card"><h3>Alerts</h3><div id="wf-detail-alerts" class="wf-context-list"><div class="muted">Loading</div></div></div>
-          <div class="wf-context-card"><h3>Farm Right Now</h3><div id="wf-detail-farm" class="wf-context-list"><div class="muted">Loading</div></div></div>
+          <div class="wf-context-card"><h3>Void Fissures</h3><div id="wf-detail-fissures" class="wf-context-list"><div class="muted">No cached snapshot yet</div></div></div>
+          <div class="wf-context-card"><h3>World State</h3><div id="wf-detail-world" class="wf-context-list"><div class="muted">No cached snapshot yet</div></div></div>
+          <div class="wf-context-card"><h3>Alerts</h3><div id="wf-detail-alerts" class="wf-context-list"><div class="muted">No cached snapshot yet</div></div></div>
+          <div class="wf-context-card"><h3>Farm Right Now</h3><div id="wf-detail-farm" class="wf-context-list"><div class="muted">Market pulse will populate after sync</div></div></div>
         </aside>
       </div>
       <div class="stat-card">
@@ -1370,7 +1370,7 @@
         <div>
           <h3 class="wf-section-title">Farm Right Now</h3>
           <div class="tool-minor" style="margin:-4px 0 10px">Opportunity score combines demand, liquidity, volume and trend. It is not a guaranteed platinum-per-hour estimate.</div>
-          <div id="wf-farm-now" class="wf-farm-grid"><div class="muted">Recommendations will appear after the market pulse scan finishes.</div></div>
+          <div id="wf-farm-now" class="wf-farm-grid"><div class="muted">Market pulse will populate after sync.</div></div>
         </div>
         <div class="wf-grid-stack">
           <div>

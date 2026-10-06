@@ -22,6 +22,7 @@
     .shell-utility svg{width:16px;height:16px}
     .shell-search{display:none;align-items:center;gap:9px;width:min(430px,34vw);height:38px;margin-left:auto;margin-right:18px;padding:0 13px;border:1px solid #29405f;border-radius:10px;background:#091525;color:#8ea0b7;font:inherit;font-size:12px;text-align:left;cursor:pointer}
     .shell-search svg{width:15px;height:15px;color:#67e8f9;flex:0 0 auto}.shell-search kbd{margin-left:auto;border:1px solid #35506f;border-radius:5px;padding:2px 5px;color:#b7cadf;font-size:10px}
+    .mobile-search-trigger{display:none;width:34px;height:34px;padding:0;border-radius:10px;color:#67e8f9;border-color:#29405f;background:#091525}.mobile-search-trigger svg{width:16px;height:16px}
     body[data-hub="tools"] .shell-search{display:flex}
     body[data-hub="tools"] .shell-context{display:none}
     body[data-hub="f1"] .shell-context,body[data-hub="warframe"] .shell-context,body[data-hub="f1"] .shell-utility,body[data-hub="warframe"] .shell-utility{display:none}
@@ -643,7 +644,7 @@
     .home-event:last-child{border-bottom:0}.home-event-dot{width:7px;height:7px;border-radius:50%;background:#34d399;flex:0 0 auto}.home-event-dot.warn{background:#f59e0b}
     @media (max-width:900px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr 1fr}}
     @media (max-width:640px){.home-dashboard-grid,.home-dashboard-grid.wide,.home-dashboard-grid.bottom{grid-template-columns:1fr}.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-time{font-size:38px}}
-    @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}.app-shell-header{gap:8px}.shell-search{order:3;flex-basis:100%;width:100%;margin:4px 0 0}.shell-controls{margin-left:auto}body[data-hub="tools"] .shell-search{display:flex!important;visibility:visible}}
+    @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}.app-shell-header{gap:8px}.shell-search{display:none!important}.shell-controls{margin-left:auto}.mobile-search-trigger{display:grid;place-items:center}}
     body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
     body[data-hub="warframe"] .hub-subnav{margin-top:12px}
     body[data-hub="warframe"] .hub-subnav button{background:#16243a;border-color:#334a68;color:#b9c8db;padding:6px 12px}
@@ -800,6 +801,7 @@
   <div class="app-shell-header">
     <h1 class="holocron-brand"><span class="holocron-mark" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><polygon points="16,1.8 28.5,9 28.5,23 16,30.2 3.5,23 3.5,9" fill="#071a2c" stroke="#39d9f3" stroke-width="1.3"/><polygon points="16,6 24,10.6 24,21.4 16,26 8,21.4 8,10.6" fill="none" stroke="#62e9fb" stroke-width="1"/><circle cx="16" cy="16" r="4.2" fill="#67e8f9" opacity=".9"/></svg></span><span class="holocron-wordmark">HolocronHub</span> <span id="shell-context" class="shell-context">Tool Hub</span></h1>
     <button class="shell-search" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Search services, devices, or commands"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg><span>Search services, devices, or commands...</span><kbd>CTRL K</kbd></button>
+    <button class="mobile-search-trigger" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Open search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg></button>
     <nav class="shell-topnav" aria-label="Primary workspace navigation">
       <button class="shell-top-tab active" data-shell-tab="tools" onclick="showTab('tools',this)">Home</button>
       <button class="shell-top-tab" data-shell-tab="f1" onclick="showTab('f1',this)">F1</button>
@@ -6327,15 +6329,15 @@ async function loadWarframe(options = {}) {
     }
     if (!background && metaEl) metaEl.textContent += ' | refreshing';
   } else if (!background) {
-    marketEl.innerHTML = '<div class="muted">Loading market...</div>';
+    marketEl.innerHTML = '<div class="muted">No local market snapshot yet; refreshing in the background.</div>';
     if (marketChartEl) marketChartEl.innerHTML = '';
-    if (!samePlatformContext) hotEl.innerHTML = '<div class="muted">Loading hot market items...</div>';
+    if (!samePlatformContext) hotEl.innerHTML = '<div class="muted">No local market pulse snapshot yet.</div>';
     if (!samePlatformContext) {
-      alertsEl.innerHTML = '<div class="muted">Loading alerts...</div>';
-      newsEl.innerHTML = '<div class="muted">Loading news...</div>';
-      fissuresEl.innerHTML = '<div class="muted">Loading fissures...</div>';
-      invasionsEl.innerHTML = '<div class="muted">Loading invasions...</div>';
-      worldEl.innerHTML = '<div class="muted">Loading world state...</div>';
+      alertsEl.innerHTML = '<div class="muted">No cached alerts yet.</div>';
+      newsEl.innerHTML = '<div class="muted">No cached news yet.</div>';
+      fissuresEl.innerHTML = '<div class="muted">No cached fissures yet.</div>';
+      invasionsEl.innerHTML = '<div class="muted">No cached invasions yet.</div>';
+      worldEl.innerHTML = '<div class="muted">No cached world state yet.</div>';
     }
   }
 
@@ -6377,11 +6379,11 @@ async function loadWarframePulse() {
   const signalsEl = document.getElementById('wf-signals');
   const farmEl = document.getElementById('wf-farm-now');
   if (!demandEl || !liquidityEl || !signalsEl || !farmEl) return;
-  demandEl.innerHTML = '<div class="muted">Scanning demand leaders...</div>';
-  liquidityEl.innerHTML = '<div class="muted">Scanning liquid markets...</div>';
-  signalsEl.innerHTML = '<div class="muted">Building trader signals...</div>';
-  farmEl.innerHTML = '<div class="muted">Scoring the best farm targets right now...</div>';
-  if (metaEl) metaEl.textContent = `scanning ${String(platformEl?.value || 'pc').toUpperCase()} market pulse`;
+  demandEl.innerHTML = '<div class="muted">No local demand snapshot yet.</div>';
+  liquidityEl.innerHTML = '<div class="muted">No local liquidity snapshot yet.</div>';
+  signalsEl.innerHTML = '<div class="muted">Trader signals will appear after the first snapshot.</div>';
+  farmEl.innerHTML = '<div class="muted">Farm targets will appear after the first snapshot.</div>';
+  if (metaEl) metaEl.textContent = `market pulse refresh queued - ${String(platformEl?.value || 'pc').toUpperCase()}`;
 
   try {
     const params = new URLSearchParams({ platform: platformEl?.value || 'pc' });

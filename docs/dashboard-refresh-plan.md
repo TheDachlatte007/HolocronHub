@@ -69,3 +69,49 @@ These are not represented as fake/placeholder cards in this pass. They need a re
 - Browser checks covered service URL/icon persistence, validation, failure states, search, direct keyboard launch, filtering, browser Back and mobile navigation.
 - Checked widths: 390, 768, 1440 and 1920 pixels, without horizontal page overflow. Desktop favorites fit in a compact row; the catalog stays closed on first load.
 - Real Open-Meteo weather was verified locally. Kuma rendering and failure handling were checked with fixtures because the local checkout has no Kuma credentials; the deployed instance uses its existing private connection settings.
+
+## Next Pass: Feedback From 2026-10-07
+
+Implemented in the follow-up pass. No deployment or push was requested; the completed changes are committed locally.
+
+1. **F1 weather reliability and timestamps**
+   - Investigate the reported OpenF1 weather 429 for meeting 1296. Reuse cached readings, honor provider cooldown/Retry-After, and avoid duplicate weather calls from refresh, polling and prewarm.
+   - The screenshot already shows Open-Meteo fallback data. Keep real problems in diagnostics, but make the user-facing source/fallback state understandable instead of showing a raw URL error above otherwise usable weather.
+   - Fix the displayed future freshness label ("Updated in 5h"). The shared Open-Meteo helper currently returns a local timestamp without its UTC offset; F1 forwards it to the browser. Normalize timestamps centrally before rendering age labels.
+2. **Header and navigation alignment**
+   - Remove the redundant active-section label beside HolocronHub across all tabs; the sidebar already identifies the current section.
+   - Keep the sidebar toggle in a stable position beside the brand when switching hubs and screen widths.
+3. **One consistent left sidebar**
+   - F1 and Warframe currently have explicit right-aligned menu CSS. Replace it with the same left-sided behavior as Home.
+   - On desktop, expanding/collapsing navigation should adjust content width; use a left drawer on narrow screens and preserve a useful full-width collapsed view.
+4. **Edit Home Lab from the Home Lab page**
+   - Reuse the existing service editor for names, URLs/domains/IPs, groups and icons directly in the dedicated Home Lab view.
+   - Support monitors that appear only through Kuma by saving local launcher metadata/overrides; keep Kuma as the health-data source.
+   - Allow adding services and adjusting their display without coding. Check current grouping: the screenshot places Home Assistant and TrueNAS under Network while Systems/Services are empty.
+5. **Appearance settings**
+   - Offer saved choices for the darker black/cyan reference and the current navy/neon appearance.
+   - Connect the existing Display options button to real settings; consider restrained glow/accent and compactness controls.
+   - Persist preferences through reloads and container updates; verify contrast, mobile layout and reduced-motion behavior.
+
+Recommended execution order: weather/timestamp fixes, shared header/sidebar fixes, Home Lab editing, then appearance options. The welcome dashboard and current Warframe presentation are positively received and remain the visual baseline.
+
+## Follow-Up Completion And Verification
+
+- F1 weather requests share a five-minute persisted cache; failed requests have a one-minute retry cache. OpenF1 429 responses honor numeric and HTTP-date Retry-After headers without an immediate retry. Concurrent successes and failures cannot shorten an active cooldown.
+- Open-Meteo readings also have a shared persistent cache and last-good fallback. Existing combined F1 snapshots retain weather for the same meeting on partial failures, but not for another race or beyond 24 hours. Saved readings are labeled; provider errors remain in diagnostics rather than raw URL warnings over usable fallback data.
+- Open-Meteo measurement times include their actual UTC offset. Fresh F1 and Home Lab overview timestamps are timezone-aware, avoiding false age labels from UTC containers.
+- The header no longer displays a redundant hub name. Its navigation button stays beside the brand. All hubs use the same left sidebar: desktop expansion reduces content width, collapse reclaims it, and mobile opens below the current header without obscuring it.
+- Home Lab supports Add service and per-service Edit/Customize actions using the existing tool catalog. Kuma-only monitors become local editable launchers with a persisted monitor binding, keeping their original health source after local name/URL edits. Specific group metadata takes precedence over the broad Home Network category.
+- Ruling: registered offline services remain visible and editable instead of being silently hidden when Kuma is healthy. This can expose obsolete entries again; their links can be corrected or they can be removed through Manage Tools. No service or stored data was deleted automatically.
+- Appearance settings provide Navy / Neon blue and Midnight / Black cyan, optional glow and compact spacing. Preview can be reset; saved choices use the existing backed-up settings file. The header display button opens these settings. Controls wait for settings loading, and failed reads/writes do not replace saved preferences.
+- Fixed the existing blank service-icon fallback: a generic SVG stays visible while the remote logo loads and after failure.
+- No new database, data migration, credentials replacement, framework rewrite or changes to Markets/Warframe ingestion are required. Existing files remain in the persistent data directory.
+
+Verification:
+
+- `python -m unittest discover -s backend -p 'test_*.py' -q`: 95 tests passed, including 13 new regression tests for this pass. Existing Python/Starlette deprecation warnings remain non-failing.
+- Inline frontend JavaScript syntax checked; Git whitespace checks passed.
+- Browser checks passed at 390, 768, 1440 and 1920 pixels: consistent header/sidebar positioning, reclaimed content width, mobile drawer placement/dismissal, browser Back, central search, keyboard launch, icon/service persistence and independent filtering.
+- Browser checks also covered imported Kuma monitors, adding services, stale-editor protection, appearance save/reload, failed settings/service saves, failed Home Lab refresh, saved widget data and reduced-motion preferences.
+- Tests used an isolated temporary copy of writable local data. Kuma/OpenF1 failure states used fixtures, not the deployed server's private credentials. Server-side live integrations still require the user's deployment review.
+- Independent read-only review identified three issues (cooldown race, stale editor metadata, incomplete fallback preservation). Each was reproduced and fixed with a failing-then-passing regression check before final verification.

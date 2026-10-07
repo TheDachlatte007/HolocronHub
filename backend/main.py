@@ -19,6 +19,7 @@ from urllib.parse import quote, quote_plus, urlparse
 from statistics import median
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -208,6 +209,7 @@ class Tool(BaseModel):
     ai_tasks: List[str] = Field(default_factory=list)
     featured_rank: Optional[int] = None
     short_hint: Optional[str] = ""
+    kuma_monitor_id: Optional[str] = None
 
 
 class AgentStatus(BaseModel):
@@ -252,6 +254,9 @@ _last_good_lock = Lock()
 _f1_snapshot_lock = Lock()
 _f1_archive_lock = Lock()
 _dashboard_weather_lock = Lock()
+_openf1_weather_lock = Lock()
+_open_meteo_weather_lock = Lock()
+_provider_breaker_lock = Lock()
 
 _PROVIDER_BREAKERS: dict[str, dict[str, Any]] = {
     "openf1": {"fail_count": 0, "open_until": 0.0, "last_error": None},
@@ -399,6 +404,7 @@ def _normalize_tool_record(raw: dict[str, Any]) -> dict[str, Any]:
         'ai_tasks': ai_tasks,
         'featured_rank': featured_rank,
         'short_hint': str(tool.get('short_hint') or '').strip(),
+        'kuma_monitor_id': str(tool.get('kuma_monitor_id') or '').strip() or None,
     }
     try:
         normalized['port'] = int(normalized['port']) if normalized['port'] is not None else None
@@ -806,6 +812,9 @@ _DEFAULT_SETTINGS = {
         "language": "EN",
         "default_category": "",
         "show_disabled_sources": False,
+        "theme": "navy-neon",
+        "glow": True,
+        "compact": False,
     },
     "feed": {
         "refresh_interval_minutes": 15,
@@ -839,7 +848,7 @@ _DEFAULT_SETTINGS = {
 }
 
 _ALLOWED_SETTINGS_PATCH = {
-    "ux": {"language", "default_category", "show_disabled_sources"},
+    "ux": {"language", "default_category", "show_disabled_sources", "theme", "glow", "compact"},
     "feed": {"refresh_interval_minutes", "digest_mode"},
     "models": {"openclaw_model"},
     "api_keys": {
@@ -1458,19 +1467,23 @@ def _provider_breaker_open(name: str) -> bool:
 
 
 def _provider_breaker_error(name: str, err: str) -> None:
-    state = _PROVIDER_BREAKERS.setdefault(name, {"fail_count": 0, "open_until": 0.0, "last_error": None})
-    fail_count = int(state.get("fail_count") or 0) + 1
-    cooldown = 120 if fail_count >= 3 else 0
-    state["fail_count"] = fail_count
-    state["open_until"] = time.time() + cooldown if cooldown else 0.0
-    state["last_error"] = str(err or "")[:240]
+    with _provider_breaker_lock:
+        state = _PROVIDER_BREAKERS.setdefault(name, {"fail_count": 0, "open_until": 0.0, "last_error": None})
+        fail_count = int(state.get("fail_count") or 0) + 1
+        cooldown = 120 if fail_count >= 3 else 0
+        state["fail_count"] = fail_count
+        state["open_until"] = max(float(state.get("open_until") or 0), time.time() + cooldown if cooldown else 0.0)
+        state["last_error"] = str(err or "")[:240]
 
 
 def _provider_breaker_success(name: str) -> None:
-    state = _PROVIDER_BREAKERS.setdefault(name, {"fail_count": 0, "open_until": 0.0, "last_error": None})
-    state["fail_count"] = 0
-    state["open_until"] = 0.0
-    state["last_error"] = None
+    with _provider_breaker_lock:
+        state = _PROVIDER_BREAKERS.setdefault(name, {"fail_count": 0, "open_until": 0.0, "last_error": None})
+        if float(state.get("open_until") or 0) > time.time():
+            return
+        state["fail_count"] = 0
+        state["open_until"] = 0.0
+        state["last_error"] = None
 
 
 def _set_last_good(key: str, payload: dict[str, Any]) -> None:
@@ -1683,6 +1696,23 @@ def _http_get_json(
             return payload, None
         except Exception as e:
             last_err = str(e)
+            response = getattr(e, "response", None)
+            if provider_name and getattr(response, "status_code", None) == 429:
+                retry_after = response.headers.get("Retry-After", "")
+                try:
+                    delay = float(retry_after)
+                except (TypeError, ValueError):
+                    try:
+                        delay = parsedate_to_datetime(retry_after).timestamp() - time.time()
+                    except (TypeError, ValueError, OverflowError):
+                        delay = 120
+                if not math.isfinite(delay):
+                    delay = 120
+                with _provider_breaker_lock:
+                    state = _PROVIDER_BREAKERS.setdefault(provider_name, {})
+                    state.update(open_until=max(float(state.get("open_until") or 0), time.time() + max(60, delay)),
+                                 last_error=last_err[:240], fail_count=int(state.get("fail_count") or 0) + 1)
+                return None, last_err
             if is_warframe_market and "429" in last_err:
                 _mark_warframe_market_backoff(8.0)
             if provider_name and attempt + 1 < attempts:
@@ -2649,6 +2679,26 @@ def _find_f1_schedule_race_match(
 def _fetch_open_meteo_weather(latitude: Optional[float], longitude: Optional[float]) -> tuple[dict[str, Any], Optional[str]]:
     if latitude is None or longitude is None:
         return {}, "open_meteo:coords_missing"
+    key = f"weather:open_meteo:{latitude}:{longitude}"
+    with _open_meteo_weather_lock:
+        cached = _API_CACHE.get(key)
+        if cached and time.time() - cached["ts"] < cached["ttl"]:
+            return deepcopy(cached["value"]["weather"]), cached["value"].get("error")
+        saved, age = _get_last_good(key, max_age_seconds=86400)
+        if saved and age < 300:
+            _API_CACHE[key] = {"ts": time.time() - age, "ttl": 300, "value": saved}
+            return {**deepcopy(saved["weather"]), "cached": True}, None
+        weather, error = _query_open_meteo_weather(latitude, longitude)
+        if error and saved:
+            weather = {**saved["weather"], "cached": True, "stale": True}
+        value = {"weather": weather, "error": error}
+        _API_CACHE[key] = {"ts": time.time(), "ttl": 60 if error else 300, "value": value}
+        if weather and not error:
+            _set_last_good(key, value)
+        return deepcopy(weather), error
+
+
+def _query_open_meteo_weather(latitude: float, longitude: float) -> tuple[dict[str, Any], Optional[str]]:
     data, err = _http_get_json(
         "https://api.open-meteo.com/v1/forecast",
         params={
@@ -2664,6 +2714,13 @@ def _fetch_open_meteo_weather(latitude: Optional[float], longitude: Optional[flo
     current = data.get("current") if isinstance(data, dict) and isinstance(data.get("current"), dict) else {}
     if not current:
         return {}, "open_meteo:invalid_payload"
+    try:
+        measured = datetime.fromisoformat(str(current.get("time") or ""))
+        if measured.tzinfo is None:
+            measured = measured.replace(tzinfo=timezone(timedelta(seconds=int(data.get("utc_offset_seconds") or 0))))
+        measured_at = measured.isoformat()
+    except (TypeError, ValueError, OverflowError):
+        return {}, "open_meteo:invalid_timestamp"
     return {
         "air_temperature": current.get("temperature_2m"),
         "track_temperature": None,
@@ -2675,7 +2732,7 @@ def _fetch_open_meteo_weather(latitude: Optional[float], longitude: Optional[flo
         "weather_code": current.get("weather_code"),
         "is_day": current.get("is_day"),
         "feels_like": current.get("apparent_temperature"),
-        "date": current.get("time"),
+        "date": measured_at,
         "source": "open_meteo",
         "utc_offset_seconds": data.get("utc_offset_seconds") if isinstance(data, dict) else None,
     }, None
@@ -2765,6 +2822,29 @@ def _f1_norm_text(value: Any) -> str:
 
 
 def _openf1_get(path: str, *, params: Optional[dict[str, Any]] = None, timeout: int = 15) -> tuple[list[dict[str, Any]], Optional[str]]:
+    if path == "weather":
+        # Overview, prewarm and session polling share one persisted weather cache.
+        key = "f1:weather:" + json.dumps(params or {}, sort_keys=True, separators=(",", ":"))
+        with _openf1_weather_lock:
+            cached = _API_CACHE.get(key)
+            if cached and time.time() - cached["ts"] < cached["ttl"]:
+                return deepcopy(cached["value"]["rows"]), cached["value"].get("error")
+            saved, age = _get_last_good(key, max_age_seconds=86400)
+            if saved and age < 300:
+                _API_CACHE[key] = {"ts": time.time() - age, "ttl": 300, "value": saved}
+                return deepcopy(saved["rows"]), None
+            data, err = _http_get_json(f"https://api.openf1.org/v1/{path}", params=params, timeout=timeout)
+            if not err and not isinstance(data, list):
+                err = "invalid_payload"
+            rows = [row for row in (data or []) if isinstance(row, dict)] if not err else []
+            error = f"weather:{err}" if err else None
+            if err and saved:
+                rows = saved["rows"]
+            value = {"rows": rows, "error": error}
+            _API_CACHE[key] = {"ts": time.time(), "ttl": 60 if err else 300, "value": value}
+            if rows and not err:
+                _set_last_good(key, value)
+            return deepcopy(rows), error
     data, err = _http_get_json(f"https://api.openf1.org/v1/{path}", params=params, timeout=timeout)
     if err:
         return [], f"{path}:{err}"
@@ -3064,6 +3144,7 @@ def _build_f1_schedule_fallback_context(
             "pressure": weather.get("pressure"),
             "date": weather.get("date"),
             "source": weather.get("source") or "unavailable",
+            "stale": bool(weather.get("stale")),
         },
     }, fallback_errors[:10]
 
@@ -3171,7 +3252,7 @@ def _fetch_openf1_weekend_context(
         if _f1_weather_has_data(backup_weather):
             latest_weather = backup_weather
             weather_source = backup_weather.get("source") or "open_meteo"
-        elif weather_err:
+        if weather_err:
             errors.append(weather_err)
 
     phase = "offseason"
@@ -3237,6 +3318,7 @@ def _fetch_openf1_weekend_context(
             "pressure": latest_weather.get("pressure"),
             "date": latest_weather.get("date"),
             "source": weather_source,
+            "stale": bool(latest_weather.get("stale") or (err and weather_rows)),
         },
     }, errors[:10]
 
@@ -3444,7 +3526,7 @@ def _fetch_openf1_session_detail(session_key: str) -> tuple[dict[str, Any], list
             if _f1_weather_has_data(backup_weather):
                 latest_weather = backup_weather
                 weather_source = backup_weather.get("source") or "open_meteo"
-            elif weather_err:
+            if weather_err:
                 errors.append(weather_err)
 
     data_as_of = _f1_rows_data_as_of(
@@ -3474,6 +3556,7 @@ def _fetch_openf1_session_detail(session_key: str) -> tuple[dict[str, Any], list
             "pressure": latest_weather.get("pressure"),
             "date": latest_weather.get("date"),
             "source": weather_source,
+            "stale": bool(latest_weather.get("stale")),
         },
     }, errors[:12]
 
@@ -6153,6 +6236,10 @@ def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
     cfg["ux"]["language"] = "DE" if str(cfg["ux"].get("language", "EN")).upper() == "DE" else "EN"
     cfg["ux"]["default_category"] = str(cfg["ux"].get("default_category", "")).strip()
     cfg["ux"]["show_disabled_sources"] = bool(cfg["ux"].get("show_disabled_sources", False))
+    if cfg["ux"].get("theme") not in {"navy-neon", "black-cyan"}:
+        cfg["ux"]["theme"] = "navy-neon"
+    for key in ("glow", "compact"):
+        cfg["ux"][key] = bool(cfg["ux"][key])
 
     try:
         refresh = int(cfg["feed"].get("refresh_interval_minutes", 15))
@@ -7337,7 +7424,20 @@ def f1_overview(season: Optional[str] = None, force: bool = False):
     standings = overview.get("standings", [])
     all_errors = list(errors or []) + list(weekend_errors or [])
 
-    generated_at = datetime.now().isoformat(timespec="seconds")
+    # Existing deployments may only have the combined overview cache. Never
+    # erase its usable weather on a partial failure, or carry it to a new race.
+    if isinstance(weekend, dict) and not _f1_weather_has_data(weekend.get("weather")):
+        saved, _ = _get_last_good(cache_key, max_age_seconds=12 * 3600)
+        previous = (saved or {}).get("weekend") or {}
+        meeting_key = (weekend.get("meeting") or {}).get("meeting_key")
+        old_weather = previous.get("weather") or {}
+        measured = _parse_dt(old_weather.get("date"))
+        if (meeting_key is not None and str(meeting_key) == str((previous.get("meeting") or {}).get("meeting_key"))
+                and measured and 0 <= (datetime.now(timezone.utc) - measured).total_seconds() <= 86400
+                and _f1_weather_has_data(old_weather)):
+            weekend["weather"] = {**deepcopy(old_weather), "stale": True}
+
+    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     payload = {
         "generated_at": generated_at,
         "data_as_of": generated_at,
@@ -7874,7 +7974,7 @@ def _probe_home_tool(tool: dict[str, Any]) -> dict[str, Any]:
 @app.get("/api/tools/home-lab/overview")
 def home_lab_overview():
     tools = [tool for tool in _load_tools() if _is_home_tool_record(tool)]
-    generated_at = datetime.now().isoformat(timespec="seconds")
+    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     if not tools:
         return {
             "generated_at": generated_at,
@@ -7939,7 +8039,8 @@ def _refresh_dashboard_weather(key: str, location: str, latitude: float, longitu
             if not math.isfinite(temperature):
                 raise ValueError("Non-finite weather temperature")
             offset = timezone(timedelta(seconds=int(weather.get("utc_offset_seconds") or 0)))
-            measured_at = datetime.fromisoformat(weather["date"]).replace(tzinfo=offset).isoformat()
+            measured = datetime.fromisoformat(weather["date"])
+            measured_at = (measured if measured.tzinfo else measured.replace(tzinfo=offset)).isoformat()
         except (KeyError, TypeError, ValueError, OverflowError):
             error = error or "open_meteo:invalid_payload"
         if error or weather.get("air_temperature") is None:
@@ -8014,6 +8115,24 @@ def dashboard_kuma(force: bool = False):
     }
 
 
+def _homelab_bucket(service: dict[str, Any]) -> str:
+    groups = {
+        "systems": ("system", "infra", "storage", "core", "truenas", "smarthome", "home assistant", "vm_host"),
+        "network": ("network", "dns", "pihole", "pi-hole", "router", "fritz"),
+        "media": ("media", "jellyfin", "audiobook", "navidrome", "immich", "yamtrack"),
+        "monitoring": ("monitor", "uptime", "beszel", "observability"),
+        "services": ("service", "automation", "local_ai", "local_llm"),
+    }
+    # Explicit user grouping takes precedence. "Home Network" is a category,
+    # not evidence that every local tool belongs to the Network section.
+    for value in (service.get("group"), service.get("service_kind"), service.get("name")):
+        text = str(value or "").lower()
+        for bucket, tokens in groups.items():
+            if any(token in text for token in tokens):
+                return bucket
+    return "services"
+
+
 @app.get("/api/homelab/overview")
 def homelab_command_center_overview(force: bool = False):
     """Aggregate registry reachability and optional provider snapshots."""
@@ -8033,6 +8152,8 @@ def homelab_command_center_overview(force: bool = False):
         return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
 
     def matches_kuma_monitor(service: dict[str, Any], monitor: dict[str, Any]) -> bool:
+        if service.get("kuma_monitor_id"):
+            return str(service["kuma_monitor_id"]) == str(monitor.get("id") or monitor.get("name"))
         service_name = normalized_match_value(service.get("name"))
         monitor_name = normalized_match_value(monitor.get("name"))
         if service_name and monitor_name and (
@@ -8042,20 +8163,21 @@ def homelab_command_center_overview(force: bool = False):
         ):
             return True
         try:
-            service_host = (urlparse(str(service.get("link") or "")).hostname or "").lower()
-            monitor_host = (urlparse(str(monitor.get("url") or "")).hostname or "").lower()
-            return bool(service_host and monitor_host and service_host == monitor_host)
+            service_url = urlparse(str(service.get("link") or ""))
+            monitor_url = urlparse(str(monitor.get("url") or ""))
+            def endpoint(url):
+                return ((url.hostname or "").lower(), url.port or (443 if url.scheme == "https" else 80), url.path.rstrip("/"))
+            return bool(service_url.hostname and endpoint(service_url) == endpoint(monitor_url))
         except Exception:
             return False
 
-    matched_registry_ids: set[str] = set()
     for monitor in kuma_services:
         registry = next((
             candidate for candidate in services
             if matches_kuma_monitor(candidate, monitor)
         ), None)
         if registry:
-            matched_registry_ids.add(str(registry.get("id") or ""))
+            registry["kuma_monitor_id"] = str(monitor.get("id") or monitor.get("name"))
             registry["status"] = monitor.get("status", registry.get("status"))
             registry["latency_ms"] = monitor.get("latency_ms")
             registry["status_source"] = "uptime_kuma"
@@ -8065,25 +8187,16 @@ def homelab_command_center_overview(force: bool = False):
         else:
             services.append({
                 "id": f"kuma:{monitor.get('id') or monitor.get('name')}",
+                "kuma_monitor_id": str(monitor.get("id") or monitor.get("name")),
                 "name": monitor.get("name") or "Kuma monitor",
                 "link": monitor.get("url"),
-                "group": "Monitoring",
-                "service_kind": "monitoring",
+                "group": _homelab_bucket({"name": monitor.get("name")}).title(),
                 "status": monitor.get("status", "unknown"),
                 "latency_ms": monitor.get("latency_ms"),
                 "status_source": "uptime_kuma",
                 "status_checked_at": (provider_snapshots.get("uptime_kuma") or {}).get("checked_at"),
             })
 
-    hidden_unmonitored = []
-    if (provider_snapshots.get("uptime_kuma") or {}).get("status") == "healthy":
-        visible_services = []
-        for service in services:
-            if service.get("status") == "offline" and str(service.get("id") or "") not in matched_registry_ids:
-                hidden_unmonitored.append(service.get("name") or service.get("id"))
-                continue
-            visible_services.append(service)
-        services = visible_services
 
     registry_summary = {
         "total": len(services),
@@ -8094,20 +8207,7 @@ def homelab_command_center_overview(force: bool = False):
     }
 
     def bucket_for(service: dict[str, Any]) -> str:
-        value = " ".join([
-            str(service.get("group") or ""),
-            str(service.get("category") or ""),
-            str(service.get("service_kind") or ""),
-        ]).lower()
-        if any(token in value for token in ("media", "jellyfin", "audiobook", "navidrome", "immich")):
-            return "media"
-        if any(token in value for token in ("network", "pihole", "router", "fritz")):
-            return "network"
-        if any(token in value for token in ("monitor", "uptime", "beszel", "observability")):
-            return "monitoring"
-        if any(token in value for token in ("core", "system", "truenas", "home assistant", "homelab")):
-            return "systems"
-        return "services"
+        return _homelab_bucket(service)
 
     buckets = {"systems": [], "services": [], "network": [], "media": [], "monitoring": []}
     for service in services:
@@ -8159,7 +8259,7 @@ def homelab_command_center_overview(force: bool = False):
         "media": buckets["media"],
         "monitoring": buckets["monitoring"],
         "providers": provider_snapshots,
-        "hidden_unmonitored": hidden_unmonitored,
+        "hidden_unmonitored": [],
         "source": "provider_adapters_and_tool_registry",
     }
 

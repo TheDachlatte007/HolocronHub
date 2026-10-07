@@ -48,14 +48,8 @@
     .holocron-shell>.nav .nav-tab{width:100%;margin:0;text-align:left;border:1px solid transparent;border-radius:9px;padding:9px 11px}
     .holocron-shell>.nav .nav-tab.active{border-color:rgba(56,189,248,.28);background:rgba(37,99,235,.22);color:#f8fafc}
     .nav-collapsed .holocron-shell>.nav{display:none}
-    body[data-hub="f1"] .holocron-shell,body[data-hub="warframe"] .holocron-shell{grid-template-columns:1fr}
     body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{display:flex}
-    body[data-hub="f1"] .holocron-shell>.nav,body[data-hub="warframe"] .holocron-shell>.nav{display:none!important}
-    body[data-hub="f1"] .holocron-shell>.nav,body[data-hub="warframe"] .holocron-shell>.nav{grid-column:1;grid-row:2;position:static;display:flex;flex-direction:row;align-items:center;overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;margin:0 0 14px;padding:6px;border-radius:11px}
-    body[data-hub="f1"] .holocron-shell>.nav .nav-tab,body[data-hub="warframe"] .holocron-shell>.nav .nav-tab{width:auto;flex:0 0 auto;text-align:center}
     body[data-hub="f1"] .holocron-content,body[data-hub="warframe"] .holocron-content{grid-column:1;grid-row:3}
-    body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(2),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(3),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(4),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(5),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(9),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(10),body[data-hub="f1"] .holocron-shell>.nav .nav-tab:nth-child(11),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(2),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(3),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(4),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(5),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(9),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(10),body[data-hub="warframe"] .holocron-shell>.nav .nav-tab:nth-child(11){display:none}
-    body.nav-collapsed[data-hub="f1"] .holocron-shell>.nav,body.nav-collapsed[data-hub="warframe"] .holocron-shell>.nav{display:none}
     body[data-hub="f1"] .wrap,body[data-hub="warframe"] .wrap{max-width:none;padding:0 0 28px}
     body[data-hub="f1"] .app-shell-header,body[data-hub="warframe"] .app-shell-header{padding:16px 24px 12px;margin:0;border-bottom:1px solid rgba(41,64,95,.7)}
     body[data-hub="f1"] .holocron-content,body[data-hub="warframe"] .holocron-content{width:100%}
@@ -798,10 +792,6 @@
     .home-dashboard-grid:nth-of-type(4) .home-panel{animation-delay:320ms}
     @media(prefers-reduced-motion:reduce){.home-dashboard.home-arriving .home-panel{animation:none;opacity:1;transform:none}}
     #tab-tools>.card,#tab-homelab>.card{background:linear-gradient(155deg,#0c1725 0%,#09121e 58%,#070e18 100%);border-color:#20364d;box-shadow:0 20px 55px rgba(0,0,0,.35)}
-    body[data-hub="f1"] .holocron-shell>.nav,body[data-hub="warframe"] .holocron-shell>.nav{display:none!important}
-    body.nav-menu-open[data-hub="f1"] .holocron-shell>.nav,body.nav-menu-open[data-hub="warframe"] .holocron-shell>.nav{position:fixed!important;z-index:1000;top:58px;right:14px;left:auto;display:flex!important;flex-direction:column!important;align-items:stretch!important;width:min(300px,calc(100vw - 28px));max-height:calc(100vh - 76px);overflow:auto;margin:0!important;padding:12px!important;border:1px solid #244761!important;border-radius:14px!important;background:rgba(5,12,22,.97)!important;box-shadow:0 22px 70px rgba(0,0,0,.62)!important;backdrop-filter:blur(18px)}
-    body.nav-menu-open[data-hub="f1"] .holocron-shell>.nav .nav-tab,body.nav-menu-open[data-hub="warframe"] .holocron-shell>.nav .nav-tab{display:flex!important;width:100%;text-align:left}
-    body.nav-menu-open[data-hub="f1"] .holocron-shell>.nav .nav-tab::before,body.nav-menu-open[data-hub="warframe"] .holocron-shell>.nav .nav-tab::before{display:inline-flex}
     body[data-hub="f1"] .f1-shell-card,body[data-hub="warframe"] .wf-shell-card{background:linear-gradient(180deg,#101d2e 0%,#0b1421 58%,#080f19 100%);padding:14px clamp(14px,2vw,30px) 30px}
     body[data-hub="f1"] .f1-shell-card>*,body[data-hub="warframe"] .wf-shell-card>*{max-width:none}
     body[data-hub="f1"] .f1-hero{min-height:clamp(290px,31vw,440px);padding:clamp(22px,4vw,48px);background-size:cover!important;background-position:center 52%!important;border:1px solid #24445b;border-radius:13px;box-shadow:0 18px 50px rgba(0,0,0,.32)}
@@ -894,7 +884,8 @@
     .home-quick-link:hover{transform:translateY(-2px);border-color:rgba(45,212,235,.68);background:linear-gradient(145deg,#10253a,#0b1928);box-shadow:0 11px 28px rgba(0,0,0,.26),0 0 18px rgba(34,211,238,.07)}
     .home-quick-link:focus-visible,.home-text-link:focus-visible{outline:2px solid #67e8f9;outline-offset:3px}
     .home-service-icon{position:relative;display:grid;place-items:center;width:46px;height:46px;flex:0 0 46px;overflow:hidden;border:1px solid rgba(78,139,166,.34);border-radius:13px;background:radial-gradient(circle at 35% 25%,rgba(34,211,238,.2),transparent 70%),#0a1927;color:#76eaff}
-    .home-service-icon img{position:relative;z-index:1;width:27px;height:27px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(34,211,238,.25))}
+    .home-service-icon img{position:relative;z-index:1;width:27px;height:27px;object-fit:contain;opacity:0;filter:drop-shadow(0 0 6px rgba(34,211,238,.25))}
+    .home-service-icon.has-brand img{opacity:1}
     .home-service-icon svg{position:absolute;width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
     .home-service-icon.has-brand svg{opacity:0}
     .home-quick-copy{display:flex;flex-direction:column;gap:5px;min-width:0}
@@ -1013,6 +1004,39 @@
     @media(max-width:780px){.home-dashboard-grid{grid-template-columns:1fr}.home-side-stack{grid-template-columns:1fr 1fr}.home-panel-head{flex-wrap:wrap}}
     @media(max-width:540px){.home-side-stack{grid-template-columns:1fr}.home-library>summary{flex-wrap:wrap;gap:9px}.home-library>summary small{width:100%;margin-left:19px}.service-editor-fields{grid-template-columns:1fr}.service-editor-field.wide{grid-column:auto}.home-quick-link{padding:10px;gap:9px}dialog.tool-search-panel,dialog.service-editor{width:calc(100vw - 20px);max-height:calc(100dvh - 24px);padding:16px}.tool-search-foot{gap:6px}.tool-search-foot select{flex-basis:100%}}
     @media(max-width:900px){body.nav-menu-open .holocron-shell>.nav{position:fixed!important;z-index:1000;top:58px;left:12px;right:auto;display:flex!important;flex-direction:column!important;align-items:stretch!important;width:min(280px,calc(100vw - 24px));max-height:calc(100dvh - 74px);overflow:auto;margin:0!important;padding:12px!important;border:1px solid #244761!important;border-radius:14px!important;background:rgba(5,12,22,.97)!important;box-shadow:0 22px 70px rgba(0,0,0,.62)!important}body.nav-menu-open .holocron-shell>.nav .nav-tab{display:flex!important;width:100%;flex:0 0 auto;text-align:left;min-height:44px}}
+    /* Shared shell: every hub uses the same left navigation and header origin. */
+    body .wrap{padding:12px clamp(14px,2vw,32px) 30px!important}
+    body .app-shell-header{justify-content:flex-start;padding:0 2px 8px!important;margin:0 0 10px!important;gap:14px;min-height:48px}
+    .holocron-brand,.shell-nav-toggle{flex:0 0 auto}
+    .shell-controls{margin-left:auto}
+    .shell-context{display:none!important}
+    body .holocron-content{grid-column:2!important;grid-row:2!important}
+    body .holocron-shell>.nav{background:transparent;position:sticky;top:18px;grid-column:1;grid-row:2;flex-direction:column!important;align-items:stretch!important;overflow-x:hidden;white-space:normal}
+    body .holocron-shell>.nav .nav-tab{display:flex!important;width:100%!important;text-align:left!important;flex:0 0 auto}
+    @media(min-width:901px){body .holocron-shell{display:grid;grid-template-columns:184px minmax(0,1fr)!important}body:not(.nav-collapsed) .holocron-shell>.nav{display:flex!important;position:sticky!important}body.nav-collapsed .holocron-shell{grid-template-columns:minmax(0,1fr)!important}body.nav-collapsed .holocron-shell>.nav{display:none!important}body.nav-collapsed .holocron-content{grid-column:1!important;grid-row:2!important}}
+    @media(max-width:900px){body .wrap{padding:10px 12px 24px!important}body .holocron-content{grid-column:auto!important}body .holocron-shell>.nav{display:none!important}body.nav-menu-open .holocron-shell>.nav{top:var(--nav-drawer-top,68px)!important;left:12px!important;right:auto!important;max-height:calc(100dvh - var(--nav-drawer-top,68px) - 12px)!important}body .app-shell-header{gap:8px}.holocron-brand{font-size:1.05rem}}
+    .homelab-service-row{flex-wrap:wrap;gap:8px;align-items:center}
+    .homelab-service-row .service-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .homelab-command-head>div:first-child{flex:1;min-width:220px}
+    .appearance-preview{padding:18px;border:1px solid var(--hh-border);border-radius:12px;background:var(--hh-surface-deep);margin:14px 0;color:var(--hh-text)}
+    .settings-field input[type="checkbox"]{width:16px;height:16px;flex:0 0 auto;accent-color:var(--hh-accent)}
+    .settings-field .settings-toggle{display:flex;align-items:center;gap:10px;line-height:1.5}
+    body[data-theme="black-cyan"]{--hh-bg:#03080d;--hh-surface:#0a141c;--hh-surface-deep:#060e15;--hh-border:#24404c;--hh-text:#e7f5f8;--hh-muted:#9bb2be;--hh-accent:#5ceadd;--hh-accent-strong:#06796f;background:radial-gradient(ellipse at 50% -20%,rgba(16,85,86,.16),transparent 60%),#03080d!important}
+    body[data-theme="black-cyan"] .app-shell-header{border-color:var(--hh-border)}
+    body[data-theme="black-cyan"] .home-welcome{background:radial-gradient(ellipse at top right,rgba(23,86,89,.16),transparent 65%),linear-gradient(145deg,#09151b,#060c12);border-color:var(--hh-border)}
+    body[data-theme="black-cyan"] .home-service-icon{background:radial-gradient(circle at 35% 25%,rgba(92,234,221,.16),transparent 70%),#071219;border-color:var(--hh-border)}
+    body[data-theme="black-cyan"] :is(.shell-utility,.shell-back,.shell-nav-toggle){background:linear-gradient(145deg,#102329,#081219);border-color:var(--hh-border);color:#bce9e8}
+    body[data-theme="black-cyan"] :is(.card,.mini-card,.home-panel,.home-dashboard,.homelab-command-card,.wf-shell-card,.f1-shell-card,.wf-detail-card,.wf-item-card,.tool-card,.ai-overview-card,.ai-rail-card,.service-editor,.tool-search-panel){background:linear-gradient(145deg,#0a141c,#060d13)!important;border-color:var(--hh-border)!important;color:var(--hh-text)}
+    body[data-theme="black-cyan"] :is(.home-quick-link,.tool-quick-link,.shell-search,input,select,textarea){background:#081219!important;border-color:var(--hh-border);color:var(--hh-text)}
+    body[data-theme="black-cyan"] .primary,body[data-theme="black-cyan"] button.active{background:#066b65!important;border-color:#24c5b6!important;color:#effffd}
+    body[data-theme="black-cyan"] .nav-tab.active{background:rgba(26,159,151,.13)!important;box-shadow:inset 2px 0 var(--hh-accent)}
+    body[data-theme="black-cyan"] :is(.muted,.tool-section-sub,.tool-hub-strap,.home-widget-meta){color:var(--hh-muted)}
+    body[data-glow="off"] :is(.holocron-mark,.home-holocron-mark,.nav-icon,.home-service-icon,.home-service-icon img,.shell-utility,.shell-back,.homelab-status-dot),body[data-glow="off"] .home-holocron-mark::before,body[data-glow="off"] .home-holocron-mark::after{filter:none!important;box-shadow:none!important}
+    body[data-glow="off"] :is(.home-panel,.card,.wf-shell-card,.f1-shell-card){box-shadow:none!important}
+    body[data-density="compact"] :is(.home-panel,.homelab-command-card,.mini-card){padding:12px!important}
+    body[data-density="compact"] .holocron-shell>.nav .nav-tab{min-height:36px;padding-top:6px!important;padding-bottom:6px!important}
+    body[data-density="compact"] .home-quick-link{padding:10px!important}
+    @media(prefers-reduced-motion:reduce){.shell-nav-toggle,.shell-utility,.shell-back,.nav-icon{transition:none!important}}
   </style>
   <link rel="stylesheet" href="assets/learning.css" />
 </head>
@@ -1034,7 +1058,7 @@
       <span id="shell-clock" class="shell-clock"></span>
       <button class="shell-back" onclick="goBackInHub()" title="Back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
       <button class="shell-utility" onclick="showTab('settings')" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15.1a1.7 1.7 0 0 0 .34 1.88l.06.06-1.9 1.9-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56v.08h-2.68v-.08a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.9-1.9.06-.06a1.7 1.7 0 0 0 .34-1.88 1.7 1.7 0 0 0-1.56-1.03h-.08v-2.68h.08a1.7 1.7 0 0 0 1.56-1.03 1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.9-1.9.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56v-.08h2.68v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.9 1.9-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03h.08v2.68h-.08a1.7 1.7 0 0 0-1.56 1.03Z"/></svg></button>
-      <button class="shell-utility" title="Display options" aria-label="Display options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></button>
+      <button class="shell-utility" title="Display options" aria-label="Display options" onclick="openAppearanceSettings()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></button>
     </div>
   </div>
 
@@ -1065,6 +1089,7 @@
           <div class="tool-hub-strap">A compact health overview built from your registered services. Holocron aggregates status and links; the original tools remain the source of truth.</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="sm" onclick="openHomeServiceEditor()">Add service</button>
           <button class="sm" id="homelab-refresh" onclick="refreshHomelabCommandCenter()">Refresh</button>
           <div id="homelab-overall-status" class="homelab-status"><span class="homelab-status-dot"></span><span>Loading health</span></div>
         </div>
@@ -1803,12 +1828,23 @@
       <h2>Settings</h2>
       <div class="settings-tabs">
         <button class="settings-tab active" data-settings-tab="general" onclick="showSettingsPanel('general',this)">General</button>
+        <button class="settings-tab" data-settings-tab="appearance" onclick="showSettingsPanel('appearance',this)">Appearance</button>
         <button class="settings-tab" data-settings-tab="feed" onclick="showSettingsPanel('feed',this)">Feed & Digest</button>
         <button class="settings-tab" data-settings-tab="ingest" onclick="showSettingsPanel('ingest',this)">Ingest</button>
         <button class="settings-tab" data-settings-tab="api" onclick="showSettingsPanel('api',this)">API</button>
         <button class="settings-tab" data-settings-tab="homelab" onclick="showSettingsPanel('homelab',this)">Homelab</button>
       </div>
 
+      <div id="settings-panel-appearance" class="settings-panel">
+        <h3>Make the hub yours</h3>
+        <div class="settings-grid">
+          <div class="settings-field"><label for="set-ux-theme">Color theme</label><select id="set-ux-theme" onchange="previewAppearance()"><option value="navy-neon">Navy / Neon blue</option><option value="black-cyan">Midnight / Black cyan</option></select></div>
+          <div class="settings-field"><label class="settings-toggle"><input id="set-ux-glow" type="checkbox" onchange="previewAppearance()" /> Subtle icon and panel glow</label></div>
+          <div class="settings-field"><label class="settings-toggle"><input id="set-ux-compact" type="checkbox" onchange="previewAppearance()" /> Compact spacing</label></div>
+        </div>
+        <div class="appearance-preview"><strong>HolocronHub</strong><p class="muted">A quiet command center. Preview changes here, then save to apply them across this instance. Browser reduced-motion preferences are always respected.</p></div>
+        <div class="settings-actions"><button id="appearance-save" class="primary" onclick="saveSettingsAppearance()">Save Appearance</button><button onclick="resetAppearancePreview()">Reset preview</button><span id="settings-status-appearance" role="status" class="muted"></span></div>
+      </div>
       <div id="settings-panel-general" class="settings-panel active">
         <div class="settings-grid">
           <div class="settings-field">
@@ -2023,7 +2059,8 @@
     <div class="service-editor-head"><h2 id="service-editor-title">Edit service</h2><button type="button" class="sm" onclick="document.getElementById('service-editor').close()" aria-label="Close service editor">Close</button></div>
     <div class="service-editor-fields">
       <label class="service-editor-field">Name<input id="service-name" required /></label>
-      <label class="service-editor-field">Group<input id="service-group" placeholder="Media, Infra, Storage..." /></label>
+      <label class="service-editor-field">Group<input id="service-group" list="service-groups" placeholder="Media, Infra, Storage..." /></label>
+      <datalist id="service-groups"><option value="Systems"></option><option value="Services"></option><option value="Network"></option><option value="Media"></option><option value="Monitoring"></option><option value="Storage"></option><option value="Infra"></option></datalist>
       <label class="service-editor-field wide">Service URL or domain<input id="service-link" type="url" placeholder="https://jellyfin.example.com" required /></label>
       <label class="service-editor-field wide">Custom icon URL (optional)<input id="service-icon" oninput="syncIconPicker('service-icon')" placeholder="Automatic icon, or select one below" /></label>
     </div>
@@ -2202,7 +2239,7 @@ function homeServiceGlyph(service) {
 function homeDashboardIconMarkup(tool) {
   const src = tool?.icon_url || deriveToolIcon(tool?.link, tool);
   const glyph = homeServiceGlyph(tool);
-  return `<span class="home-service-icon${src ? ' has-brand' : ''}">${src ? `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove();this.parentElement.classList.remove('has-brand')"/>` : ''}<svg viewBox="0 0 24 24" aria-hidden="true">${glyph}</svg></span>`;
+  return `<span class="home-service-icon">${src ? `<img src="${esc(src)}" alt="" loading="lazy" onload="this.parentElement.classList.add('has-brand')" onerror="this.parentElement.classList.remove('has-brand');this.remove()"/>` : ''}<svg viewBox="0 0 24 24" aria-hidden="true">${glyph}</svg></span>`;
 }
 
 function normalizeToolCategory(cat) {
@@ -2260,8 +2297,12 @@ function setGlobalNavCollapsed(collapsed) {
 function syncGlobalNavToggle() {
   const toggle = document.getElementById('shell-nav-toggle');
   if (!toggle) return;
-  const menuMode = ['f1', 'warframe'].includes(document.body.dataset.hub) || window.matchMedia('(max-width: 900px)').matches;
+  const menuMode = window.matchMedia('(max-width: 900px)').matches;
   const expanded = menuMode ? document.body.classList.contains('nav-menu-open') : !document.body.classList.contains('nav-collapsed');
+  if (menuMode && expanded) {
+    const bottom = document.querySelector('.app-shell-header').getBoundingClientRect().bottom;
+    document.documentElement.style.setProperty('--nav-drawer-top', `${Math.max(12, bottom + 8)}px`);
+  }
   toggle.title = expanded ? 'Hide navigation' : 'Show navigation';
   toggle.setAttribute('aria-label', toggle.title);
   toggle.setAttribute('aria-expanded', String(expanded));
@@ -2272,9 +2313,10 @@ window.matchMedia('(max-width: 900px)').addEventListener('change', () => {
   document.body.classList.remove('nav-menu-open');
   syncGlobalNavToggle();
 });
+window.addEventListener('resize', syncGlobalNavToggle);
 
 function toggleGlobalNav() {
-  if (['f1', 'warframe'].includes(document.body.dataset.hub) || window.matchMedia('(max-width: 900px)').matches) {
+  if (window.matchMedia('(max-width: 900px)').matches) {
     document.body.classList.toggle('nav-menu-open');
     syncGlobalNavToggle();
     return;
@@ -2314,6 +2356,7 @@ function updateHomeEntrance(name) {
 
 function showTab(name, btn, options = {}) {
   if (!HUB_TABS.has(name)) name = 'tools';
+  if (name !== 'settings') applyAppearance(_appSettings?.ux || loadGlobalSettings());
   updateHomeEntrance(name);
   if (!options.fromHistory && window.location.hash !== `#${name}`) {
     window.history.pushState({ tab: name }, '', `#${name}`);
@@ -2918,18 +2961,23 @@ function toggleHomeServiceEditing() {
 }
 
 function openHomeServiceEditor(toolId) {
-  const tool = _toolCache.find(item => item.id === toolId);
-  if (!tool) return;
+  const registered = _toolCache.find(item => item.id === toolId);
+  const snapshot = ['systems','services','network','media','monitoring'].flatMap(key => _homelabCommandData?.[key] || []).find(item => item.id === toolId);
+  const tool = registered || snapshot;
+  if (toolId && !tool) return;
   const dialog = document.getElementById('service-editor');
-  dialog.dataset.toolId = toolId;
-  document.getElementById('service-name').value = tool.name || '';
-  document.getElementById('service-group').value = tool.group || '';
-  document.getElementById('service-link').value = tool.link || '';
-  document.getElementById('service-icon').value = tool.icon_url || '';
+  const isRegistered = toolId && !String(toolId).startsWith('kuma:');
+  dialog.dataset.toolId = isRegistered ? toolId : '';
+  dialog.dataset.monitorId = tool?.kuma_monitor_id || snapshot?.kuma_monitor_id || '';
+  document.getElementById('service-editor-title').textContent = isRegistered ? 'Edit service' : tool ? 'Customize Kuma service' : 'Add service';
+  document.getElementById('service-name').value = tool?.name || '';
+  document.getElementById('service-group').value = tool?.group || 'Services';
+  document.getElementById('service-link').value = tool?.link || '';
+  document.getElementById('service-icon').value = tool?.icon_url || '';
   document.getElementById('service-icon-picker').innerHTML = iconLibraryMarkup('service-icon', true);
   document.getElementById('service-editor-status').textContent = '';
   syncIconPicker('service-icon');
-  dialog.showModal();
+  if (!dialog.open) dialog.showModal();
 }
 
 async function saveHomeService(event) {
@@ -2952,15 +3000,21 @@ async function saveHomeService(event) {
   button.disabled = true;
   status.textContent = 'Saving...';
   try {
-    await fetchJson(`${API}/tools/${encodeURIComponent(dialog.dataset.toolId)}`, {
-      method: 'PATCH', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name: document.getElementById('service-name').value.trim(),
+    const payload = { name: document.getElementById('service-name').value.trim(),
         group: document.getElementById('service-group').value.trim(), link: url.href,
         host: url.hostname, port: url.port ? Number(url.port) : null,
-        icon_url: document.getElementById('service-icon').value.trim() }),
+        icon_url: document.getElementById('service-icon').value.trim(),
+        kuma_monitor_id: dialog.dataset.monitorId || null };
+    const id = dialog.dataset.toolId;
+    if (!id) Object.assign(payload, {id: `service-${crypto.randomUUID()}`, category: 'Home Network',
+      provider: 'Self-hosted', local_or_cloud: 'local', auth_type: 'local', cost_hint: 'Self-hosted'});
+    await fetchJson(id ? `${API}/tools/${encodeURIComponent(id)}` : `${API}/tools`, {
+      method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
     });
     dialog.close();
     await loadTools();
+    if (document.body.dataset.hub === 'homelab') await loadHomelabCommandCenter();
   } catch (error) { status.textContent = `Could not save: ${error.message}`; }
   finally { button.disabled = false; }
 }
@@ -3058,9 +3112,10 @@ function homelabStatusLabel(status) {
 function renderHomelabService(service) {
   const status = homelabStatusClass(service.status);
   const link = String(service.link || '').trim();
-  return `<div class="small-row">
+  const registered = !String(service.id || '').startsWith('kuma:');
+  return `<div class="small-row homelab-service-row">
     <span style="display:flex;align-items:center;gap:8px"><span class="homelab-status-dot ${status}"></span><strong>${esc(service.name || service.id || 'Unnamed service')}</strong></span>
-    <span class="muted">${esc(homelabStatusLabel(service.status))}${service.latency_ms != null ? ` | ${esc(String(service.latency_ms))}ms` : ''}${link ? ` | <a href="${esc(link)}" target="_blank" rel="noopener">Open</a>` : ''}</span>
+    <span class="service-row-actions"><span class="muted">${esc(homelabStatusLabel(service.status))}${service.latency_ms != null ? ` | ${esc(String(service.latency_ms))}ms` : ''}</span>${/^https?:\/\//i.test(link) ? `<a href="${esc(link)}" target="_blank" rel="noopener">Open</a>` : ''}<button class="sm" data-service-id="${esc(service.id)}" onclick="openHomeServiceEditor(this.dataset.serviceId)" aria-label="Customize ${esc(service.name || 'service')}">${registered ? 'Edit' : 'Customize'}</button></span>
   </div>`;
 }
 
@@ -3109,7 +3164,7 @@ function setHomelabView(view, button) {
 
 async function loadHomelabCommandCenter() {
   const content = document.getElementById('homelab-command-content');
-  if (content) content.innerHTML = '<div class="empty">Loading registered Homelab services...</div>';
+  if (content && !_homelabCommandData) content.innerHTML = '<div class="empty">Loading registered Homelab services...</div>';
   try {
     _homelabCommandData = await fetch(`${API}/homelab/overview`).then(response => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -3117,7 +3172,10 @@ async function loadHomelabCommandCenter() {
     });
     renderHomelabCommandCenter();
   } catch (error) {
-    if (content) content.innerHTML = `<div class="empty">Homelab overview unavailable: ${esc(error.message || 'Unknown error')}</div>`;
+    if (_homelabCommandData) {
+      renderHomelabCommandCenter();
+      document.getElementById('homelab-command-meta').textContent = 'Refresh unavailable. Showing the last loaded services.';
+    } else if (content) content.innerHTML = `<div class="empty">Homelab overview unavailable: ${esc(error.message || 'Unknown error')}</div>`;
   }
 }
 
@@ -3129,7 +3187,7 @@ async function refreshHomelabCommandCenter() {
   }
   try {
     const content = document.getElementById('homelab-command-content');
-    if (content) content.innerHTML = '<div class="empty">Refreshing Homelab providers...</div>';
+    if (content && !_homelabCommandData) content.innerHTML = '<div class="empty">Refreshing Homelab providers...</div>';
     _homelabCommandData = await fetch(`${API}/homelab/overview?force=true&_=${Date.now()}`).then(response => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.json();
@@ -3137,7 +3195,10 @@ async function refreshHomelabCommandCenter() {
     renderHomelabCommandCenter();
   } catch (error) {
     const content = document.getElementById('homelab-command-content');
-    if (content) content.innerHTML = `<div class="empty">Homelab refresh failed: ${esc(error.message || 'Unknown error')}</div>`;
+    if (_homelabCommandData) {
+      renderHomelabCommandCenter();
+      document.getElementById('homelab-command-meta').textContent = 'Refresh failed. Showing the last loaded services.';
+    } else if (content) content.innerHTML = `<div class="empty">Homelab refresh failed: ${esc(error.message || 'Unknown error')}</div>`;
   } finally {
     if (button) {
       button.disabled = false;
@@ -5708,7 +5769,7 @@ function renderF1WeatherCard(weather) {
     <div class="small-row"><span>Humidity</span><strong>${esc(weather.humidity ?? '-')}%</strong></div>
     <div class="small-row"><span>Wind</span><strong>${esc(weather.wind_speed ?? '-')} km/h</strong></div>
     <div class="small-row"><span>Rain</span><strong>${esc(rain)}</strong></div>
-    <div class="muted">${weather.date ? `Updated ${relTime(weather.date)}` : 'Latest meeting snapshot'}</div>
+    <div class="muted">${weather.stale ? 'Saved reading · ' : ''}${weather.date ? `Updated ${relTime(weather.date)}` : 'Latest meeting snapshot'}</div>
   `;
 }
 
@@ -6230,8 +6291,7 @@ async function loadF1(options = {}) {
     const refreshTag = cachedAge > F1_OVERVIEW_FRESH_MS && !force ? ' · refreshing' : '';
     metaEl.textContent = `${data.standings_count || 0} drivers · ${relTime(data.generated_at)} (local cache${staleTag ? ', server ' + staleTag.replace(' | stale ','').replace(/[()]/g,'') + ' stale' : ''})${asOfTag.replace(' | data ',', as of ')}${refreshTag}${errInfo}`;
     if (errEl) {
-      const errs = [...new Set((data.errors || []).map(e => String(e || '').trim()).filter(Boolean))].slice(0, 6);
-      errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
+      errEl.innerHTML = f1UserWarnings(data).map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
     }
     await applyF1OverviewData(data, preferredSession, { background: true, searchQuery: queryInfo.search, rawQuery: queryInfo.raw, preferredSessionKey });
     await loadF1History({ query: historyQuery, background: true, keepInput: true });
@@ -6282,8 +6342,7 @@ async function loadF1(options = {}) {
     const asOfTag = data.stale && data.data_as_of ? ` | data ${relTime(data.data_as_of)}` : '';
     metaEl.textContent = `${data.standings_count || 0} drivers · ${relTime(data.generated_at)}${data.stale ? ', server data stale ' + Math.max(0, Math.round((data.stale_age_seconds || 0) / 60)) + 'm' : ''}${asOfTag.replace(' | data ',', as of ')}${errInfo}`;
     if (errEl) {
-      const errs = [...new Set((data.errors || []).map(e => String(e || '').trim()).filter(Boolean))].slice(0, 6);
-      errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
+      errEl.innerHTML = f1UserWarnings(data).map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
     }
 
     await applyF1OverviewData(data, preferredSession, { force, searchQuery: queryInfo.search, rawQuery: queryInfo.raw, preferredSessionKey });
@@ -8144,11 +8203,63 @@ document.addEventListener('keydown', handleToolHubShortcuts);
 // ══ settings page ═════════════════════════════════════════════
 
 const SETTINGS_KEY = 'hub_global_settings';
+
+function f1UserWarnings(data) {
+  const weather = data.weekend?.weather;
+  const hasWeather = weather && ['air_temperature','track_temperature','humidity','wind_speed'].some(key => weather[key] != null);
+  return [...new Set((data.errors || []).filter(Boolean).filter(error => !(hasWeather && /^(weather:|open_meteo:)/.test(String(error)))).map(error => {
+    const area = String(error).split(':')[0];
+    return /weather|open_meteo/.test(area) ? 'Track weather temporarily unavailable. Saved data and fallback sources are used when available.' : `${area.replaceAll('_', ' ')} data temporarily unavailable. Details are available in Settings diagnostics.`;
+  }))].slice(0, 6);
+}
+
+function applyAppearance(ux = {}) {
+  document.body.dataset.theme = ux.theme === 'black-cyan' ? 'black-cyan' : 'navy-neon';
+  document.body.dataset.glow = ux.glow === false ? 'off' : 'on';
+  document.body.dataset.density = ux.compact === true ? 'compact' : 'comfortable';
+}
+
+function previewAppearance() {
+  applyAppearance({theme: document.getElementById('set-ux-theme').value,
+    glow: document.getElementById('set-ux-glow').checked, compact: document.getElementById('set-ux-compact').checked});
+  setSettingsStatus('appearance', 'Preview only. Save to keep these changes.');
+}
+
+function resetAppearancePreview() {
+  const ux = _appSettings?.ux || loadGlobalSettings();
+  applyAppearance(ux);
+  document.getElementById('set-ux-theme').value = ux.theme || 'navy-neon';
+  document.getElementById('set-ux-glow').checked = ux.glow !== false;
+  document.getElementById('set-ux-compact').checked = ux.compact === true;
+  setSettingsStatus('appearance', '');
+}
+
+function openAppearanceSettings() {
+  showTab('settings');
+  showSettingsPanel('appearance', document.querySelector('[data-settings-tab="appearance"]'));
+  resetAppearancePreview();
+  document.getElementById('set-ux-theme').focus();
+}
+
+async function saveSettingsAppearance() {
+  const button = document.getElementById('appearance-save');
+  button.disabled = true;
+  try {
+    await patchSettings({ux: {theme: document.getElementById('set-ux-theme').value,
+      glow: document.getElementById('set-ux-glow').checked, compact: document.getElementById('set-ux-compact').checked}});
+    setSettingsStatus('appearance', 'Saved for this instance.');
+  } catch (error) {
+    setSettingsStatus('appearance', `Save failed: ${error.message}. Preview is not saved.`, true);
+  } finally { button.disabled = false; }
+}
 const DEFAULT_SETTINGS = {
   ux: {
     language: 'EN',
     default_category: '',
     show_disabled_sources: false,
+    theme: 'navy-neon',
+    glow: true,
+    compact: false,
   },
   feed: {
     refresh_interval_minutes: 15,
@@ -8225,6 +8336,9 @@ function normalizeSettings(raw) {
   cfg.ux.language = String(cfg.ux.language || 'EN').toUpperCase() === 'DE' ? 'DE' : 'EN';
   cfg.ux.default_category = String(cfg.ux.default_category || '');
   cfg.ux.show_disabled_sources = !!cfg.ux.show_disabled_sources;
+  cfg.ux.theme = cfg.ux.theme === 'black-cyan' ? 'black-cyan' : 'navy-neon';
+  cfg.ux.glow = cfg.ux.glow !== false;
+  cfg.ux.compact = cfg.ux.compact === true;
   cfg.feed.refresh_interval_minutes = Math.max(1, Math.min(240, parseInt(cfg.feed.refresh_interval_minutes || 15) || 15));
   cfg.feed.digest_mode = ['off','daily','twice'].includes(String(cfg.feed.digest_mode || 'daily')) ? cfg.feed.digest_mode : 'daily';
   cfg.schedule.interval_hours = Math.max(1, Math.min(24, parseInt(cfg.schedule.interval_hours || 2) || 2));
@@ -8304,6 +8418,7 @@ function setSettingsStatus(section, text, isError=false) {
 }
 
 function showSettingsPanel(name, btn) {
+  if (name !== 'appearance') resetAppearancePreview();
   document.querySelectorAll('.settings-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
   if (btn) btn.classList.add('active');
@@ -8331,6 +8446,7 @@ function populateSettingsForm(cfg) {
   document.getElementById('set-ux-lang').value = cfg.ux.language || 'EN';
   document.getElementById('set-ux-default-category').value = cfg.ux.default_category || '';
   document.getElementById('set-ux-show-disabled').checked = cfg.ux.show_disabled_sources === true;
+  resetAppearancePreview();
 
   document.getElementById('set-feed-refresh-minutes').value = cfg.feed.refresh_interval_minutes || 15;
   document.getElementById('set-feed-digest-mode').value = cfg.feed.digest_mode || 'daily';
@@ -8367,21 +8483,23 @@ function populateSettingsForm(cfg) {
 }
 
 async function fetchSettings() {
-  const data = await fetch(`${API}/settings`).then(r=>r.json());
+  const data = await fetchJson(`${API}/settings`);
   _appSettings = normalizeSettings(data);
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(_appSettings.ux));
+  applyAppearance(_appSettings.ux);
   applyFeedAutoRefresh();
   return _appSettings;
 }
 
 async function patchSettings(patch) {
-  const data = await fetch(`${API}/settings`, {
+  const data = await fetchJson(`${API}/settings`, {
     method: 'PATCH',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(patch),
-  }).then(r=>r.json());
+  });
   _appSettings = normalizeSettings(data);
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(_appSettings.ux));
+  applyAppearance(_appSettings.ux);
   applyFeedAutoRefresh();
   applyScheduleUI(_appSettings.schedule || {});
   if (tabLoaded['sources']) renderSourcesFiltered();
@@ -8389,6 +8507,9 @@ async function patchSettings(patch) {
 }
 
 async function loadSettingsPage() {
+  const controls = [...document.querySelectorAll('#tab-settings input, #tab-settings select, #tab-settings textarea, #tab-settings button')];
+  const disabled = controls.map(control => control.disabled);
+  controls.forEach(control => { control.disabled = true; });
   try {
     const cfg = await fetchSettings();
     populateSettingsForm(cfg);
@@ -8400,6 +8521,8 @@ async function loadSettingsPage() {
     loadProviderDiagnostics();
   } catch (e) {
     setSettingsStatus('general', `Could not load settings: ${e.message}`, true);
+  } finally {
+    controls.forEach((control, index) => { control.disabled = disabled[index]; });
   }
 }
 
@@ -8539,6 +8662,7 @@ async function saveSettingsHomelab() {
 }
 
 // ══ init ═════════════════════════════════════════════════════
+applyAppearance(loadGlobalSettings());
 fetchSettings().catch(()=>{}).finally(() => {
   restoreWarframeWorkspace();
   loadCategories().then(()=>loadTools());

@@ -115,3 +115,31 @@ Verification:
 - Browser checks also covered imported Kuma monitors, adding services, stale-editor protection, appearance save/reload, failed settings/service saves, failed Home Lab refresh, saved widget data and reduced-motion preferences.
 - Tests used an isolated temporary copy of writable local data. Kuma/OpenF1 failure states used fixtures, not the deployed server's private credentials. Server-side live integrations still require the user's deployment review.
 - Independent read-only review identified three issues (cooldown race, stale editor metadata, incomplete fallback preservation). Each was reproduced and fixed with a failing-then-passing regression check before final verification.
+
+## Service Navigation Follow-Up
+
+User feedback: All Services had no usable editing, Learning appeared below Settings, and the deployed header/right-hand drawer still reflected the older design.
+
+Investigation:
+
+- The deployed HTML at the configured LAN address lacked the shared-shell, Kuma service editor and appearance-settings changes and still contained the right-aligned drawer rule. GitHub main was still `0bc4c4e`; the preceding `cbd19ff` changes were committed locally but not pushed. No server or volume settings were changed during inspection.
+- All Services previously opened the health overview, which depended on provider requests and displayed only five services per group. A separate, complete launcher list was needed for reliable editing.
+
+Delivered:
+
+- Home Lab now defaults to All services, and the Home shortcut explicitly opens that view and clears old filters. Every saved service is visible in a compact searchable list with its group, address, direct launch link and Edit action. Monitor-only services offer Customize; Add service remains available.
+- Local launcher records render before health checks finish. Health refresh is independent, deduplicated, bounded to 20 seconds and never disables service editing. Unknown or saved health is labeled honestly.
+- Successful edits update the local catalog immediately, even if the follow-up catalog fetch fails. Returning through the sidebar rerenders the latest records.
+- Late Kuma snapshots reconcile monitor IDs or normalized endpoints/names without duplicating local launchers. Deleted registry entries cannot be resurrected by stale snapshots. Inferred monitor bindings remain available to the editor.
+- New service IDs work on plain HTTP LAN addresses using `getRandomValues`, rather than the secure-context-only `randomUUID` API.
+- Learning is placed after Home Lab and before Feed in the sidebar; it follows Home in the top workspace navigation. Learning functionality is unchanged.
+- The redundant workspace label beside the brand is removed from the markup and routing code, not just hidden by CSS. Shared left-sidebar desktop/mobile behavior remains intact.
+
+Verification:
+
+- 98 tests pass, including permanent browser regressions for editing during slow/failed health, failed catalog reload after successful saving, HTTP-only service creation, stale/late Kuma records, sidebar reentry and desktop/mobile F1/Warframe navigation.
+- Updated the Learning shell test to assert the active sidebar entry instead of the deliberately removed duplicate header label; existing study/keyboard/mobile tests still pass.
+- Visual inspection of the fixture-based All services desktop view and JavaScript/whitespace checks completed. Tests use isolated API fixtures and do not alter deployed services or private data.
+- The independent review findings were reproduced and addressed before committing.
+
+Useful next checks after rollout: verify configured adapter health on the deployed instance and consider a visible build/version indicator in Settings to distinguish old images from new commits. These are follow-up checks, not new integrations added in this pass.

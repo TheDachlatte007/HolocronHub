@@ -12,7 +12,6 @@
     body[data-hub="homelab"]{--hh-accent:#67e8f9;--hh-accent-strong:#2563eb}
     .app-shell-header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;position:relative}
     .holocron-brand{margin:0;display:flex;align-items:baseline;gap:8px;font-size:1.4rem;letter-spacing:-.02em}
-    .shell-context{font-size:11px;color:var(--hh-accent);letter-spacing:.14em;text-transform:uppercase;font-weight:700}
     .shell-controls{display:flex;align-items:center;gap:8px}
     .shell-back{display:grid;place-items:center;width:36px;height:36px;padding:0;border-radius:11px;border:1px solid rgba(71,105,139,.55);background:linear-gradient(145deg,rgba(18,35,56,.96),rgba(8,18,32,.96));color:#b8d7e9;box-shadow:inset 0 1px rgba(255,255,255,.06),0 5px 14px rgba(0,0,0,.16);transition:transform .18s ease,border-color .18s ease,color .18s ease}.shell-back svg{width:18px;height:18px;stroke-width:1.9}.shell-back:hover{transform:translateY(-1px);border-color:#38bdf8;color:#e7fbff}
     .shell-clock{font-size:11px;color:#94a3b8;letter-spacing:.04em;white-space:nowrap}
@@ -25,8 +24,7 @@
     .shell-search svg{width:15px;height:15px;color:#67e8f9;flex:0 0 auto}.shell-search kbd{margin-left:auto;border:1px solid #35506f;border-radius:5px;padding:2px 5px;color:#b7cadf;font-size:10px}
     .mobile-search-trigger{display:none;width:34px;height:34px;padding:0;border-radius:10px;color:#67e8f9;border-color:#29405f;background:#091525}.mobile-search-trigger svg{width:16px;height:16px}
     body[data-hub="tools"] .shell-search{display:flex}
-    body[data-hub="tools"] .shell-context{display:none}
-    body[data-hub="f1"] .shell-context,body[data-hub="warframe"] .shell-context,body[data-hub="f1"] .shell-utility,body[data-hub="warframe"] .shell-utility{display:none}
+    body[data-hub="f1"] .shell-utility,body[data-hub="warframe"] .shell-utility{display:none}
     .nav-tab::before{content:attr(data-icon);display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;flex:0 0 19px;margin-right:9px;border:1px solid rgba(56,189,248,.16);border-radius:6px;background:rgba(8,145,178,.08);color:#67e8f9;font-size:10px;font-weight:700;opacity:.94;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease}
     .nav-tab:hover::before,.nav-tab.active::before{border-color:rgba(34,211,238,.42);background:rgba(8,145,178,.18);box-shadow:0 0 12px rgba(34,211,238,.12)}
     .nav-glyph,.nav-glyph::before,.nav-glyph::after{display:block;width:13px;height:1px;background:currentColor;content:"";position:relative}
@@ -1009,7 +1007,6 @@
     body .app-shell-header{justify-content:flex-start;padding:0 2px 8px!important;margin:0 0 10px!important;gap:14px;min-height:48px}
     .holocron-brand,.shell-nav-toggle{flex:0 0 auto}
     .shell-controls{margin-left:auto}
-    .shell-context{display:none!important}
     body .holocron-content{grid-column:2!important;grid-row:2!important}
     body .holocron-shell>.nav{background:transparent;position:sticky;top:18px;grid-column:1;grid-row:2;flex-direction:column!important;align-items:stretch!important;overflow-x:hidden;white-space:normal}
     body .holocron-shell>.nav .nav-tab{display:flex!important;width:100%!important;text-align:left!important;flex:0 0 auto}
@@ -1017,6 +1014,13 @@
     @media(max-width:900px){body .wrap{padding:10px 12px 24px!important}body .holocron-content{grid-column:auto!important}body .holocron-shell>.nav{display:none!important}body.nav-menu-open .holocron-shell>.nav{top:var(--nav-drawer-top,68px)!important;left:12px!important;right:auto!important;max-height:calc(100dvh - var(--nav-drawer-top,68px) - 12px)!important}body .app-shell-header{gap:8px}.holocron-brand{font-size:1.05rem}}
     .homelab-service-row{flex-wrap:wrap;gap:8px;align-items:center}
     .homelab-service-row .service-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .homelab-service-filter{display:flex;align-items:center;gap:12px;margin:14px 0;font-size:12px;color:var(--hh-muted);flex-wrap:wrap}
+    .homelab-service-filter[hidden]{display:none}
+    .homelab-service-filter input{flex:1;min-width:180px;max-width:520px}
+    .homelab-service-label{display:flex;align-items:center;gap:10px;min-width:0}
+    .homelab-service-copy{display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
+    .homelab-service-label .home-service-icon{width:34px;height:34px;flex-basis:34px;border-radius:9px}
+    .homelab-service-label .home-service-icon :is(img,svg){width:21px;height:21px}
     .homelab-command-head>div:first-child{flex:1;min-width:220px}
     .appearance-preview{padding:18px;border:1px solid var(--hh-border);border-radius:12px;background:var(--hh-surface-deep);margin:14px 0;color:var(--hh-text)}
     .settings-field input[type="checkbox"]{width:16px;height:16px;flex:0 0 auto;accent-color:var(--hh-accent)}
@@ -1043,16 +1047,16 @@
 <body data-hub="tools">
 <div class="wrap holocron-shell">
   <div class="app-shell-header">
-    <h1 class="holocron-brand"><button class="brand-home-button" type="button" onclick="goHomeDashboard()" aria-label="HolocronHub Home" title="Back to dashboard"><span class="holocron-mark" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><polygon points="16,1.8 28.5,9 28.5,23 16,30.2 3.5,23 3.5,9" fill="#071a2c" stroke="#39d9f3" stroke-width="1.3"/><polygon points="16,6 24,10.6 24,21.4 16,26 8,21.4 8,10.6" fill="none" stroke="#62e9fb" stroke-width="1"/><circle cx="16" cy="16" r="4.2" fill="#67e8f9" opacity=".9"/></svg></span><span class="holocron-wordmark">HolocronHub</span></button> <span id="shell-context" class="shell-context">Tool Hub</span></h1>
+    <h1 class="holocron-brand"><button class="brand-home-button" type="button" onclick="goHomeDashboard()" aria-label="HolocronHub Home" title="Back to dashboard"><span class="holocron-mark" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><polygon points="16,1.8 28.5,9 28.5,23 16,30.2 3.5,23 3.5,9" fill="#071a2c" stroke="#39d9f3" stroke-width="1.3"/><polygon points="16,6 24,10.6 24,21.4 16,26 8,21.4 8,10.6" fill="none" stroke="#62e9fb" stroke-width="1"/><circle cx="16" cy="16" r="4.2" fill="#67e8f9" opacity=".9"/></svg></span><span class="holocron-wordmark">HolocronHub</span></button></h1>
     <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" aria-expanded="true" title="Hide navigation"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16M13 9l-2 3 2 3"/></svg></button>
     <button class="shell-search" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Search services, devices, or commands"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg><span>Search services, devices, or commands...</span><kbd>CTRL K</kbd></button>
     <button class="mobile-search-trigger" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Open search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg></button>
     <nav class="shell-topnav" aria-label="Primary workspace navigation">
       <button class="shell-top-tab active" data-shell-tab="tools" onclick="showTab('tools',this)">Home</button>
+      <button class="shell-top-tab" data-shell-tab="learning" onclick="showTab('learning',this)">Learning</button>
       <button class="shell-top-tab" data-shell-tab="f1" onclick="showTab('f1',this)">F1</button>
       <button class="shell-top-tab" data-shell-tab="warframe" onclick="showTab('warframe',this)">Warframe</button>
       <button class="shell-top-tab" data-shell-tab="markets" onclick="showTab('markets',this)">Markets</button>
-      <button class="shell-top-tab" data-shell-tab="learning" onclick="showTab('learning',this)">Learning</button>
     </nav>
     <div class="shell-controls">
       <span id="shell-clock" class="shell-clock"></span>
@@ -1065,6 +1069,7 @@
   <div class="nav" style="align-items:center">
     <button class="nav-tab active" onclick="showTab('tools',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
     <button class="nav-tab" onclick="showTab('homelab',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="6" rx="1.5"/><rect x="4" y="14" width="16" height="6" rx="1.5"/><path d="M8 7h.01M8 17h.01M12 7h4M12 17h4"/></svg><span>Homelab</span></button>
+    <button class="nav-tab" onclick="showTab('learning',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v15M3 4l9 2 9-2v15l-9 2-9-2z"/></svg><span>Learning</span></button>
     <button class="nav-tab" onclick="showTab('feed',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19a2 2 0 0 0 0-4M5 11a10 10 0 0 1 8 8M5 4a17 17 0 0 1 15 15"/><circle cx="5" cy="19" r=".7"/></svg><span>Feed</span></button>
     <button class="nav-tab" onclick="showTab('digest',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h5M8 16h3"/><path d="M7 3v4M17 3v4"/></svg><span>Morning Digest</span></button>
     <button class="nav-tab" onclick="showTab('tldr',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6M8 10l-4 5M16 10l4 5"/></svg><span>TLDR</span></button>
@@ -1074,7 +1079,6 @@
     <button class="nav-tab" onclick="showTab('saved',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg><span>Saved</span></button>
     <button class="nav-tab" onclick="showTab('sources',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.5-3.6M8.2 13.2l7.5 3.6"/></svg><span>Sources</span></button>
     <button class="nav-tab" onclick="showTab('settings',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 15 .1.1 1.2 1-1.5 2.6-1.5-.6a8 8 0 0 1-1.7 1l-.3 1.6h-3l-.3-1.6a8 8 0 0 1-1.7-1l-1.5.6-1.5-2.6 1.2-1a7 7 0 0 1 0-2l-1.2-1 1.5-2.6 1.5.6a8 8 0 0 1 1.7-1l.3-1.6h3l.3 1.6a8 8 0 0 1 1.7 1l1.5-.6 1.5 2.6-1.2 1a7 7 0 0 1-.1 1.9Z" transform="translate(-1 -1) scale(1.08)"/></svg><span>Settings</span></button>
-    <button class="nav-tab" onclick="showTab('learning',this)"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v15M3 4l9 2 9-2v15l-9 2-9-2z"/></svg><span>Learning</span></button>
   </div>
 
   <!-- ═══ TOOLS ═══ -->
@@ -1095,14 +1099,16 @@
         </div>
       </div>
       <div id="homelab-command-tabs" class="homelab-command-tabs">
-        <button class="homelab-command-tab active" data-homelab-view="overview" onclick="setHomelabView('overview',this)">Overview</button>
+        <button class="homelab-command-tab active" data-homelab-view="all" onclick="setHomelabView('all',this)">All services</button>
+        <button class="homelab-command-tab" data-homelab-view="overview" onclick="setHomelabView('overview',this)">Overview</button>
         <button class="homelab-command-tab" data-homelab-view="systems" onclick="setHomelabView('systems',this)">Systems</button>
         <button class="homelab-command-tab" data-homelab-view="services" onclick="setHomelabView('services',this)">Services</button>
         <button class="homelab-command-tab" data-homelab-view="network" onclick="setHomelabView('network',this)">Network</button>
         <button class="homelab-command-tab" data-homelab-view="media" onclick="setHomelabView('media',this)">Media</button>
         <button class="homelab-command-tab" data-homelab-view="monitoring" onclick="setHomelabView('monitoring',this)">Monitoring</button>
       </div>
-      <div id="homelab-command-content"><div class="empty">Loading Homelab status.</div></div>
+      <label id="homelab-service-filter" class="homelab-service-filter">Filter services<input id="homelab-service-query" type="search" placeholder="Name, group, domain or IP" oninput="renderHomelabCommandCenter()" /></label>
+      <div id="homelab-command-content"><div class="empty">Loading saved services.</div></div>
       <div id="homelab-command-meta" class="muted" style="margin-top:12px"></div>
     </div>
   </div>
@@ -1123,7 +1129,7 @@
         </header>
         <div class="home-dashboard-grid">
           <section class="home-panel home-launch-panel">
-            <div class="home-panel-head"><div><span>Quick Launch</span><small>Home Lab services</small></div><div class="home-panel-actions"><button class="home-text-link" id="home-edit-services" onclick="toggleHomeServiceEditing()" aria-pressed="false">Edit services</button><button class="home-text-link" onclick="showTab('homelab')">All services <span aria-hidden="true">↗</span></button></div></div>
+            <div class="home-panel-head"><div><span>Quick Launch</span><small>Home Lab services</small></div><div class="home-panel-actions"><button class="home-text-link" id="home-edit-services" onclick="toggleHomeServiceEditing()" aria-pressed="false">Edit services</button><button class="home-text-link" onclick="openAllServices()">All services <span aria-hidden="true">↗</span></button></div></div>
             <div id="home-dashboard-links" class="home-quick-grid"><div class="home-dashboard-empty">Loading your services...</div></div>
           </section>
           <div class="home-side-stack">
@@ -2365,8 +2371,6 @@ function showTab(name, btn, options = {}) {
   document.body.dataset.hub = name;
   document.body.classList.remove('nav-menu-open');
   syncGlobalNavToggle();
-  const context = document.getElementById('shell-context');
-  if (context) context.textContent = HUB_CONTEXT_LABELS[name] || name;
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.getAttribute('onclick')?.includes(`showTab('${name}'`)));
   document.querySelectorAll('[data-shell-tab]').forEach(b => b.classList.toggle('active', b.dataset.shellTab === name));
@@ -2388,6 +2392,10 @@ function showTab(name, btn, options = {}) {
   }
   if (name === 'f1' && tabLoaded[name]) {
     loadF1({ background: true });
+    return;
+  }
+  if (name === 'homelab' && tabLoaded[name]) {
+    renderHomelabCommandCenter();
     return;
   }
   if (tabLoaded[name]) return;
@@ -2962,7 +2970,7 @@ function toggleHomeServiceEditing() {
 
 function openHomeServiceEditor(toolId) {
   const registered = _toolCache.find(item => item.id === toolId);
-  const snapshot = ['systems','services','network','media','monitoring'].flatMap(key => _homelabCommandData?.[key] || []).find(item => item.id === toolId);
+  const snapshot = homelabServiceCatalog().find(item => item.id === toolId);
   const tool = registered || snapshot;
   if (toolId && !tool) return;
   const dialog = document.getElementById('service-editor');
@@ -3006,15 +3014,22 @@ async function saveHomeService(event) {
         icon_url: document.getElementById('service-icon').value.trim(),
         kuma_monitor_id: dialog.dataset.monitorId || null };
     const id = dialog.dataset.toolId;
-    if (!id) Object.assign(payload, {id: `service-${crypto.randomUUID()}`, category: 'Home Network',
+    // getRandomValues also works on plain HTTP homelab addresses.
+    const newId = id || `service-${Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2,'0')).join('')}`;
+    if (!id) Object.assign(payload, {id: newId, category: 'Home Network',
       provider: 'Self-hosted', local_or_cloud: 'local', auth_type: 'local', cost_hint: 'Self-hosted'});
-    await fetchJson(id ? `${API}/tools/${encodeURIComponent(id)}` : `${API}/tools`, {
+    const saved = await fetchJson(id ? `${API}/tools/${encodeURIComponent(id)}` : `${API}/tools`, {
       method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload),
     });
+    const index = _toolCache.findIndex(tool => tool.id === saved.id);
+    if (index < 0) _toolCache.push(saved);
+    else _toolCache[index] = saved;
+    renderHomeDashboard();
+    if (document.body.dataset.hub === 'homelab') renderHomelabCommandCenter();
     dialog.close();
     await loadTools();
-    if (document.body.dataset.hub === 'homelab') await loadHomelabCommandCenter();
+    if (document.body.dataset.hub === 'homelab') loadHomelabCommandCenter();
   } catch (error) { status.textContent = `Could not save: ${error.message}`; }
   finally { button.disabled = false; }
 }
@@ -3095,7 +3110,47 @@ function filteredToolCatalog() {
 }
 
 let _homelabCommandData = null;
-let _homelabCommandView = 'overview';
+let _homelabCommandView = 'all';
+let _homelabCommandRequest = null;
+let _homelabCommandLoading = false;
+let _homelabCommandError = '';
+
+function homelabServiceCatalog() {
+  const observed = ['systems','services','network','media','monitoring'].flatMap(key => _homelabCommandData?.[key] || []);
+  const used = new Set();
+  const endpoint = link => {
+    try {
+      const url = new URL(link);
+      return /^https?:$/.test(url.protocol) ? url.origin + url.pathname.replace(/\/+$/,'') + url.search : '';
+    } catch { return ''; }
+  };
+  const nameKey = name => String(name || '').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const registered = _toolCache.filter(isHomeTool).map(tool => {
+    const health = observed.find(row => {
+      if (used.has(row.id)) return false;
+      if (row.id === tool.id) return true;
+      if (tool.kuma_monitor_id) return row.kuma_monitor_id === tool.kuma_monitor_id;
+      if (!String(row.id || '').startsWith('kuma:')) return false;
+      const url = endpoint(tool.link);
+      const name = nameKey(tool.name);
+      return (url && url === endpoint(row.link)) || (name && name === nameKey(row.name));
+    });
+    if (health) used.add(health.id);
+    return {...health, ...tool, status: health?.status || 'unknown', latency_ms: health?.latency_ms,
+      kuma_monitor_id: tool.kuma_monitor_id || health?.kuma_monitor_id};
+  });
+  // Only unmatched Kuma monitors are additional services. Registry records
+  // removed from the current catalog must not reappear from an old snapshot.
+  return [...registered, ...observed.filter(row => String(row.id || '').startsWith('kuma:') && !used.has(row.id))]
+    .sort((a,b) => String(a.group || '').localeCompare(String(b.group || '')) || String(a.name || '').localeCompare(String(b.name || '')));
+}
+
+function openAllServices() {
+  document.getElementById('homelab-service-query').value = '';
+  showTab('homelab');
+  setHomelabView('all', document.querySelector('[data-homelab-view="all"]'));
+  if (!_toolCache.length) loadTools();
+}
 
 function homelabStatusClass(status) {
   const value = String(status || 'unknown').toLowerCase();
@@ -3113,9 +3168,10 @@ function renderHomelabService(service) {
   const status = homelabStatusClass(service.status);
   const link = String(service.link || '').trim();
   const registered = !String(service.id || '').startsWith('kuma:');
+  const savedStatus = service.status !== 'unknown' && (_homelabCommandError || _homelabCommandLoading) && _homelabCommandData;
   return `<div class="small-row homelab-service-row">
-    <span style="display:flex;align-items:center;gap:8px"><span class="homelab-status-dot ${status}"></span><strong>${esc(service.name || service.id || 'Unnamed service')}</strong></span>
-    <span class="service-row-actions"><span class="muted">${esc(homelabStatusLabel(service.status))}${service.latency_ms != null ? ` | ${esc(String(service.latency_ms))}ms` : ''}</span>${/^https?:\/\//i.test(link) ? `<a href="${esc(link)}" target="_blank" rel="noopener">Open</a>` : ''}<button class="sm" data-service-id="${esc(service.id)}" onclick="openHomeServiceEditor(this.dataset.serviceId)" aria-label="Customize ${esc(service.name || 'service')}">${registered ? 'Edit' : 'Customize'}</button></span>
+    <span class="homelab-service-label">${homeDashboardIconMarkup(service)}<span class="homelab-service-copy"><strong>${esc(service.name || service.id || 'Unnamed service')}</strong><small class="muted">${esc(service.group || 'Services')}${link ? ` · ${esc(link)}` : ''}</small></span></span>
+    <span class="service-row-actions"><span class="homelab-status-dot ${status}"></span><span class="muted">${esc(homelabStatusLabel(service.status))}${savedStatus ? ' · saved' : ''}${service.latency_ms != null ? ` | ${esc(String(service.latency_ms))}ms` : ''}</span>${/^https?:\/\//i.test(link) ? `<a href="${esc(link)}" target="_blank" rel="noopener">Open</a>` : ''}<button class="sm" data-service-id="${esc(service.id)}" onclick="openHomeServiceEditor(this.dataset.serviceId)" aria-label="${registered ? 'Edit' : 'Customize'} ${esc(service.name || 'service')}">${registered ? 'Edit' : 'Customize'}</button></span>
   </div>`;
 }
 
@@ -3125,13 +3181,25 @@ function renderHomelabCommandCenter() {
   const overall = document.getElementById('homelab-overall-status');
   const meta = document.getElementById('homelab-command-meta');
   if (!content || !overall) return;
+  document.getElementById('homelab-service-filter').hidden = _homelabCommandView !== 'all';
+  if (_homelabCommandView === 'all') {
+    const all = homelabServiceCatalog();
+    const query = document.getElementById('homelab-service-query').value.toLowerCase().trim();
+    const rows = all.filter(row => [row.name, row.group, row.link, row.host].join(' ').toLowerCase().includes(query));
+    content.innerHTML = `<div class="homelab-command-card"><h3>All services</h3>${rows.length ? rows.map(renderHomelabService).join('') : `<div class="empty">${query ? 'No services match this filter.' : 'No saved services yet. Use Add service to create your first launcher.'}</div>`}</div>`;
+    overall.innerHTML = `<span class="homelab-status-dot ${data && !_homelabCommandError ? homelabStatusClass(data.overall_status) : 'unknown'}"></span><span>${_homelabCommandLoading ? 'Checking health' : _homelabCommandError ? 'Health unavailable' : data ? esc(homelabStatusLabel(data.overall_status)) : 'Health not checked'}</span>`;
+    if (meta) meta.textContent = _homelabCommandError ? 'Health unavailable. Saved service links remain editable.' : `${all.length} saved or monitored services${_homelabCommandLoading ? ' · health updating in background' : ''}`;
+    return;
+  }
   if (!data) {
-    content.innerHTML = '<div class="empty">No Homelab data available.</div>';
+    content.innerHTML = '<div class="empty">Health data is not available yet. All services remains available for links and editing.</div>';
+    overall.innerHTML = '<span class="homelab-status-dot unknown"></span><span>Health unavailable</span>';
+    if (meta) meta.textContent = _homelabCommandLoading ? 'Checking provider health...' : 'Use All services to manage your launchers.';
     return;
   }
   const overallStatus = homelabStatusClass(data.overall_status);
   overall.innerHTML = `<span class="homelab-status-dot ${overallStatus}"></span><span>${esc(homelabStatusLabel(data.overall_status))}</span>`;
-  if (meta) meta.textContent = `${data.source === 'tool_registry_reachability' ? 'Registered service reachability' : 'Aggregated provider data'}${data.generated_at ? ` | Updated ${relTime(data.generated_at)}` : ''}`;
+  if (meta) meta.textContent = _homelabCommandError ? 'Refresh unavailable. Showing the last loaded health data.' : `${data.source === 'tool_registry_reachability' ? 'Registered service reachability' : 'Aggregated provider data'}${data.generated_at ? ` | Updated ${relTime(data.generated_at)}` : ''}`;
 
   const summary = data.summary || {};
   const alerts = Array.isArray(data.alerts) ? data.alerts : [];
@@ -3162,49 +3230,35 @@ function setHomelabView(view, button) {
   renderHomelabCommandCenter();
 }
 
-async function loadHomelabCommandCenter() {
-  const content = document.getElementById('homelab-command-content');
-  if (content && !_homelabCommandData) content.innerHTML = '<div class="empty">Loading registered Homelab services...</div>';
-  try {
-    _homelabCommandData = await fetch(`${API}/homelab/overview`).then(response => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json();
-    });
-    renderHomelabCommandCenter();
-  } catch (error) {
-    if (_homelabCommandData) {
-      renderHomelabCommandCenter();
-      document.getElementById('homelab-command-meta').textContent = 'Refresh unavailable. Showing the last loaded services.';
-    } else if (content) content.innerHTML = `<div class="empty">Homelab overview unavailable: ${esc(error.message || 'Unknown error')}</div>`;
-  }
-}
-
-async function refreshHomelabCommandCenter() {
+function loadHomelabCommandCenter(force = false) {
+  if (_homelabCommandRequest) return _homelabCommandRequest;
+  _homelabCommandLoading = true;
   const button = document.getElementById('homelab-refresh');
   if (button) {
     button.disabled = true;
     button.textContent = 'Refreshing...';
   }
-  try {
-    const content = document.getElementById('homelab-command-content');
-    if (content && !_homelabCommandData) content.innerHTML = '<div class="empty">Refreshing Homelab providers...</div>';
-    _homelabCommandData = await fetch(`${API}/homelab/overview?force=true&_=${Date.now()}`).then(response => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json();
-    });
+  renderHomelabCommandCenter();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  _homelabCommandRequest = fetchJson(`${API}/homelab/overview${force ? `?force=true&_=${Date.now()}` : ''}`, {signal:controller.signal})
+    .then(data => { _homelabCommandData = data; _homelabCommandError = ''; })
+    .catch(error => { _homelabCommandError = error.message || 'Health request failed'; })
+    .finally(() => {
+    clearTimeout(timer);
+    _homelabCommandRequest = null;
+    _homelabCommandLoading = false;
     renderHomelabCommandCenter();
-  } catch (error) {
-    const content = document.getElementById('homelab-command-content');
-    if (_homelabCommandData) {
-      renderHomelabCommandCenter();
-      document.getElementById('homelab-command-meta').textContent = 'Refresh failed. Showing the last loaded services.';
-    } else if (content) content.innerHTML = `<div class="empty">Homelab refresh failed: ${esc(error.message || 'Unknown error')}</div>`;
-  } finally {
     if (button) {
       button.disabled = false;
       button.textContent = 'Refresh';
     }
-  }
+  });
+  return _homelabCommandRequest;
+}
+
+function refreshHomelabCommandCenter() {
+  return loadHomelabCommandCenter(true);
 }
 
 function renderToolSections(tools) {
@@ -3316,6 +3370,7 @@ async function loadTools() {
     if (_toolCache.some(t => isAiTool(t) && !isHomeTool(t))) loadAiRadar();
     else { _aiFeedCache = []; renderAiOverview(filteredToolCatalog()); renderAiRail(filteredToolCatalog()); }
     renderHomeDashboard();
+    if (document.body.dataset.hub === 'homelab') renderHomelabCommandCenter();
     if (_toolSearchOpen) renderToolSearchResults();
   } catch(e) {
     document.getElementById('tools-ai').innerHTML = `<div class="empty err-msg">Backend not reachable: ${esc(e.message)}</div>`;

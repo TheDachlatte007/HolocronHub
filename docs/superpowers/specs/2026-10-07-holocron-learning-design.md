@@ -99,4 +99,3 @@ The Learning UI and all learning content are English. Existing Holocron shell la
 - Obsidian ingestion.
 - Anki synchronization or export.
 - Editing or deleting cards in the UI.
-

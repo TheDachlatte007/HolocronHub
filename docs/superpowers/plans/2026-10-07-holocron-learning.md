@@ -188,4 +188,3 @@ Verify desktop and iPhone-sized layouts, answer reveal, all four ratings, persis
 - [ ] **Step 6: Prepare production deployment without overwriting unrelated work**
 
 Review the final diff and deployment mechanism. Deploy only if the release can preserve the repository's pre-existing uncommitted dashboard/provider changes and the persistent Holocron data volume.
-

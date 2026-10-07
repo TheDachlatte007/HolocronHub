@@ -59,7 +59,23 @@ Choose a category and click `Start session` to review due cards first, followed 
 
 Card content, scheduling progress, and append-only review history persist in `data/learning.db`, including across reloads and container restarts when the data volume is retained. Seed content updates preserve existing progress and review history. Both **Download Data Backup** and **Full Migration Backup** include this database.
 
-Learning v1 requires an online connection to the Holocron backend and follows the existing trusted-network, single-user boundary. It does not provide offline review or multi-user accounts.
+Open **Personal cards · Add or import** to create your own cards, edit them, or remove them from the active deck. Seed-managed cards remain read-only. Editing preserves review progress; removing a personal card retains its history in the database.
+
+JSON imports use an array of objects; CSV imports require `prompt,answer` headers. Optional fields are `deck`, `category`, `skill`, `example`, `explanation`, `source`, and `tags` (JSON array or semicolon-separated CSV text). Preview first, then confirm. Files are limited to 1 MiB and 500 cards. Exact duplicates are skipped, not overwritten; conflicting IDs reject the import. Deck and category filters support your own collections.
+
+Learning requires an online connection to the Holocron backend and follows the existing trusted-network, single-user boundary. It does not provide offline review or multi-user accounts.
+
+## Personal Dashboard
+
+Choose **Arrange dashboard** on Home to drag Quick Launch, Weather, Monitoring, AI/Web Quick Access, and optional Jellyfin tiles. Move buttons work with keyboard and touch. Visibility, order, reset and cancel are previews until you choose **Save layout**. The saved layout persists in `data/settings.json`; the Full Migration Backup includes it. The arrangement control stays available even if every tile is hidden.
+
+Jellyfin is disabled and hidden by default. In **Settings > Homelab**, enable Continue Watching and enter the server URL, API key and user ID. Save, then show the Jellyfin tile through **Arrange dashboard**. It shows up to six resumable videos and opens the original Jellyfin page, with no embedded player. Resume data is cached for five minutes in `data/jellyfin_dashboard_cache.json`; failures retain the last saved snapshot and respect a retry cooldown. Hidden tiles make no automatic provider requests. Authentication headers and image fetching stay server-side; Settings itself is for trusted users and can display saved credentials.
+
+## Warframe Farm Workflows
+
+Under **Farm & trade > Farm Planner**, **Mission drop routes** adds mission nodes, reward rotations, event markers and drop chances from the [WFCD drop tables](https://github.com/WFCD/warframe-drop-data). Sources refresh in the background with a six-hour cache and last-good fallback. On first use, building the snapshot may take a moment. The average `1/p` is a count of reward rolls for that rotation, not guaranteed complete missions, time-to-drop or platinum/hour. Not every item has a mission drop; sets may require searching individual parts or relics.
+
+Open **Personal farm journal** to start/stop a manual session, log quantities and optional estimated unit values, and record confirmed sale proceeds. **Use in journal** copies a mission route into a new session draft, never starts it automatically. Only one session can be active. Previous sessions remain editable for corrections; sale proceeds are a replacement total, not an increment. Unpriced drops stay unknown and estimates are kept separate from actual sales. Records persist in `data/warframe_farm_journal.db`, included in both backup exports. No automatic trades, game hooks or AlecaFrame session tracking are involved.
 
 ## F1 SignalR Sidecar
 
@@ -167,6 +183,8 @@ Notes:
 - Market history DB: `data/markets_history.db`
 - Warframe market history DB: `data/warframe_market_history.db`
 - Warframe world-state history DB: `data/warframe_worldstate.db`
+- Warframe personal farm journal DB: `data/warframe_farm_journal.db`
+- Optional Jellyfin resume snapshot: `data/jellyfin_dashboard_cache.json`
 - TLDR issue DB: `data/tldr_issues.db`
 - Learning content, progress, and review history DB: `data/learning.db`
 
@@ -174,7 +192,7 @@ Notes:
 
 The `Homelab` view aggregates registered Home Lab services into Overview, Systems, Services, Network, Media and Monitoring sections. `GET /api/homelab/overview` combines the editable Tool Hub registry with optional read-only Uptime Kuma and Beszel adapters. Missing provider configuration is safe: registry reachability checks still work, and no mock health data is generated.
 
-Provider credentials stay server-side through environment variables and are never exposed to the browser. Configure these optional variables in Portainer or Docker Compose:
+Provider requests authenticate server-side. Connections can be configured in the trusted-user Settings page or with these optional variables in Portainer or Docker Compose:
 
 - `UPTIME_KUMA_URL`, optionally `UPTIME_KUMA_API_KEY` or `UPTIME_KUMA_USERNAME` / `UPTIME_KUMA_PASSWORD`
 - `BESZEL_URL`, optionally `BESZEL_API_KEY` or `BESZEL_USERNAME` / `BESZEL_PASSWORD`
@@ -183,7 +201,7 @@ The adapter layer caches the last successful provider snapshot in `data/homelab_
 
 ### Data Safety
 
-Runtime databases and local state are excluded from Git and Docker images. They live in the persistent `holocron_data` volume. Application startup only creates missing SQLite tables with `CREATE TABLE IF NOT EXISTS`; it does not replace existing databases. Before changing a Portainer stack or volume, export or back up the volume first.
+Runtime databases and local state are excluded from Git and Docker images. They live in the persistent `holocron_data` volume or your bind-mounted `/app/data` directory. Schema initialization is additive (missing tables/columns); it does not replace existing databases. Before changing a Portainer stack or volume, export or back up the volume first.
 
 The Settings page includes **Download Data Backup**. It creates a portable ZIP containing application databases, histories, feeds, schedules and tool data. The separate **Full Migration Backup** also includes the effective API settings and TLDR mailbox configuration for a private plug-and-play migration. Treat that file like a password: it contains credentials and must never be shared or committed. To move data to a bind-mounted `/app/data` path, stop the old container, extract the selected ZIP into the new host folder, and deploy without deleting the existing volume.
 

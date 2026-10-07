@@ -31,6 +31,15 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 try:
+    from .warframe_farm_api import create_farm_router
+    from .warframe_drop_routes import flatten_mission_rewards
+    from .jellyfin_dashboard import create_jellyfin_router
+except ImportError:
+    from warframe_farm_api import create_farm_router
+    from warframe_drop_routes import flatten_mission_rewards
+    from jellyfin_dashboard import create_jellyfin_router
+
+try:
     from .learning_api import create_learning_router
     from .learning_store import init_learning_db, sync_seed_cards
 except ImportError:
@@ -147,6 +156,8 @@ MARKETS_HISTORY_DB_FILE = BASE_DIR / "data" / "markets_history.db"
 TLDR_DB_FILE = BASE_DIR / "data" / "tldr_issues.db"
 TLDR_DB_LEGACY_FILE = BASE_DIR / "data" / "tldr.db"
 LEARNING_DB_FILE = BASE_DIR / "data" / "learning.db"
+FARM_JOURNAL_DB_FILE = BASE_DIR / "data" / "warframe_farm_journal.db"
+JELLYFIN_CACHE_FILE = BASE_DIR / "data" / "jellyfin_dashboard_cache.json"
 LEARNING_SEED_FILE = BASE_DIR / "backend" / "learning.seed.json"
 TLDR_IMAP_CONFIG_FILE = BASE_DIR / "data" / "tldr_imap_config.json"
 HOMELAB_PROVIDER_CACHE_FILE = BASE_DIR / "data" / "homelab_provider_cache.json"
@@ -166,6 +177,7 @@ _BACKUP_DATA_FILES = (
     "f1_secondary_ingest.json",
     "f1_session_archive.json",
     "homelab_provider_cache.json",
+    "jellyfin_dashboard_cache.json",
 )
 _BACKUP_DATABASE_FILES = (
     "tldr_issues.db",
@@ -176,6 +188,7 @@ _BACKUP_DATABASE_FILES = (
     "f1_history.db",
     "markets_history.db",
     "learning.db",
+    "warframe_farm_journal.db",
 )
 
 
@@ -242,6 +255,8 @@ class F1SecondaryIngestPayload(BaseModel):
 
 app = FastAPI(title="HolocronHub API", version="0.2.0")
 app.include_router(create_learning_router(LEARNING_DB_FILE, LEARNING_SEED_FILE))
+app.include_router(create_farm_router(FARM_JOURNAL_DB_FILE))
+app.include_router(create_jellyfin_router(lambda: _load_settings()["homelab"], JELLYFIN_CACHE_FILE))
 app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS), name="assets")
 
 _ingest_state: dict = {"running": False, "last_result": None, "started_at": None}
@@ -257,6 +272,7 @@ _dashboard_weather_lock = Lock()
 _openf1_weather_lock = Lock()
 _open_meteo_weather_lock = Lock()
 _provider_breaker_lock = Lock()
+_warframe_drop_routes_lock = Lock()
 
 _PROVIDER_BREAKERS: dict[str, dict[str, Any]] = {
     "openf1": {"fail_count": 0, "open_until": 0.0, "last_error": None},
@@ -815,6 +831,8 @@ _DEFAULT_SETTINGS = {
         "theme": "navy-neon",
         "glow": True,
         "compact": False,
+        "dashboard_order": ["launch", "weather", "monitoring", "favorites", "jellyfin"],
+        "dashboard_hidden": ["jellyfin"],
     },
     "feed": {
         "refresh_interval_minutes": 15,
@@ -833,6 +851,10 @@ _DEFAULT_SETTINGS = {
         "alecaframe_public_token": "",
     },
     "homelab": {
+        "jellyfin_enabled": False,
+        "jellyfin_url": "",
+        "jellyfin_api_key": "",
+        "jellyfin_user_id": "",
         "weather_location": "Augsburg",
         "weather_latitude": 48.3705,
         "weather_longitude": 10.8978,
@@ -848,7 +870,7 @@ _DEFAULT_SETTINGS = {
 }
 
 _ALLOWED_SETTINGS_PATCH = {
-    "ux": {"language", "default_category", "show_disabled_sources", "theme", "glow", "compact"},
+    "ux": {"language", "default_category", "show_disabled_sources", "theme", "glow", "compact", "dashboard_order", "dashboard_hidden"},
     "feed": {"refresh_interval_minutes", "digest_mode"},
     "models": {"openclaw_model"},
     "api_keys": {
@@ -861,6 +883,7 @@ _ALLOWED_SETTINGS_PATCH = {
         "alecaframe_public_token",
     },
     "homelab": {
+        "jellyfin_enabled", "jellyfin_url", "jellyfin_api_key", "jellyfin_user_id",
         "weather_location",
         "weather_latitude",
         "weather_longitude",
@@ -6240,6 +6263,16 @@ def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
         cfg["ux"]["theme"] = "navy-neon"
     for key in ("glow", "compact"):
         cfg["ux"][key] = bool(cfg["ux"][key])
+    tile_ids = _DEFAULT_SETTINGS["ux"]["dashboard_order"]
+    for key in ("dashboard_order", "dashboard_hidden"):
+        value = cfg["ux"].get(key)
+        if not isinstance(value, list):
+            value = _DEFAULT_SETTINGS["ux"][key]
+        selected = list(dict.fromkeys(item for item in value if isinstance(item, str) and item in tile_ids))
+        cfg["ux"][key] = selected + [item for item in tile_ids if item not in selected] if key == "dashboard_order" else selected
+    cfg["homelab"]["jellyfin_enabled"] = cfg["homelab"]["jellyfin_enabled"] is True
+    for key in ("jellyfin_url", "jellyfin_api_key", "jellyfin_user_id"):
+        cfg["homelab"][key] = str(cfg["homelab"].get(key) or "").strip()
 
     try:
         refresh = int(cfg["feed"].get("refresh_interval_minutes", 15))
@@ -7622,6 +7655,41 @@ def f1_history_summary(limit: int = Query(default=6, ge=1, le=12)):
 def warframe_arsenal(q: str = ""):
     payload, errors = _fetch_warframe_arsenal(q)
     return {**payload, "errors": errors}
+
+
+def _refresh_mission_drop_routes() -> None:
+    key = "warframe:mission-drop-routes"
+    try:
+        raw, error = _http_get_json("https://drops.warframestat.us/data/missionRewards.json", timeout=15)
+        if error:
+            raise ValueError("Drop source unavailable")
+        payload = {"items": flatten_mission_rewards(raw), "fetched_at": datetime.now(timezone.utc).isoformat()}
+        _cache_set(key, payload)
+        _set_last_good(key, payload)
+    except Exception:
+        _cache_set(key + ":retry", {"error": "Mission drop source temporarily unavailable"})
+    finally:
+        _warframe_drop_routes_lock.release()
+
+
+@app.get("/api/warframe/drop-routes")
+def warframe_drop_routes(background_tasks: BackgroundTasks, q: str = Query(min_length=1, max_length=100)):
+    key = "warframe:mission-drop-routes"
+    cached = _cache_get(key, ttl_seconds=21600)
+    saved, _ = _get_last_good(key, max_age_seconds=7 * 86400) if not cached else (cached, 0)
+    retry = _cache_get(key + ":retry", ttl_seconds=60)
+    refreshing = False
+    if not cached and not retry:
+        if _warframe_drop_routes_lock.acquire(blocking=False):
+            background_tasks.add_task(_refresh_mission_drop_routes)
+        refreshing = True
+    query = str(q).strip().lower()
+    rows = [row for row in (saved or {}).get("items", []) if query in " ".join(str(row.get(field) or "") for field in ("item_name", "planet", "node", "game_mode")).lower()]
+    rows.sort(key=lambda row: (-row["chance"], row.get("planet", ""), row.get("node", "")))
+    return {"items": rows[:40], "total": len(rows), "fetched_at": (saved or {}).get("fetched_at"),
+            "refreshing": refreshing, "stale": bool(saved and not cached), "loading": not saved and refreshing,
+            "source": "WFCD mission drop tables", "error": (retry or {}).get("error"),
+            "note": "Probabilities are per reward roll/rotation, not guaranteed complete mission runs."}
 
 
 @app.get("/api/warframe/planner")

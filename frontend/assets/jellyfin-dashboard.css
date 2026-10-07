@@ -1,0 +1,27 @@
+.jellyfin-dashboard { --jf-accent: var(--hh-accent, #67e8f9); color: var(--hh-text, #e7f0f8); font: inherit; min-width: 0; }
+.jellyfin-dashboard *, .jellyfin-dashboard *::before, .jellyfin-dashboard *::after { box-sizing: border-box; }
+.jellyfin-dashboard [hidden] { display: none !important; }
+.jellyfin-dashboard .jellyfin-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.jellyfin-dashboard .jellyfin-kicker { color: var(--jf-accent); font-size: 9px; letter-spacing: .16em; font-weight: 700; }
+.jellyfin-dashboard h3 { margin: 4px 0 0; font: inherit; font-size: 14px; font-weight: 650; letter-spacing: -.02em; }
+.jellyfin-dashboard .jellyfin-refresh, .jellyfin-dashboard .jellyfin-settings { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 7px 10px; border: 1px solid var(--hh-border, #203b51); border-radius: 9px; background: var(--hh-surface-deep, #081520); color: var(--jf-accent); font: inherit; font-size: 11px; text-decoration: none; cursor: pointer; touch-action: manipulation; }
+.jellyfin-dashboard .jellyfin-refresh:disabled { opacity: .5; cursor: wait; }
+.jellyfin-dashboard .jellyfin-refresh:hover:not(:disabled), .jellyfin-dashboard .jellyfin-settings:hover { border-color: var(--jf-accent); }
+.jellyfin-dashboard .jellyfin-status { color: var(--hh-muted, #8fa4b8); font-size: 11px; line-height: 1.6; margin: 0 0 10px; }
+.jellyfin-dashboard .jellyfin-stale { border-left: 2px solid #d6ad66; padding-left: 9px; }
+.jellyfin-dashboard .jellyfin-saved { display: block; font-size: 10px; opacity: .85; }
+.jellyfin-dashboard .jellyfin-items { display: grid; gap: 7px; }
+.jellyfin-dashboard .jellyfin-item { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 76px; padding: 10px; border: 1px solid var(--hh-border, #203b51); border-radius: 10px; background: linear-gradient(135deg, #0e243322, #08152044); color: inherit; text-decoration: none; }
+.jellyfin-dashboard a.jellyfin-item:hover { border-color: var(--jf-accent); }
+.jellyfin-dashboard .jellyfin-art { flex: 0 0 40px; width: 40px; height: 60px; object-fit: cover; border-radius: 5px; }
+.jellyfin-dashboard .jellyfin-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.jellyfin-dashboard .jellyfin-title { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.jellyfin-dashboard .jellyfin-summary { font-size: 10px; color: var(--hh-muted, #8fa4b8); overflow-wrap: anywhere; line-height: 1.4; }
+.jellyfin-dashboard .jellyfin-timing { color: var(--hh-muted, #8fa4b8); font-size: 10px; font-variant-numeric: tabular-nums; }
+.jellyfin-dashboard .jellyfin-progress { width: 100%; height: 3px; margin: 3px 0 0; border: none; border-radius: 3px; overflow: hidden; background: var(--hh-border, #203b51); accent-color: var(--jf-accent); }
+.jellyfin-dashboard .jellyfin-progress::-webkit-progress-bar { background: var(--hh-border, #203b51); }
+.jellyfin-dashboard .jellyfin-progress::-webkit-progress-value { background: var(--jf-accent); }
+.jellyfin-dashboard .jellyfin-progress::-moz-progress-bar { background: var(--jf-accent); }
+.jellyfin-dashboard .jellyfin-open { flex: 0 0 auto; color: var(--jf-accent); font-size: 10px; }
+.jellyfin-dashboard a:focus-visible, .jellyfin-dashboard button:focus-visible { outline: 2px solid var(--jf-accent); outline-offset: 3px; }
+@media (max-width: 420px) { .jellyfin-dashboard .jellyfin-item { gap: 8px; padding: 9px; } .jellyfin-dashboard .jellyfin-open { display: none; } }

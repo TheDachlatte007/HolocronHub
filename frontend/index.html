@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HolocronHub</title>
+  <link rel="stylesheet" href="assets/warframe-journal.css" />
+  <link rel="stylesheet" href="assets/jellyfin-dashboard.css" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2360a5fa'/%3E%3Cstop offset='1' stop-color='%231d4ed8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='16,2 28,9 28,23 16,30 4,23 4,9' fill='url(%23g)'/%3E%3Cpolygon points='16,6 24,11 24,21 16,26 8,21 8,11' fill='none' stroke='%23bfdbfe' stroke-width='1'/%3E%3Cpolygon points='16,10 21,13 21,19 16,22 11,19 11,13' fill='%23bfdbfe' opacity='0.25'/%3E%3Cline x1='16' y1='2' x2='16' y2='10' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='16' y1='22' x2='16' y2='30' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='4' y1='9' x2='11' y2='13' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='21' y1='19' x2='28' y2='23' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='28' y1='9' x2='21' y2='13' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3Cline x1='11' y1='19' x2='4' y2='23' stroke='%23bfdbfe' stroke-width='0.8' opacity='0.6'/%3E%3C/svg%3E" />
   <style>
     :root{--hh-bg:#080d1a;--hh-surface:#111f38;--hh-surface-deep:#0b1220;--hh-border:#29405f;--hh-text:#e2e8f0;--hh-muted:#94a3b8;--hh-accent:#38bdf8;--hh-accent-strong:#2563eb;--hh-good:#34d399;--hh-warn:#f59e0b;--hh-danger:#ef4444;--hh-radius:12px;--hh-shadow:0 18px 50px rgba(2,6,23,.28)}
@@ -1043,6 +1045,7 @@
     @media(prefers-reduced-motion:reduce){.shell-nav-toggle,.shell-utility,.shell-back,.nav-icon{transition:none!important}}
   </style>
   <link rel="stylesheet" href="assets/learning.css" />
+  <link rel="stylesheet" href="assets/dashboard-layout.css" />
 </head>
 <body data-hub="tools">
 <div class="wrap holocron-shell">
@@ -1128,20 +1131,21 @@
           <div class="home-hero-time"><div id="home-dashboard-time" class="home-time">--:--</div><div id="home-dashboard-date" class="home-date">Loading local time</div></div>
         </header>
         <div class="home-dashboard-grid">
-          <section class="home-panel home-launch-panel">
+          <section class="home-panel home-launch-panel" data-dashboard-tile="launch">
             <div class="home-panel-head"><div><span>Quick Launch</span><small>Home Lab services</small></div><div class="home-panel-actions"><button class="home-text-link" id="home-edit-services" onclick="toggleHomeServiceEditing()" aria-pressed="false">Edit services</button><button class="home-text-link" onclick="openAllServices()">All services <span aria-hidden="true">↗</span></button></div></div>
             <div id="home-dashboard-links" class="home-quick-grid"><div class="home-dashboard-empty">Loading your services...</div></div>
           </section>
           <div class="home-side-stack">
-            <section class="home-panel home-weather-panel" aria-label="Local weather">
+            <section class="home-panel home-weather-panel" data-dashboard-tile="weather" aria-label="Local weather">
               <div class="home-panel-head"><div><span>Weather</span><small id="home-weather-location">Augsburg</small></div><button class="home-text-link" onclick="loadDashboardWeather(true)" aria-label="Refresh weather">Refresh</button></div>
               <div id="home-weather-content" aria-live="polite"><div class="home-widget-meta">Loading local weather...</div></div>
             </section>
-            <section class="home-panel home-kuma-panel" aria-label="Uptime Kuma snapshot">
+            <section class="home-panel home-kuma-panel" data-dashboard-tile="monitoring" aria-label="Uptime Kuma snapshot">
               <div class="home-panel-head"><div><span>Monitoring</span><small>Uptime Kuma</small></div><button class="home-text-link" onclick="loadDashboardKuma(true)" aria-label="Refresh Kuma snapshot">Refresh</button></div>
               <div id="home-kuma-content" aria-live="polite"><div class="home-widget-meta">Loading Kuma snapshot...</div></div>
               <a id="home-kuma-link" class="home-kuma-link" href="http://192.168.178.32:31050/dashboard" target="_blank" rel="noopener noreferrer">Open Uptime Kuma <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
             </section>
+            <section class="home-panel home-jellyfin-panel" data-dashboard-tile="jellyfin" aria-label="Jellyfin continue watching" hidden><div id="home-jellyfin-content"></div></section>
           </div>
         </div>
       </section>
@@ -1156,7 +1160,7 @@
         </div>
       </div>
 
-      <div id="quick-tools-section" class="tool-section" hidden>
+      <div id="quick-tools-section" class="tool-section home-panel home-favorites-panel" data-dashboard-tile="favorites" hidden>
         <div class="tool-section-head">
           <div>
             <div class="tool-section-title">AI & Web Quick Access</div>
@@ -1678,7 +1682,9 @@
           <button class="sm" onclick="loadWarframeValueLab()">Analyze value</button>
         </div>
         <div id="wf-plan" class="wf-plan-grid"></div>
+        <details class="wf-drop-details" open><summary>Mission drop routes</summary><div id="wf-drop-routes" class="wf-drop-routes"><p class="muted">Search a target to find missions and reward rotations.</p></div></details>
       </div>
+      <details class="stat-card wf-journal-details" id="wf-journal-details"><summary>Personal farm journal</summary><div id="wf-farm-journal"></div></details>
       <div class="stat-card">
         <div class="diag-head">
           <h2 style="margin:0">Value Lab</h2>
@@ -1989,6 +1995,15 @@
       </div>
 
       <div id="settings-panel-homelab" class="settings-panel">
+        <h3>Jellyfin (optional)</h3>
+        <div class="settings-grid">
+          <div class="settings-field"><label class="settings-toggle"><input id="set-jellyfin-enabled" type="checkbox" /> Enable Continue Watching</label></div>
+          <div class="settings-field"><label for="set-jellyfin-url">Jellyfin URL</label><input id="set-jellyfin-url" type="url" placeholder="https://jellyfin.example.com" /></div>
+          <div class="settings-field"><label for="set-jellyfin-key">Jellyfin API key</label><input id="set-jellyfin-key" type="password" autocomplete="off" /></div>
+          <div class="settings-field"><label for="set-jellyfin-user">Jellyfin user ID</label><input id="set-jellyfin-user" placeholder="User whose Continue Watching list to show" /></div>
+        </div>
+        <p class="settings-hint">Optional and read-only. Set URL, API key and user ID, save, then show Jellyfin through Arrange dashboard. Credentials stay in your private settings backup; no embedded player.</p>
+        <h3>Weather and monitoring</h3>
         <div class="settings-grid">
           <div class="settings-field"><label for="set-weather-location">Weather location</label><input id="set-weather-location" placeholder="Augsburg" /></div>
           <div class="settings-field"><label for="set-weather-latitude">Latitude</label><input id="set-weather-latitude" type="number" min="-90" max="90" step="any" placeholder="48.3705" /></div>
@@ -2076,7 +2091,11 @@
   </form>
 </dialog>
 <script src="assets/tool-icons.js"></script>
+<script src="assets/dashboard-layout.js"></script>
 <script src="assets/learning.js"></script>
+<script src="assets/warframe-journal.js"></script>
+<script src="assets/warframe-drops.js"></script>
+<script src="assets/jellyfin-dashboard.js"></script>
 <script src="assets/warframe-chart.js"></script>
 <script>
 const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8787' : window.location.origin;
@@ -2377,6 +2396,7 @@ function showTab(name, btn, options = {}) {
   if (name !== 'f1') { clearF1SessionPolling(); clearF1ClockTicker(); }
   if (name !== 'warframe') clearWarframeAutoRefresh();
   document.getElementById(`tab-${name}`).style.display='';
+  if (name === 'tools' && !document.querySelector('[data-dashboard-tile="jellyfin"]')?.hidden) window.HolocronJellyfinDashboard?.load();
   if (btn) btn.classList.add('active');
   if (name === 'learning') {
     window.HolocronLearning.mount(document.getElementById('tab-learning'));
@@ -3277,6 +3297,7 @@ function renderToolSections(tools) {
     .filter(t => (t.favorite || t.pinned) && !isHomeTool(t))
     .sort((a,b) => (Number(b.pinned) - Number(a.pinned)) || (Number(b.favorite) - Number(a.favorite)) || ((b.usage_count||0) - (a.usage_count||0)) || String(b.last_used||'').localeCompare(String(a.last_used||'')));
   secQuick.hidden = favorites.length === 0;
+  secQuick.dataset.layoutEmpty = String(favorites.length === 0);
   if (favorites.length) renderToolGrid(elQuick, favorites, 'quick', 'No favorites yet.');
 
   const aiTools = tools.filter(t => isAiTool(t) && !isHomeTool(t));
@@ -3349,6 +3370,7 @@ function renderToolSections(tools) {
   const otherTools = tools.filter(t => !isAiTool(t) && !isHomeTool(t));
   secOther.hidden = otherTools.length === 0;
   if (otherTools.length) renderToolGrid(elOther, otherTools, 'default', 'No other tools found.');
+  window.HolocronDashboardLayout?.apply();
 }
 
 async function loadTools() {
@@ -7314,6 +7336,8 @@ async function loadWarframePlanner(seedQuery = '') {
   if (!gridEl) return;
   if (seedQuery && inputEl) inputEl.value = seedQuery;
   const q = (inputEl?.value || seedQuery || '').trim();
+  window.HolocronWarframeDrops?.load(q);
+  window.HolocronFarmJournal?.setTarget(q);
   if (!q) {
     gridEl.innerHTML = '<div class="muted">Search an item, part or mod to see relic and drop paths.</div>';
     if (metaEl) metaEl.textContent = 'waiting for a target';
@@ -8315,6 +8339,8 @@ const DEFAULT_SETTINGS = {
     theme: 'navy-neon',
     glow: true,
     compact: false,
+    dashboard_order: ['launch', 'weather', 'monitoring', 'favorites', 'jellyfin'],
+    dashboard_hidden: ['jellyfin'],
   },
   feed: {
     refresh_interval_minutes: 15,
@@ -8339,6 +8365,10 @@ const DEFAULT_SETTINGS = {
     alecaframe_public_token: '',
   },
   homelab: {
+    jellyfin_enabled: false,
+    jellyfin_url: '',
+    jellyfin_api_key: '',
+    jellyfin_user_id: '',
     weather_location: 'Augsburg',
     weather_latitude: 48.3705,
     weather_longitude: 10.8978,
@@ -8491,7 +8521,7 @@ function toggleApiKeyVisibility() {
 
 function toggleHomelabKeyVisibility() {
   const show = document.getElementById('set-homelab-show')?.checked;
-  ['set-homelab-kuma-key','set-homelab-kuma-password','set-homelab-beszel-key','set-homelab-beszel-password'].forEach(id => {
+  ['set-jellyfin-key','set-homelab-kuma-key','set-homelab-kuma-password','set-homelab-beszel-key','set-homelab-beszel-password'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.type = show ? 'text' : 'password';
   });
@@ -8519,6 +8549,10 @@ function populateSettingsForm(cfg) {
   toggleApiKeyVisibility();
 
   const homelab = cfg.homelab || {};
+  document.getElementById('set-jellyfin-enabled').checked = homelab.jellyfin_enabled === true;
+  document.getElementById('set-jellyfin-url').value = homelab.jellyfin_url || '';
+  document.getElementById('set-jellyfin-key').value = homelab.jellyfin_api_key || '';
+  document.getElementById('set-jellyfin-user').value = homelab.jellyfin_user_id || '';
   document.getElementById('set-weather-location').value = homelab.weather_location || 'Augsburg';
   document.getElementById('set-weather-latitude').value = homelab.weather_latitude ?? 48.3705;
   document.getElementById('set-weather-longitude').value = homelab.weather_longitude ?? 10.8978;
@@ -8542,6 +8576,7 @@ async function fetchSettings() {
   _appSettings = normalizeSettings(data);
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(_appSettings.ux));
   applyAppearance(_appSettings.ux);
+  window.HolocronDashboardLayout?.apply();
   applyFeedAutoRefresh();
   return _appSettings;
 }
@@ -8555,6 +8590,7 @@ async function patchSettings(patch) {
   _appSettings = normalizeSettings(data);
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(_appSettings.ux));
   applyAppearance(_appSettings.ux);
+  window.HolocronDashboardLayout?.apply();
   applyFeedAutoRefresh();
   applyScheduleUI(_appSettings.schedule || {});
   if (tabLoaded['sources']) renderSourcesFiltered();
@@ -8695,6 +8731,10 @@ async function saveSettingsHomelab() {
   try {
     await patchSettings({
       homelab: {
+        jellyfin_enabled: document.getElementById('set-jellyfin-enabled').checked,
+        jellyfin_url: document.getElementById('set-jellyfin-url').value.trim(),
+        jellyfin_api_key: document.getElementById('set-jellyfin-key').value.trim(),
+        jellyfin_user_id: document.getElementById('set-jellyfin-user').value.trim(),
         weather_location: document.getElementById('set-weather-location').value.trim() || 'Augsburg',
         weather_latitude: Number(latitude.value),
         weather_longitude: Number(longitude.value),
@@ -8711,12 +8751,29 @@ async function saveSettingsHomelab() {
     setSettingsStatus('homelab', 'Saved. Refresh the Homelab view to check connections.');
     loadDashboardWeather(true);
     loadDashboardKuma(true);
+    if (!document.querySelector('[data-dashboard-tile="jellyfin"]')?.hidden) window.HolocronJellyfinDashboard?.load(true);
   } catch (e) {
     setSettingsStatus('homelab', `Save failed: ${e.message}`, true);
   }
 }
 
 // ══ init ═════════════════════════════════════════════════════
+window.HolocronFarmJournal.mount(document.getElementById('wf-farm-journal'));
+document.getElementById('wf-journal-details').addEventListener('toggle', event => {
+  if (event.target.open) window.HolocronFarmJournal.load();
+});
+window.HolocronWarframeDrops.mount(document.getElementById('wf-drop-routes'));
+window.HolocronJellyfinDashboard.mount();
+let _jellyfinTileVisible = false;
+window.HolocronDashboardLayout.mount(document.querySelector('.home-dashboard'), {
+  get: () => _appSettings?.ux || loadGlobalSettings(),
+  save: async layout => { await patchSettings({ux:layout}); },
+  onVisibility: hidden => {
+    const visible = !hidden.includes('jellyfin');
+    if (visible && !_jellyfinTileVisible) window.HolocronJellyfinDashboard.load();
+    _jellyfinTileVisible = visible;
+  },
+});
 applyAppearance(loadGlobalSettings());
 fetchSettings().catch(()=>{}).finally(() => {
   restoreWarframeWorkspace();

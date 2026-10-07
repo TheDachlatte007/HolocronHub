@@ -1,6 +1,6 @@
 # HolocronHub: Current Baseline And Next Features
 
-Reviewed 2026-10-07. These are proposals, not implemented features or a commitment to build every integration.
+Reviewed 2026-10-07. This is a status index and list of possible follow-ups, not a commitment to build every integration. The approved manual workflow baseline below is implemented; external integrations still need deployment verification.
 
 ## Current Baseline
 
@@ -9,7 +9,7 @@ Reviewed 2026-10-07. These are proposals, not implemented features or a commitme
 - Warframe: market pulse, watchlist, farm/relic planning, inventory/AlecaFrame integration, accumulating local history, stored provider payloads and locally served artwork.
 - F1: weekend/live/history views, weather fallback and persistent history.
 - Feed, Saved, Digest and TLDR: local ingestion/storage and reading surfaces.
-- Learning: Engineering English seed deck, spaced review, persistent progress and review history. User card/deck editing is not available yet.
+- Learning: Engineering English seed deck, personal card authoring, CSV/JSON preview/import, deck filtering, spaced review and persistent history.
 - JSON/SQLite data and credentials remain under the existing backed-up persistent data directory. No storage migration is needed for the layout fix.
 
 Local tests do not prove that every configured external provider works on the server. The current stage is a usable personal command center with continuing visual polish and integration verification, not a frozen product or a new framework migration.
@@ -25,6 +25,8 @@ Local tests do not prove that every configured external provider works on the se
 
 ### 1. Personal Warframe Farm Journal
 
+Implemented baseline: manual start/stop, drop quantities, optional estimated values, separate confirmed sale totals, corrections and paginated history. Mission drop routes are cached and can populate a journal draft. Personal multi-session route comparisons remain a follow-up, not a promised feature.
+
 Highest relevance to the original goal: what should I farm to earn platinum efficiently?
 
 - Start/stop a session, choose a target and record obtained items/counts manually first.
@@ -37,6 +39,8 @@ Initial scope: manual logging and history, no screen capture, game-client hooks 
 
 ### 2. Personal Dashboard Layout
 
+Implemented baseline: drag handles, accessible move buttons, hide/show, reset, save/cancel, persisted settings and all-hidden recovery. Presets and free-form resizing are not included.
+
 - Choose which existing areas are visible and their order through Settings.
 - Offer focused Home presets, such as Gaming, Learn and Home Lab, without creating additional top-level hubs.
 - Persist layout choices alongside existing theme/glow/density preferences.
@@ -45,6 +49,8 @@ Initial scope: manual logging and history, no screen capture, game-client hooks 
 Initial scope: toggle/reorder existing sections, not a generic drag-and-drop dashboard framework.
 
 ### 3. Own Learning Cards And Deck Imports
+
+Implemented baseline: personal CRUD, custom deck/category filters, bounded CSV/JSON preview and atomic import with duplicate/collision protection. Article-to-card drafts and AI extraction remain proposals.
 
 - Add and edit personal cards; import CSV/JSON decks with preview and validation.
 - Turn a saved article/TLDR issue into a manually reviewed card draft with its source link.
@@ -60,10 +66,10 @@ Initial scope: manual authoring/import. Automatic AI extraction is optional late
 - Keep user credentials/token on the backend, with bounded caching and unavailable states.
 - Jellyfin's [official Python API client](https://github.com/jellyfin/jellyfin-apiclient-python/blob/master/jellyfin_apiclient_python/api.py) includes resume-item retrieval. That supports feasibility, but the installed server version, user identity and authentication still need verification.
 
-This is a proposed adapter, not a currently working HolocronHub integration.
+The adapter, Settings fields and opt-in dashboard tile are implemented and covered by fixtures. A configured live Jellyfin server has not yet been verified. No credentials are needed to use the other new features.
 
 ## Suggested Order
 
-Build/version and adapter verification first; then choose Farm Journal for gaming value or Dashboard Layout for everyday efficiency. Learning authoring follows when personal study content is wanted. Jellyfin remains optional, not another always-open dashboard panel.
+Next: review the new manual workflows after redeployment, then build/version visibility and version-aware Beszel verification. Jellyfin remains optional, not another always-open dashboard panel. The detailed implementation record is in [dashboard-qol-implementation.md](dashboard-qol-implementation.md).
 
 Avoid duplicate launchers, a second monitoring system, automatic AI-directory scraping, generic third-party iframes and new database infrastructure until a concrete need justifies them.

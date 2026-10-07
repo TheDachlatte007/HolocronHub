@@ -18,6 +18,7 @@ data/*.db-shm
 data/warframe_assets/
 data/newsletter_cache/
 data/homelab_provider_cache.json
+data/jellyfin_dashboard_cache.json
 __pycache__/
 backend/__pycache__/
 *.log

@@ -109,11 +109,11 @@ class LearningApiTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 422)
                 self.assertIn("detail", response.json())
 
-    def test_filters_reject_unknown_categories_and_statuses(self):
+    def test_filters_allow_custom_categories_and_reject_unknown_statuses(self):
         client = self.client()
         for route in ["session", "cards"]:
             with self.subTest(route=route):
-                self.assertEqual(client.get(f"/api/learning/{route}", params={"category": "unknown"}).status_code, 422)
+                self.assertEqual(client.get(f"/api/learning/{route}", params={"category": "unknown"}).json(), [])
         self.assertEqual(client.get("/api/learning/cards", params={"status": "unknown"}).status_code, 422)
 
     def test_reviews_reject_invalid_ratings_without_writing_history(self):

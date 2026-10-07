@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import csv
+import io
 import sqlite3
+import uuid
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -20,6 +23,16 @@ _CARD_FIELDS = (
     "source",
     "tags",
 )
+
+MAX_IMPORT_BYTES = 1024 * 1024
+MAX_IMPORT_ROWS = 500
+_TEXT_LIMITS = {"id": 128, "deck": 120, "category": 120, "skill": 120,
+                "prompt": 4000, "answer": 4000, "example": 4000,
+                "explanation": 4000, "source": 500}
+
+
+class CardConflict(ValueError):
+    pass
 
 
 def _connect(db_path: Path) -> sqlite3.Connection:
@@ -87,6 +100,12 @@ def init_learning_db(db_path: Path) -> None:
             )
             """
         )
+        # Legacy content was entirely seed-managed; never infer ownership from source text.
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(learning_cards)")}
+        if "ownership" not in columns:
+            conn.execute("ALTER TABLE learning_cards ADD COLUMN ownership TEXT NOT NULL DEFAULT 'seed' CHECK (ownership IN ('seed', 'personal'))")
+        if "deleted_at" not in columns:
+            conn.execute("ALTER TABLE learning_cards ADD COLUMN deleted_at TEXT")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS learning_reviews (
@@ -154,6 +173,9 @@ def sync_seed_cards(db_path: Path, seed_path: Path) -> int:
     with _connection(db_path) as conn:
         conn.execute("BEGIN IMMEDIATE")
         for card in cards:
+            existing = conn.execute("SELECT ownership FROM learning_cards WHERE id = ?", (card["id"],)).fetchone()
+            if existing and existing["ownership"] != "seed":
+                raise ValueError("Seed card id conflicts with a personal card")
             conn.execute(
                 """
                 INSERT INTO learning_cards (
@@ -215,7 +237,7 @@ def _decode_card(row: sqlite3.Row, *, now: datetime) -> dict[str, Any]:
 def _card_select() -> str:
     return """
         SELECT c.id, c.deck, c.category, c.skill, c.prompt, c.answer,
-               c.example, c.explanation, c.source, c.tags_json,
+               c.example, c.explanation, c.source, c.tags_json, c.ownership,
                p.state, p.due_at, p.interval_days, p.ease,
                p.review_count, p.lapse_count, p.last_review_at
         FROM learning_cards c
@@ -228,6 +250,7 @@ def learning_session(
     *,
     limit: int = 20,
     category: str | None = None,
+    deck: str | None = None,
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
     if isinstance(limit, bool) or not 1 <= int(limit) <= 100:
@@ -235,11 +258,14 @@ def learning_session(
     init_learning_db(db_path)
     current = _utc_now(now)
     current_iso = _iso(current)
-    sql = _card_select() + " WHERE (p.review_count = 0 OR p.due_at <= ?)"
+    sql = _card_select() + " WHERE c.deleted_at IS NULL AND (p.review_count = 0 OR p.due_at <= ?)"
     params: list[Any] = [current_iso]
     if category:
         sql += " AND c.category = ?"
         params.append(str(category).strip())
+    if deck:
+        sql += " AND c.deck = ?"
+        params.append(str(deck).strip())
     sql += """
         ORDER BY
             CASE WHEN p.review_count > 0 AND p.due_at <= ? THEN 0 ELSE 1 END,
@@ -258,6 +284,7 @@ def list_learning_cards(
     *,
     query: str | None = None,
     category: str | None = None,
+    deck: str | None = None,
     status: str | None = None,
     limit: int = 500,
     now: datetime | None = None,
@@ -270,7 +297,7 @@ def list_learning_cards(
     init_learning_db(db_path)
     current = _utc_now(now)
     current_iso = _iso(current)
-    sql = _card_select() + " WHERE 1 = 1"
+    sql = _card_select() + " WHERE c.deleted_at IS NULL"
     params: list[Any] = []
     if query and str(query).strip():
         needle = f"%{str(query).strip().lower()}%"
@@ -284,6 +311,9 @@ def list_learning_cards(
     if category:
         sql += " AND c.category = ?"
         params.append(str(category).strip())
+    if deck:
+        sql += " AND c.deck = ?"
+        params.append(str(deck).strip())
     if normalized_status == "new":
         sql += " AND p.review_count = 0"
     elif normalized_status == "due":
@@ -348,7 +378,7 @@ def record_learning_review(
     with _connection(db_path) as conn:
         conn.execute("BEGIN IMMEDIATE")
         row = conn.execute(
-            "SELECT * FROM learning_progress WHERE card_id = ?",
+            "SELECT p.* FROM learning_progress p JOIN learning_cards c ON c.id = p.card_id WHERE p.card_id = ? AND c.deleted_at IS NULL",
             (identifier,),
         ).fetchone()
         if row is None:
@@ -436,6 +466,7 @@ def learning_summary(db_path: Path, *, now: datetime | None = None) -> dict[str,
                 SUM(CASE WHEN p.interval_days >= 21 THEN 1 ELSE 0 END) AS mastered_cards
             FROM learning_cards c
             JOIN learning_progress p ON p.card_id = c.id
+            WHERE c.deleted_at IS NULL
             """,
             (current_iso,),
         ).fetchone()
@@ -461,12 +492,16 @@ def learning_summary(db_path: Path, *, now: datetime | None = None) -> dict[str,
                        SUM(CASE WHEN p.review_count > 0 AND p.due_at <= ? THEN 1 ELSE 0 END) AS due_cards
                 FROM learning_cards c
                 JOIN learning_progress p ON p.card_id = c.id
+                WHERE c.deleted_at IS NULL
                 GROUP BY c.category
                 ORDER BY MIN(c.id)
                 """,
                 (current_iso,),
             ).fetchall()
         ]
+        decks = [dict(row) for row in conn.execute(
+            "SELECT deck, COUNT(*) AS total_cards FROM learning_cards WHERE deleted_at IS NULL GROUP BY deck ORDER BY deck"
+        ).fetchall()]
     return {
         "total_cards": int(totals["total_cards"] or 0),
         "new_cards": int(totals["new_cards"] or 0),
@@ -475,4 +510,167 @@ def learning_summary(db_path: Path, *, now: datetime | None = None) -> dict[str,
         "reviews_today": reviews_today,
         "streak_days": _streak_days(review_dates, today=current.date()),
         "categories": categories,
+        "decks": decks,
     }
+
+
+def _personal_content(raw: Any, *, allow_id: bool = False) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise ValueError("Card must be an object")
+    allowed = set(_CARD_FIELDS) - (set() if allow_id else {"id"})
+    if set(raw) - allowed:
+        raise ValueError("Unknown card fields: " + ", ".join(sorted(set(raw) - allowed)))
+    defaults = {"deck": "Personal", "category": "Personal", "skill": "General",
+                "example": "", "explanation": "", "source": "", "tags": []}
+    card = {**defaults, **raw}
+    for field, limit in _TEXT_LIMITS.items():
+        if field == "id" and field not in card:
+            continue
+        value = card.get(field)
+        if not isinstance(value, str) or len(value) > limit or "\x00" in value:
+            raise ValueError(f"Invalid {field} (maximum {limit} characters)")
+        card[field] = value.strip()
+        if field in {"id", "deck", "category", "skill", "prompt", "answer"} and not card[field]:
+            raise ValueError(f"{field} is required")
+    tags = card["tags"]
+    if "id" in card and ("/" in card["id"] or "\\" in card["id"] or any(ord(char) < 32 for char in card["id"])):
+        raise ValueError("Card id cannot contain slashes or control characters")
+    if not isinstance(tags, list) or len(tags) > 30 or any(
+        not isinstance(tag, str) or not tag.strip() or len(tag) > 80 or "\x00" in tag for tag in tags
+    ):
+        raise ValueError("tags must be at most 30 non-empty strings of up to 80 characters")
+    card["tags"] = list(dict.fromkeys(tag.strip() for tag in tags))
+    return card
+
+
+def _insert_personal(conn: sqlite3.Connection, card: dict[str, Any]) -> str:
+    identifier = card.get("id") or "personal-" + uuid.uuid4().hex
+    fields = _CARD_FIELDS[1:-1]
+    conn.execute(
+        "INSERT INTO learning_cards (id, deck, category, skill, prompt, answer, example, explanation, source, tags_json, content_updated_at, ownership) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'personal')",
+        (identifier, *(card[field] for field in fields), json.dumps(card["tags"], ensure_ascii=False), _iso(_utc_now())),
+    )
+    conn.execute("INSERT INTO learning_progress(card_id) VALUES (?)", (identifier,))
+    return identifier
+
+
+def _get_card(conn: sqlite3.Connection, identifier: str) -> dict[str, Any]:
+    row = conn.execute(_card_select() + " WHERE c.id = ? AND c.deleted_at IS NULL", (identifier,)).fetchone()
+    if row is None:
+        raise KeyError(identifier)
+    return _decode_card(row, now=_utc_now())
+
+
+def create_personal_card(db_path: Path, raw: dict[str, Any]) -> dict[str, Any]:
+    card = _personal_content(raw)
+    init_learning_db(db_path)
+    with _connection(db_path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        return _get_card(conn, _insert_personal(conn, card))
+
+
+def update_personal_card(db_path: Path, identifier: str, changes: dict[str, Any]) -> dict[str, Any]:
+    init_learning_db(db_path)
+    with _connection(db_path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        current = _get_card(conn, identifier)
+        if current["ownership"] != "personal":
+            raise PermissionError("Seed-managed cards are read-only")
+        if not isinstance(changes, dict) or not changes:
+            raise ValueError("Provide card fields to update")
+        content = {field: current[field] for field in _CARD_FIELDS if field != "id"}
+        card = _personal_content({**content, **changes})
+        conn.execute(
+            "UPDATE learning_cards SET deck=?, category=?, skill=?, prompt=?, answer=?, example=?, explanation=?, source=?, tags_json=?, content_updated_at=? WHERE id=?",
+            (*(card[field] for field in _CARD_FIELDS[1:-1]), json.dumps(card["tags"], ensure_ascii=False), _iso(_utc_now()), identifier),
+        )
+        return _get_card(conn, identifier)
+
+
+def delete_personal_card(db_path: Path, identifier: str) -> dict[str, bool]:
+    init_learning_db(db_path)
+    with _connection(db_path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        card = _get_card(conn, identifier)
+        if card["ownership"] != "personal":
+            raise PermissionError("Seed-managed cards are read-only")
+        conn.execute("UPDATE learning_cards SET deleted_at=? WHERE id=?", (_iso(_utc_now()), identifier))
+    return {"deleted": True}
+
+
+def _parse_import(format: str, content: str) -> list[dict[str, Any]]:
+    if not isinstance(content, str) or len(content.encode("utf-8")) > MAX_IMPORT_BYTES:
+        raise ValueError("Import file must be at most 1 MiB")
+    content = content.lstrip("\ufeff")
+    try:
+        if format == "json":
+            rows = json.loads(content)
+        elif format == "csv":
+            reader = csv.DictReader(io.StringIO(content, newline=""), strict=True)
+            headers = reader.fieldnames
+            if not headers or len(set(headers)) != len(headers) or not {"prompt", "answer"}.issubset(headers) or set(headers) - set(_CARD_FIELDS):
+                raise ValueError("CSV needs unique card field headers including prompt and answer")
+            rows = []
+            for row in reader:
+                if len(rows) >= MAX_IMPORT_ROWS:
+                    raise ValueError("Import must contain 1 to 500 cards")
+                if None in row or any(value is None for value in row.values()):
+                    raise ValueError("CSV row does not match its headers")
+                if "id" in row and not row["id"].strip():
+                    del row["id"]
+                if "tags" in row:
+                    value = row["tags"].strip()
+                    row["tags"] = json.loads(value) if value.startswith("[") else [tag.strip() for tag in value.split(";") if tag.strip()]
+                rows.append(row)
+        else:
+            raise ValueError("format must be json or csv")
+    except (json.JSONDecodeError, csv.Error, RecursionError) as exc:
+        raise ValueError("Invalid JSON or CSV file") from exc
+    if not isinstance(rows, list) or not 1 <= len(rows) <= MAX_IMPORT_ROWS:
+        raise ValueError("Import must contain 1 to 500 cards")
+    cards = []
+    for index, row in enumerate(rows, 1):
+        try:
+            cards.append(_personal_content(row, allow_id=True))
+        except ValueError as exc:
+            raise ValueError(f"Row {index}: {exc}") from exc
+    return cards
+
+
+def _content_key(card: dict[str, Any]) -> str:
+    return json.dumps({field: sorted(card[field]) if field == "tags" else card[field]
+                       for field in _CARD_FIELDS if field != "id"}, sort_keys=True, ensure_ascii=False)
+
+
+def import_personal_cards(db_path: Path, format: str, content: str, *, preview: bool = False) -> dict[str, Any]:
+    cards = _parse_import(format, content)
+    init_learning_db(db_path)
+    with _connection(db_path) as conn:
+        # Preview and import share collision rules; import rechecks under the write lock.
+        conn.execute("BEGIN" if preview else "BEGIN IMMEDIATE")
+        existing = {row["id"]: {**dict(row), "tags": json.loads(row["tags_json"])}
+                    for row in conn.execute("SELECT * FROM learning_cards")}
+        keys = {_content_key(card) for card in existing.values()}
+        selected = []
+        imported = skipped = 0
+        for card in cards:
+            identifier = card.get("id")
+            key = _content_key(card)
+            if identifier and identifier in existing:
+                old = existing[identifier]
+                if old["ownership"] != "personal" or old.get("deleted_at") or _content_key(old) != key:
+                    raise CardConflict(f"Card id already exists: {identifier}")
+            duplicate = key in keys
+            selected.append({**card, "action": "skip" if duplicate else "import"})
+            if duplicate:
+                skipped += 1
+            else:
+                imported += 1
+                keys.add(key)
+                if not preview:
+                    _insert_personal(conn, card)
+            if identifier:
+                existing[identifier] = {**card, "ownership": "personal"}
+        if preview:
+            return {"importable": imported, "skipped": skipped, "cards": selected}
+        return {"imported": imported, "skipped": skipped}

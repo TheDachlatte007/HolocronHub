@@ -44,10 +44,11 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
     page.setDefaultTimeout(5000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    let failToolReads = false;
+    let failToolReads = false, mediaCalls = 0;
+    let settings = {ux:{theme:'navy-neon',dashboard_order:['launch','weather','monitoring','favorites','jellyfin'],dashboard_hidden:['jellyfin']},homelab:{jellyfin_enabled:false}};
     let tools = Array.from({length: 9}, (_, i) => ({id: 'svc-' + i, name: i ? 'Service ' + i : 'TrueNAS',
       category: 'Home Network', provider: 'Self-hosted', local_or_cloud: 'local', auth_type: 'local', cost_hint: '',
-      link: 'https://service-' + i + '.local', group: 'Storage', tags: [], status: 'unknown'}));
+      link: 'https://service-' + i + '.local', group: 'Storage', tags: [], status: 'unknown', favorite: i === 0}));
     await page.route('**/*', async route => {
       const req = route.request(), url = new URL(req.url());
       if (url.hostname !== 'launcher.test') return route.abort();
@@ -57,6 +58,12 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
         return route.fulfill({contentType: url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname.endsWith('.css') ? 'text/css' : 'image/svg+xml', body:fs.readFileSync(file)});
       }
       if (url.pathname === '/') return route.fulfill({contentType: 'text/html', body: fs.readFileSync(path.join(process.env.LAUNCHER_ROOT, 'frontend/index.html'))});
+      if (url.pathname === '/api/settings') {
+        if (req.method() === 'PATCH') for (const [section, values] of Object.entries(req.postDataJSON())) settings[section]={...settings[section],...values};
+        return route.fulfill({json:settings});
+      }
+      if (url.pathname === '/api/dashboard/jellyfin') {mediaCalls++;return route.fulfill({json:{state:'disabled',items:[]}});}
+      if (url.pathname === '/api/warframe/farm-journal/sessions') return route.fulfill({json:{sessions:[],active_session:null,summary:{session_count:0},has_more:false}});
       if (url.pathname === '/api/homelab/overview') {
         await healthGate;
         return route.fulfill({status:503, json:{detail:'Fixture health unavailable'}});
@@ -151,6 +158,32 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
     await page.getByRole('button', {name:'Edit Vault NAS', exact:true}).waitFor();
     assert.equal(await page.locator('.homelab-command-tab.active').textContent(), 'All services');
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile service list must fit viewport');
+    await page.evaluate(() => showTab('tools'));
+    assert.equal(mediaCalls,0,'hidden optional tile performs no requests');
+    await page.getByRole('button',{name:'Arrange dashboard',exact:true}).click();
+    await page.getByRole('button',{name:'Move Weather earlier',exact:true}).click();
+    await page.getByRole('checkbox',{name:'Show Monitoring',exact:true}).uncheck();
+    await page.getByRole('checkbox',{name:'Show Jellyfin',exact:true}).check();
+    await page.getByRole('button',{name:'Save layout',exact:true}).click();
+    await page.getByRole('button',{name:'Arrange dashboard',exact:true}).waitFor();
+    await page.getByText('Jellyfin is disabled. Enable it in Settings.',{exact:true}).waitFor();
+    assert.equal(settings.ux.dashboard_order[0],'weather');
+    await page.reload();
+    await page.getByRole('button',{name:'Arrange dashboard',exact:true}).waitFor();
+    await page.waitForFunction(()=>_appSettings?.ux.dashboard_order[0]==='weather');
+    await page.waitForFunction(()=>!document.querySelector('.home-arriving'));
+    assert.equal(await page.locator('[data-dashboard-tile]').first().getAttribute('data-dashboard-tile'),'weather');
+    assert.equal(await page.locator('[data-dashboard-tile="monitoring"]').isVisible(),false,'hide survives reload');
+    assert.equal(await page.locator('[data-dashboard-tile="favorites"]').count(),1);
+    assert.equal(await page.locator('.home-dashboard-grid > [data-dashboard-tile="favorites"]').count(),1,'quick access is a real arranged tile');
+    for (const width of [1440,390,320]) {
+      await page.setViewportSize({width,height:1000});
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'dashboard fits '+width);
+      if(process.env.LAUNCHER_QA_OUTPUT)await page.screenshot({path:path.join(process.env.LAUNCHER_QA_OUTPUT,'dashboard-'+width+'.png'),fullPage:true});
+    }
+    await page.evaluate(()=>{showTab('warframe');setWarframeWorkspace('planner');document.getElementById('wf-journal-details').open=true;});
+    await page.locator('#wf-farm-journal').getByRole('button',{name:'Start session',exact:true}).waitFor();
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'journal integration fits mobile Warframe');
     assert.deepEqual(errors, []);
   } finally {releaseHealth(); await browser.close();}
 })().catch(error => {console.error(error); process.exit(1);});

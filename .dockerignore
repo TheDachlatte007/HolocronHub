@@ -4,9 +4,15 @@
 *.pyo
 *.pyd
 *.log
+.env
+**/.env
+stack.env
+output/
 
 # Runtime state belongs to the persistent Docker volume, never the image.
 data/*.db
+data/*.db-wal
+data/*.db-shm
 data/settings.json
 data/saved_items.json
 data/schedule.json
@@ -18,3 +24,6 @@ data/f1_session_snapshots.json
 data/f1_secondary_ingest.json
 data/f1_session_archive.json
 data/newsletter_cache/
+data/warframe_assets/
+data/homelab_provider_cache.json
+data/jellyfin_dashboard_cache.json

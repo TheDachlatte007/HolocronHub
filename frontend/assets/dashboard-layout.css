@@ -1,0 +1,23 @@
+.home-dashboard-grid[data-layout-grid]{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:14px;align-items:start}
+.home-dashboard-grid[data-layout-grid]>[data-dashboard-tile]{margin:0;min-width:0}
+.home-dashboard-grid[data-layout-grid]>[data-dashboard-tile][hidden]{display:none!important}
+.home-dashboard-grid[data-layout-grid][data-launch-stack="true"]>[data-dashboard-tile="launch"]{grid-row:span 2}
+.home-dashboard-grid[data-layout-grid]>[data-dashboard-tile="favorites"],.home-dashboard-grid[data-layout-grid]>[data-dashboard-tile="jellyfin"]{grid-column:1/-1}
+.home-favorites-panel{padding:12px 16px;border:1px solid var(--hh-border);border-radius:15px}
+.home-favorites-panel .tool-section-head{margin-bottom:10px}
+.dashboard-layout-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dashboard-layout-toolbar button{min-height:34px}
+.dashboard-layout-choices{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px dashed var(--hh-border,#29405f);border-radius:10px}
+.dashboard-layout-choices[hidden],.dashboard-tile-controls[hidden]{display:none}
+.dashboard-layout-choices label{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer}
+.dashboard-layout-choices input[type="checkbox"]{width:16px;height:16px;accent-color:var(--hh-accent,#38bdf8)}
+.dashboard-layout-status{font-size:12px;color:var(--hh-muted,#94a3b8);overflow-wrap:anywhere}
+.dashboard-layout-status:empty{display:none}
+.dashboard-tile-controls{display:flex;gap:6px;align-items:center;padding-bottom:10px;margin-bottom:10px;border-bottom:1px dashed var(--hh-border,#29405f)}
+.dashboard-tile-controls button{min-height:34px}
+.dashboard-drag-handle{cursor:grab;touch-action:none;user-select:none;border:1px dashed var(--hh-accent,#38bdf8);border-radius:8px;color:var(--hh-accent,#38bdf8);background:transparent}
+.dashboard-drag-handle:active{cursor:grabbing}
+.dashboard-dragging{opacity:.6;outline:1px dashed var(--hh-accent,#38bdf8)}
+.dashboard-editing [data-dashboard-tile]{outline:1px dashed rgba(56,189,248,.35);outline-offset:3px}
+@media(max-width:780px){.home-dashboard-grid[data-layout-grid]{grid-template-columns:minmax(0,1fr)}.home-dashboard-grid[data-layout-grid]>[data-dashboard-tile]{grid-column:auto!important;grid-row:auto!important}.dashboard-tile-controls button,.dashboard-layout-toolbar button{min-height:44px}.dashboard-layout-choices{gap:12px}}
+@media(prefers-reduced-motion:reduce){.dashboard-dragging{transition:none}}

@@ -73,3 +73,13 @@
 - ✅ Warframe auf gutem Stand, aber weiter UI-/fallback-sensibel
 - ✅ TLDR Mail Bridge aktiv, mit lokalem Reader
 - ⏭️ Nächster Fokus: Live-QA nach Deploy, letzte UI-Kanten und Performance-Feinschliff
+
+## 2026-10-07: Command Center Baseline
+
+- Shared left navigation is verified for Home, F1, Warframe and Learning; Learning now sits above the information/settings sections.
+- Home Lab has an editable, complete All services list independent of slow or failed health requests. Kuma remains the health source, not a second editable service catalog.
+- Appearance presets, compact spacing, central search, local weather and icon fallback are implemented.
+- F1 weather handles provider cooldowns, uses saved readings and normalizes timezone offsets.
+- Warframe data/history/artwork remain persistent. Removed the old edge-to-edge CSS override that discarded Warframe/F1 rounded borders after the sidebar work; added browser coverage for expanded/collapsed and mobile layouts.
+- Reviewed feature candidates and remaining integration risks in `docs/next-features.md`. New candidates are proposals only; no additional adapters, paid API calls or database migrations were introduced.
+- Current focus: verify deployed provider connections, finish visual consistency, then grow targeted personal workflows. External APIs are not declared universally healthy based on local tests.

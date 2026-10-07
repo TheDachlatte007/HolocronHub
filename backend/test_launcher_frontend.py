@@ -126,6 +126,12 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
       await page.setViewportSize({width, height:900});
       for (const hub of ['warframe', 'f1']) {
         await page.evaluate(name => showTab(name), hub);
+        const shellCard = page.locator(`#tab-${hub} > .card`);
+        const shellStyle = await shellCard.evaluate(el => {
+          const css = getComputedStyle(el);
+          return {radius:parseFloat(css.borderTopLeftRadius), left:parseFloat(css.borderLeftWidth), right:parseFloat(css.borderRightWidth)};
+        });
+        assert(shellStyle.radius >= 12 && shellStyle.left >= 1 && shellStyle.right >= 1, `${hub}: hub frame must match rounded dashboard cards`);
         const toggle = page.locator('#shell-nav-toggle');
         if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
         const nav = await page.locator('.holocron-shell > .nav').boundingBox();
@@ -136,6 +142,8 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
         else assert(nav.y >= header.y + header.height);
         await toggle.click();
         assert.equal(await page.locator('.holocron-shell > .nav').isVisible(), false);
+        const collapsedRadius = await shellCard.evaluate(el => parseFloat(getComputedStyle(el).borderTopLeftRadius));
+        assert(collapsedRadius >= 12, `${hub}: collapsed navigation must preserve card rounding`);
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       }
     }

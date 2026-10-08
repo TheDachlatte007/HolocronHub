@@ -3,6 +3,16 @@
 .home-dashboard-grid[data-layout-grid]>[data-dashboard-tile][hidden]{display:none!important}
 .home-dashboard-grid[data-layout-grid][data-launch-stack="true"]>[data-dashboard-tile="launch"]{grid-row:span 2}
 .home-dashboard-grid[data-layout-grid]>[data-dashboard-tile="favorites"],.home-dashboard-grid[data-layout-grid]>[data-dashboard-tile="jellyfin"]{grid-column:1/-1}
+.home-dashboard-grid[data-layout-grid]>[data-dashboard-tile="welcome"],.home-dashboard-grid[data-layout-grid]>[data-dashboard-tile="library"]{grid-column:1/-1}
+.dashboard-editing [data-dashboard-tile="welcome"]{flex-wrap:wrap}
+.dashboard-editing [data-dashboard-tile="welcome"]>.dashboard-tile-controls{flex-basis:100%}
+.dashboard-tile-controls strong{font-size:12px;margin-right:auto;color:var(--hh-text)}
+.dashboard-layout-toolbar{justify-content:flex-end;margin-bottom:12px}
+.home-build-footer{display:flex;justify-content:flex-end;margin-top:12px}
+.home-build-footer button{font-size:11px;color:var(--hh-muted);background:transparent;border:0;padding:5px 0}
+.home-build-footer button:hover{color:var(--hh-accent)}
+.home-library-panel{padding:16px;border:1px solid var(--hh-border);border-radius:14px;background:var(--hh-surface-deep)}
+.home-library-panel .tool-hub-top{margin-top:0}
 .home-favorites-panel{padding:12px 16px;border:1px solid var(--hh-border);border-radius:15px}
 .home-favorites-panel .tool-section-head{margin-bottom:10px}
 .dashboard-layout-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -13,7 +23,7 @@
 .dashboard-layout-choices input[type="checkbox"]{width:16px;height:16px;accent-color:var(--hh-accent,#38bdf8)}
 .dashboard-layout-status{font-size:12px;color:var(--hh-muted,#94a3b8);overflow-wrap:anywhere}
 .dashboard-layout-status:empty{display:none}
-.dashboard-tile-controls{display:flex;gap:6px;align-items:center;padding-bottom:10px;margin-bottom:10px;border-bottom:1px dashed var(--hh-border,#29405f)}
+.dashboard-tile-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-bottom:10px;margin-bottom:10px;border-bottom:1px dashed var(--hh-border,#29405f)}
 .dashboard-tile-controls button{min-height:34px}
 .dashboard-drag-handle{cursor:grab;touch-action:none;user-select:none;border:1px dashed var(--hh-accent,#38bdf8);border-radius:8px;color:var(--hh-accent,#38bdf8);background:transparent}
 .dashboard-drag-handle:active{cursor:grabbing}

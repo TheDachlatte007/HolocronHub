@@ -1,5 +1,6 @@
 # Local secrets/runtime state
 .env
+build-info.json
 stack.env
 backend/.env
 data/settings.json

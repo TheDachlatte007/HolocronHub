@@ -15,12 +15,12 @@ from backend.warframe_farm_store import FarmJournalStore
 class DashboardLayoutTests(unittest.TestCase):
     def test_defaults_preserve_quiet_dashboard_and_optional_media(self):
         ux = main._normalize_settings({})["ux"]
-        self.assertEqual(ux["dashboard_order"], ["launch", "weather", "monitoring", "favorites", "jellyfin"])
+        self.assertEqual(ux["dashboard_order"], ["welcome", "launch", "weather", "monitoring", "favorites", "jellyfin", "library"])
         self.assertEqual(ux["dashboard_hidden"], ["jellyfin"])
 
     def test_valid_layout_roundtrips_and_duplicates_are_removed(self):
         ux = main._normalize_settings({"ux": {"dashboard_order": ["weather", "weather", "launch", "bad"], "dashboard_hidden": ["favorites", "favorites", "bad"]}})["ux"]
-        self.assertEqual(ux["dashboard_order"], ["weather", "launch", "monitoring", "favorites", "jellyfin"])
+        self.assertEqual(ux["dashboard_order"], ["welcome", "weather", "launch", "monitoring", "favorites", "jellyfin", "library"])
         self.assertEqual(ux["dashboard_hidden"], ["favorites"])
 
     def test_invalid_payload_cannot_break_dashboard_or_credentials(self):
@@ -29,7 +29,7 @@ class DashboardLayoutTests(unittest.TestCase):
         self.assertEqual(settings["homelab"]["jellyfin_api_key"], "private")
 
     def test_all_hidden_is_permitted_and_new_ids_are_not_lost(self):
-        ids = ["launch", "weather", "monitoring", "favorites", "jellyfin"]
+        ids = ["welcome", "launch", "weather", "monitoring", "favorites", "jellyfin", "library"]
         ux = main._normalize_settings({"ux": {"dashboard_order": [], "dashboard_hidden": ids}})["ux"]
         self.assertEqual(ux["dashboard_order"], ids)
         self.assertEqual(ux["dashboard_hidden"], ids)
@@ -56,8 +56,15 @@ class DashboardLayoutTests(unittest.TestCase):
                 self.assertEqual(database.execute('SELECT item, quantity FROM warframe_farm_drops').fetchall(), [('Forma', 2)])
             with zipfile.ZipFile(io.BytesIO(migration)) as bundle:
                 restored = json.loads(bundle.read('data/settings.json'))
-                self.assertEqual(restored['ux']['dashboard_order'][0], 'weather')
+                self.assertEqual(restored['ux']['dashboard_order'][1], 'weather')
                 self.assertEqual(restored['homelab']['jellyfin_api_key'], 'fixture-private-key')
+
+    def test_existing_saved_orders_are_extended_without_losing_preferences(self):
+        ux = main._normalize_settings({'ux': {'dashboard_order': ['weather','launch','favorites','monitoring','jellyfin'], 'dashboard_hidden': ['monitoring','jellyfin']}})['ux']
+        self.assertEqual(ux['dashboard_order'], ['welcome','weather','launch','favorites','monitoring','jellyfin','library'])
+        self.assertEqual(ux['dashboard_hidden'], ['monitoring','jellyfin'])
+        moved = main._normalize_settings({'ux': {'dashboard_order': ['library','weather','welcome','launch']}})['ux']
+        self.assertEqual(moved['dashboard_order'][:4], ['library','weather','welcome','launch'])
 
 
 if __name__ == "__main__":

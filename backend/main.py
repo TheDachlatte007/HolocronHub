@@ -31,10 +31,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 try:
+    from .build_info import APP_VERSION, get_build_info
     from .warframe_farm_api import create_farm_router
     from .warframe_drop_routes import flatten_mission_rewards
     from .jellyfin_dashboard import create_jellyfin_router
 except ImportError:
+    from build_info import APP_VERSION, get_build_info
     from warframe_farm_api import create_farm_router
     from warframe_drop_routes import flatten_mission_rewards
     from jellyfin_dashboard import create_jellyfin_router
@@ -253,7 +255,7 @@ class F1SecondaryIngestPayload(BaseModel):
 
 # ── app + state ───────────────────────────────────────────────────────────────
 
-app = FastAPI(title="HolocronHub API", version="0.2.0")
+app = FastAPI(title="HolocronHub API", version=APP_VERSION)
 app.include_router(create_learning_router(LEARNING_DB_FILE, LEARNING_SEED_FILE))
 app.include_router(create_farm_router(FARM_JOURNAL_DB_FILE))
 app.include_router(create_jellyfin_router(lambda: _load_settings()["homelab"], JELLYFIN_CACHE_FILE))
@@ -831,7 +833,7 @@ _DEFAULT_SETTINGS = {
         "theme": "navy-neon",
         "glow": True,
         "compact": False,
-        "dashboard_order": ["launch", "weather", "monitoring", "favorites", "jellyfin"],
+        "dashboard_order": ["welcome", "launch", "weather", "monitoring", "favorites", "jellyfin", "library"],
         "dashboard_hidden": ["jellyfin"],
     },
     "feed": {
@@ -6269,7 +6271,11 @@ def _normalize_settings(raw: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(value, list):
             value = _DEFAULT_SETTINGS["ux"][key]
         selected = list(dict.fromkeys(item for item in value if isinstance(item, str) and item in tile_ids))
-        cfg["ux"][key] = selected + [item for item in tile_ids if item not in selected] if key == "dashboard_order" else selected
+        if key == 'dashboard_order':
+            if 'welcome' not in selected:
+                selected.insert(0, 'welcome')
+            selected += [item for item in tile_ids if item not in selected]
+        cfg["ux"][key] = selected
     cfg["homelab"]["jellyfin_enabled"] = cfg["homelab"]["jellyfin_enabled"] is True
     for key in ("jellyfin_url", "jellyfin_api_key", "jellyfin_user_id"):
         cfg["homelab"][key] = str(cfg["homelab"].get(key) or "").strip()
@@ -6835,6 +6841,12 @@ def _build_runtime_backup(*, include_secrets: bool = False) -> bytes:
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+@app.get('/api/build-info')
+def deployment_build_info():
+    from fastapi.responses import JSONResponse
+    return JSONResponse(get_build_info(BASE_DIR), headers={'Cache-Control': 'no-store'})
 
 
 @app.get("/api/backup/export")

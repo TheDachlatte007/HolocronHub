@@ -1,0 +1,21 @@
+/* One restrained shell; navigation belongs to the left sidebar. */
+body[data-hub] .holocron-shell>.nav{background:var(--hh-surface-deep);border-color:var(--hh-border)}
+body[data-hub] .shell-utility{display:grid}
+body:not([data-hub="tools"]) .mobile-search-trigger{display:grid!important;place-items:center}
+body:not([data-hub="tools"]) .shell-search{display:none!important}
+body .app-shell-header{background:var(--hh-bg);border-bottom:1px solid var(--hh-border)}
+.build-info-settings{margin-top:16px;padding-top:12px;border-top:1px solid var(--hh-border)}
+.build-info-settings .small-row span{overflow-wrap:anywhere;min-width:0}
+.build-info-settings .small-row{gap:18px;align-items:flex-start}
+#tab-warframe :is(button.primary,button.active){background:var(--hh-accent-strong);border-color:var(--hh-accent);color:#effcff}
+#tab-warframe :is(.stat-card,.wf-reco-card,.market-card,.wf-context-card,.wf-detail-card){background:var(--hh-surface-deep);border-color:var(--hh-border)}
+#tab-warframe .wf-page-hero-status::before{background:var(--hh-muted);box-shadow:none}
+#tab-warframe .wf-page-hero-status[data-state="fresh"]::before{background:var(--hh-good);box-shadow:0 0 8px var(--hh-good)}
+#tab-warframe .wf-page-hero-status[data-state="stale"]::before{background:var(--hh-warn);box-shadow:none}
+#tab-warframe .wf-page-hero-status[data-state="error"]::before{background:var(--hh-danger);box-shadow:none}
+#tab-warframe .wf-page-hero-status[data-state="loading"]::before{background:var(--hh-accent);box-shadow:none}
+@media(min-width:901px){
+  body .app-shell-header{position:sticky;top:0;z-index:100;box-shadow:0 8px 18px color-mix(in srgb,var(--hh-bg) 85%,transparent)}
+  body .holocron-shell>.nav{top:70px!important}
+}
+@media(max-width:900px){body .app-shell-header{position:relative;z-index:1}}

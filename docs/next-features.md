@@ -1,6 +1,6 @@
 # HolocronHub: Current Baseline And Next Features
 
-Reviewed 2026-10-07. This is a status index and list of possible follow-ups, not a commitment to build every integration. The approved manual workflow baseline below is implemented; external integrations still need deployment verification.
+Reviewed 2026-10-08. This is a status index and list of possible follow-ups, not a commitment to build every integration. The approved manual workflow baseline below is implemented; external integrations still need deployment verification.
 
 ## Current Baseline
 
@@ -16,7 +16,7 @@ Local tests do not prove that every configured external provider works on the se
 
 ## Stabilization Before More Widgets
 
-1. Show the running build/version and last successful provider refresh in Settings. This distinguishes an old container image from a code regression.
+1. Build identity is now shown on Home and in Settings, using verified build metadata/source fingerprints rather than assuming a Git revision. Provider diagnostics already show refresh information; clearer per-provider freshness remains a follow-up.
 2. Verify configured adapters individually after deployment; retain real unknown/stale/error states rather than fabricated telemetry.
 3. Revisit Beszel before promoting CPU/RAM/container cards. The existing adapter probes `/api/metrics` and `/api/containers`, whereas the [official REST documentation](https://beszel.dev/guide/rest-api) describes PocketBase collections and user authentication. This is a compatibility concern, not proof that the user's particular installation is broken. API structure can change in minor versions; use version-aware fixtures.
 4. Keep a browser regression matrix for Home, Warframe, F1 and Learning, with both sidebar states and mobile widths. The rounded hub frame is now covered as well.
@@ -39,7 +39,7 @@ Initial scope: manual logging and history, no screen capture, game-client hooks 
 
 ### 2. Personal Dashboard Layout
 
-Implemented baseline: drag handles, accessible move buttons, hide/show, reset, save/cancel, persisted settings and all-hidden recovery. Presets and free-form resizing are not included.
+Implemented baseline: whole-Home editing, including Welcome and the Tool Library; drag handles, accessible move buttons, hide/show, reset, save/cancel, persisted settings and all-hidden recovery. Presets and free-form resizing are not included.
 
 - Choose which existing areas are visible and their order through Settings.
 - Offer focused Home presets, such as Gaming, Learn and Home Lab, without creating additional top-level hubs.
@@ -70,6 +70,6 @@ The adapter, Settings fields and opt-in dashboard tile are implemented and cover
 
 ## Suggested Order
 
-Next: review the new manual workflows after redeployment, then build/version visibility and version-aware Beszel verification. Jellyfin remains optional, not another always-open dashboard panel. The detailed implementation record is in [dashboard-qol-implementation.md](dashboard-qol-implementation.md).
+Next: review the new shell and Home editing after redeployment, then version-aware Beszel verification and measured farm comparisons. Jellyfin remains optional, not another always-open dashboard panel. Active "Now Playing" is distinct from the implemented Continue Watching list and remains a follow-up. The detailed implementation record is in [dashboard-qol-implementation.md](dashboard-qol-implementation.md).
 
 Avoid duplicate launchers, a second monitoring system, automatic AI-directory scraping, generic third-party iframes and new database infrastructure until a concrete need justifies them.

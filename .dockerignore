@@ -8,6 +8,7 @@
 **/.env
 stack.env
 output/
+build-info.json
 
 # Runtime state belongs to the persistent Docker volume, never the image.
 data/*.db

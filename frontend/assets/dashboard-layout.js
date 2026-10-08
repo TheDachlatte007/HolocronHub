@@ -1,9 +1,10 @@
 (() => {
   'use strict';
-  const names = {launch:'Quick Launch', weather:'Weather', monitoring:'Monitoring', favorites:'Quick Access', jellyfin:'Jellyfin'};
+  const names = {welcome:'Welcome', launch:'Quick Launch', weather:'Weather', monitoring:'Monitoring', favorites:'Quick Access', jellyfin:'Jellyfin', library:'Tool library'};
   const defaults = {dashboard_order:Object.keys(names), dashboard_hidden:['jellyfin']};
   let root, grid, options, toolbar, choices, status, panels, controls;
   let editing = false, busy = false, draft, original, dragging = null, touch = null;
+  const revealed = new Set();
   const element = (tag, text, className) => {
     const node = document.createElement(tag);
     if (text) node.textContent = text;
@@ -14,6 +15,7 @@
     const order = Array.isArray(input.dashboard_order) ? input.dashboard_order : defaults.dashboard_order;
     const hidden = Array.isArray(input.dashboard_hidden) ? input.dashboard_hidden : defaults.dashboard_hidden;
     const valid = [...new Set(order.filter(id => Object.hasOwn(names,id)))];
+    if (!valid.includes('welcome')) valid.unshift('welcome');
     return {dashboard_order:[...valid,...Object.keys(names).filter(id=>!valid.includes(id))], dashboard_hidden:[...new Set(hidden.filter(id=>Object.hasOwn(names,id)))]};
   }
   function button(label, handler, className = '') {
@@ -27,18 +29,18 @@
     const focused = document.activeElement;
     const choice = focused?.dataset.layoutChoice;
     const layout = editing ? draft : normalized(options.get());
-    grid.dataset.launchStack = String(layout.dashboard_order[0] === 'launch' && !layout.dashboard_hidden.includes('weather') && !layout.dashboard_hidden.includes('monitoring'));
+    grid.dataset.launchStack = String(layout.dashboard_order.filter(id=>!['welcome','library','favorites','jellyfin'].includes(id))[0] === 'launch' && !layout.dashboard_hidden.includes('weather') && !layout.dashboard_hidden.includes('monitoring'));
     root.classList.toggle('dashboard-editing',editing);
     for (const id of layout.dashboard_order) {
       const panel = panels.get(id);
       if (!panel) continue;
       grid.append(panel);
-      panel.hidden = !editing && (layout.dashboard_hidden.includes(id) || panel.dataset.layoutEmpty === 'true');
+      panel.hidden = !editing && ((layout.dashboard_hidden.includes(id) && !revealed.has(id)) || panel.dataset.layoutEmpty === 'true');
       controls.get(id).hidden = !editing;
     }
     toolbar.replaceChildren();
     if (!editing) {
-      toolbar.append(button('Arrange dashboard',start,'sm'));
+      toolbar.append(button(options.get()?.language === 'DE' ? 'Seite bearbeiten' : 'Edit page',start,'sm'));
       choices.hidden = true;
       options.onVisibility?.(layout.dashboard_hidden);
       return;
@@ -67,7 +69,7 @@
     if (choice) choices.querySelector(`[data-layout-choice="${choice}"]`)?.focus({preventScroll:true});
     else if (focused && root.contains(focused)) focused.focus({preventScroll:true});
   }
-  function start() {original=normalized(options.get());draft=normalized(original);editing=true;status.textContent='Preview only. Save to keep these changes.';render();}
+  function start() {revealed.clear();original=normalized(options.get());draft=normalized(original);editing=true;status.textContent='Preview only. Save to keep these changes.';render();}
   function cancelLayout() {editing=false;draft=null;status.textContent='';render();}
   async function saveLayout() {
     if (busy) return;
@@ -114,7 +116,7 @@
     const earlier=button('Up',()=>move(id,draft.dashboard_order.indexOf(id)-1),'sm');
     const later=button('Down',()=>move(id,draft.dashboard_order.indexOf(id)+1),'sm');
     earlier.setAttribute('aria-label','Move '+names[id]+' earlier');later.setAttribute('aria-label','Move '+names[id]+' later');
-    bar.append(handle,earlier,later);panel.prepend(bar);controls.set(id,bar);
+    bar.append(element('strong',names[id]),handle,earlier,later);panel.prepend(bar);controls.set(id,bar);
   }
   function mount(target, configuration) {
     if (!target || root) return;
@@ -140,5 +142,6 @@
     render();
   }
   function apply() {if(root && !editing)render();}
-  window.HolocronDashboardLayout={mount,apply};
+  function reveal(id, show=true) {if(show)revealed.add(id);else revealed.delete(id);apply();}
+  window.HolocronDashboardLayout={mount,apply,reveal};
 })();

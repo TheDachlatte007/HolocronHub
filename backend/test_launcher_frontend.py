@@ -55,7 +55,8 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
       if (url.pathname.startsWith('/assets/')) {
         const file = path.join(process.env.LAUNCHER_ROOT, 'frontend', url.pathname);
         if (!fs.existsSync(file)) return route.fulfill({status:404, body:''});
-        return route.fulfill({contentType: url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname.endsWith('.css') ? 'text/css' : 'image/svg+xml', body:fs.readFileSync(file)});
+        const mime={'.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.woff2':'font/woff2'}[path.extname(file)]||'application/octet-stream';
+        return route.fulfill({contentType:mime, body:fs.readFileSync(file)});
       }
       if (url.pathname === '/') return route.fulfill({contentType: 'text/html', body: fs.readFileSync(path.join(process.env.LAUNCHER_ROOT, 'frontend/index.html'))});
       if (url.pathname === '/api/settings') {
@@ -63,6 +64,9 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
         return route.fulfill({json:settings});
       }
       if (url.pathname === '/api/dashboard/jellyfin') {mediaCalls++;return route.fulfill({json:{state:'disabled',items:[]}});}
+      if (url.pathname === '/api/build-info') return route.fulfill({json:{version:'0.2.0',source_id:'c'.repeat(64),revision:null,built_at:'2026-10-08T12:00:00Z',source:'image-build'}});
+      if (url.pathname === '/api/dashboard/weather') return route.fulfill({json:{location:'Augsburg',air_temperature:11,weather_code:45,is_day:true,feels_like:8,wind_speed:4,humidity:90,rainfall:0,date:'2026-10-08T12:00:00Z'}});
+      if (url.pathname === '/api/dashboard/kuma') return route.fulfill({json:{configured:true,summary:{total:2,online:2,offline:0},services:[{name:'Fixture NAS',status:'online'},{name:'Fixture Media',status:'online'}],checked_at:'2026-10-08T12:00:00Z'}});
       if (url.pathname === '/api/warframe/farm-journal/sessions') return route.fulfill({json:{sessions:[],active_session:null,summary:{session_count:0},has_more:false}});
       if (url.pathname === '/api/homelab/overview') {
         await healthGate;
@@ -81,6 +85,8 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
     });
     await page.goto('http://launcher.test/');
     await page.waitForFunction(() => _toolCache.length === 9, null, {timeout:5000}).catch(error => {throw Error(error.message + '\n' + errors.join('\n'));});
+    assert.equal(await page.locator('.shell-topnav').count(),0,'duplicate workspace navigation removed');
+    await page.locator('#home-build-info').getByText(/cccccccccccc/).waitFor();
     await page.getByRole('button', {name: 'All services', exact: false}).first().click();
     await page.waitForFunction(() => document.querySelectorAll('#homelab-command-content .homelab-service-row').length === 9, null, {timeout: 5000});
     assert.equal(await page.locator('#shell-context').count(), 0);
@@ -133,6 +139,10 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
       await page.setViewportSize({width, height:900});
       for (const hub of ['warframe', 'f1']) {
         await page.evaluate(name => showTab(name), hub);
+        await page.locator('.app-shell-header').getByRole('button',{name:'Settings',exact:true}).waitFor();
+        await page.getByRole('button',{name:'Search Hub',exact:true}).click();
+        await page.locator('#tool-search-panel').waitFor({state:'visible'});
+        await page.keyboard.press('Escape');
         const shellCard = page.locator(`#tab-${hub} > .card`);
         const shellStyle = await shellCard.evaluate(el => {
           const css = getComputedStyle(el);
@@ -152,6 +162,13 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
         const collapsedRadius = await shellCard.evaluate(el => parseFloat(getComputedStyle(el).borderTopLeftRadius));
         assert(collapsedRadius >= 12, `${hub}: collapsed navigation must preserve card rounding`);
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        if(width>900){
+          await page.evaluate(()=>{const spacer=document.createElement('div');spacer.id='qa-spacer';spacer.style.height='1700px';document.querySelector('.holocron-content').append(spacer);window.scrollTo(0,200);});
+          await page.waitForTimeout(50);
+          const sticky = await page.locator('.app-shell-header').boundingBox();
+          assert(sticky.y>=0 && sticky.y<10,'header remains visible on desktop scroll');
+          await page.evaluate(()=>{document.getElementById('qa-spacer').remove();window.scrollTo(0,0);});
+        }
       }
     }
     await page.evaluate(() => openAllServices());
@@ -159,30 +176,58 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
     assert.equal(await page.locator('.homelab-command-tab.active').textContent(), 'All services');
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile service list must fit viewport');
     await page.evaluate(() => showTab('tools'));
+    if(process.env.LAUNCHER_QA_OUTPUT){
+      await page.setViewportSize({width:1440,height:1000});
+      await page.waitForFunction(()=>!document.querySelector('.home-arriving'));
+      await page.screenshot({path:path.join(process.env.LAUNCHER_QA_OUTPUT,'home-default.png'),fullPage:true});
+    }
     assert.equal(mediaCalls,0,'hidden optional tile performs no requests');
-    await page.getByRole('button',{name:'Arrange dashboard',exact:true}).click();
+    await page.getByRole('button',{name:'Edit page',exact:true}).click();
+    if(process.env.LAUNCHER_QA_OUTPUT){
+      await page.setViewportSize({width:390,height:1000});
+      await page.screenshot({path:path.join(process.env.LAUNCHER_QA_OUTPUT,'home-editor-mobile.png'),fullPage:true});
+    }
+    await page.getByRole('checkbox',{name:'Show Welcome',exact:true}).uncheck();
+    await page.getByRole('checkbox',{name:'Show Tool library',exact:true}).uncheck();
     await page.getByRole('button',{name:'Move Weather earlier',exact:true}).click();
     await page.getByRole('checkbox',{name:'Show Monitoring',exact:true}).uncheck();
     await page.getByRole('checkbox',{name:'Show Jellyfin',exact:true}).check();
     await page.getByRole('button',{name:'Save layout',exact:true}).click();
-    await page.getByRole('button',{name:'Arrange dashboard',exact:true}).waitFor();
+    await page.getByRole('button',{name:'Edit page',exact:true}).waitFor();
     await page.getByText('Jellyfin is disabled. Enable it in Settings.',{exact:true}).waitFor();
-    assert.equal(settings.ux.dashboard_order[0],'weather');
+    assert.equal(settings.ux.dashboard_order[1],'weather');
     await page.reload();
-    await page.getByRole('button',{name:'Arrange dashboard',exact:true}).waitFor();
-    await page.waitForFunction(()=>_appSettings?.ux.dashboard_order[0]==='weather');
+    await page.getByRole('button',{name:'Edit page',exact:true}).waitFor();
+    await page.waitForFunction(()=>_appSettings?.ux.dashboard_order[1]==='weather');
     await page.waitForFunction(()=>!document.querySelector('.home-arriving'));
-    assert.equal(await page.locator('[data-dashboard-tile]').first().getAttribute('data-dashboard-tile'),'weather');
+    assert.equal(await page.locator('[data-dashboard-tile]').first().getAttribute('data-dashboard-tile'),'welcome');
+    assert.equal(await page.locator('[data-dashboard-tile="welcome"]').isVisible(),false,'welcome can be hidden');
+    assert.equal(await page.locator('[data-dashboard-tile="library"]').isVisible(),false,'library can be hidden');
     assert.equal(await page.locator('[data-dashboard-tile="monitoring"]').isVisible(),false,'hide survives reload');
     assert.equal(await page.locator('[data-dashboard-tile="favorites"]').count(),1);
     assert.equal(await page.locator('.home-dashboard-grid > [data-dashboard-tile="favorites"]').count(),1,'quick access is a real arranged tile');
-    for (const width of [1440,390,320]) {
+    for (const width of [1440,1024,901,390,320]) {
       await page.setViewportSize({width,height:1000});
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'dashboard fits '+width);
       if(process.env.LAUNCHER_QA_OUTPUT)await page.screenshot({path:path.join(process.env.LAUNCHER_QA_OUTPUT,'dashboard-'+width+'.png'),fullPage:true});
     }
+    await page.evaluate(()=>{showTab('warframe');toggleToolSearchPanel(true);});
+    await page.locator('#q').fill('Vault');
+    await page.getByRole('button',{name:'Filter directory',exact:true}).click();
+    await page.locator('[data-dashboard-tile="library"]').waitFor({state:'visible'});
+    assert(settings.ux.dashboard_hidden.includes('library'),'search reveal does not overwrite saved layout');
+    await page.evaluate(()=>clearToolSearch());
+    await page.locator('[data-dashboard-tile="library"]').waitFor({state:'hidden'});
     await page.evaluate(()=>{showTab('warframe');setWarframeWorkspace('planner');document.getElementById('wf-journal-details').open=true;});
     await page.locator('#wf-farm-journal').getByRole('button',{name:'Start session',exact:true}).waitFor();
+    await page.evaluate(()=>updateWarframeHeroStatus({stale:true,market:{last_avg_price:78},data_as_of:'2026-10-08T12:00:00Z'}));
+    assert.equal(await page.locator('#wf-market-hero-status').getAttribute('data-state'),'stale');
+    await page.evaluate(()=>updateWarframeHeroStatus({refresh_error:'Timeout',market:{}}));
+    assert.equal(await page.locator('#wf-market-hero-status').getAttribute('data-state'),'error');
+    await page.setViewportSize({width:1440,height:1000});
+    await page.evaluate(()=>setGlobalNavCollapsed(false));
+    await page.evaluate(()=>updateWarframeHeroStatus({stale:true,market:{last_avg_price:78},data_as_of:'2026-10-08T12:00:00Z'}));
+    if(process.env.LAUNCHER_QA_OUTPUT)await page.screenshot({path:path.join(process.env.LAUNCHER_QA_OUTPUT,'warframe-header.png'),fullPage:false});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'journal integration fits mobile Warframe');
     assert.deepEqual(errors, []);
   } finally {releaseHealth(); await browser.close();}

@@ -17,9 +17,6 @@
     .shell-controls{display:flex;align-items:center;gap:8px}
     .shell-back{display:grid;place-items:center;width:36px;height:36px;padding:0;border-radius:11px;border:1px solid rgba(71,105,139,.55);background:linear-gradient(145deg,rgba(18,35,56,.96),rgba(8,18,32,.96));color:#b8d7e9;box-shadow:inset 0 1px rgba(255,255,255,.06),0 5px 14px rgba(0,0,0,.16);transition:transform .18s ease,border-color .18s ease,color .18s ease}.shell-back svg{width:18px;height:18px;stroke-width:1.9}.shell-back:hover{transform:translateY(-1px);border-color:#38bdf8;color:#e7fbff}
     .shell-clock{font-size:11px;color:#94a3b8;letter-spacing:.04em;white-space:nowrap}
-    .shell-topnav{display:none;align-items:center;gap:5px;margin-left:auto;margin-right:16px}
-    .shell-top-tab{padding:8px 13px;border:1px solid transparent;border-radius:8px;background:transparent;color:#91a4bd;font-size:12px;cursor:pointer}
-    .shell-top-tab:hover,.shell-top-tab.active{color:#ecfeff;background:rgba(8,145,178,.14);border-color:rgba(34,211,238,.28)}
     .shell-utility{width:36px;height:36px;padding:0;border-radius:11px;border:1px solid rgba(71,105,139,.55);background:linear-gradient(145deg,rgba(18,35,56,.96),rgba(8,18,32,.96));color:#b8d7e9;display:grid;place-items:center;box-shadow:inset 0 1px rgba(255,255,255,.06),0 5px 14px rgba(0,0,0,.16);transition:transform .18s ease,border-color .18s ease,color .18s ease}
     .shell-utility svg{width:18px;height:18px;stroke-width:1.8}.shell-utility:hover{transform:translateY(-1px);border-color:#38bdf8;color:#e7fbff}
     .shell-search{display:none;align-items:center;gap:9px;width:min(430px,34vw);height:38px;margin-left:auto;margin-right:18px;padding:0 13px;border:1px solid #29405f;border-radius:10px;background:#091525;color:#8ea0b7;font:inherit;font-size:12px;text-align:left;cursor:pointer}
@@ -48,7 +45,6 @@
     .holocron-shell>.nav .nav-tab{width:100%;margin:0;text-align:left;border:1px solid transparent;border-radius:9px;padding:9px 11px}
     .holocron-shell>.nav .nav-tab.active{border-color:rgba(56,189,248,.28);background:rgba(37,99,235,.22);color:#f8fafc}
     .nav-collapsed .holocron-shell>.nav{display:none}
-    body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{display:flex}
     body[data-hub="f1"] .holocron-content,body[data-hub="warframe"] .holocron-content{grid-column:1;grid-row:3}
     body[data-hub="f1"] .wrap,body[data-hub="warframe"] .wrap{max-width:none;padding:0 0 28px}
     body[data-hub="f1"] .app-shell-header,body[data-hub="warframe"] .app-shell-header{padding:16px 24px 12px;margin:0;border-bottom:1px solid rgba(41,64,95,.7)}
@@ -609,7 +605,7 @@
     .wf-shell-card>h2{font-size:11px;letter-spacing:.14em;color:#8293ac;margin-bottom:9px}
     #tab-tools>.card,#tab-homelab>.card{background:linear-gradient(150deg,#18263c 0%,#142137 48%,#101b2e 100%);border-color:#2e4664;box-shadow:0 20px 55px rgba(2,6,23,.22)}
     #tab-tools>.card h2,#tab-homelab>.card h2{color:#8293ac}
-    @media (max-width:720px){body[data-hub="f1"] .shell-topnav,body[data-hub="warframe"] .shell-topnav{order:3;flex-basis:100%;margin:4px 0 0;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}.app-shell-header{gap:8px}.shell-search{display:none!important}.shell-controls{margin-left:auto}.mobile-search-trigger{display:grid;place-items:center}}
+    @media (max-width:720px){body[data-hub="f1"] .shell-clock,body[data-hub="warframe"] .shell-clock{display:none}.app-shell-header{gap:8px}.shell-search{display:none!important}.shell-controls{margin-left:auto}.mobile-search-trigger{display:grid;place-items:center}}
     @media(max-width:640px){.shell-clock,.shell-back,.shell-utility[aria-label="Display options"]{display:none!important}.shell-controls{gap:6px}.app-shell-header{justify-content:flex-start}}
     body[data-hub="warframe"] .holocron-shell>.nav{background:linear-gradient(180deg,rgba(8,19,37,.96),rgba(7,15,29,.96));border-color:#294261}
     body[data-hub="warframe"] .hub-subnav{margin-top:12px}
@@ -1046,6 +1042,7 @@
   </style>
   <link rel="stylesheet" href="assets/learning.css" />
   <link rel="stylesheet" href="assets/dashboard-layout.css" />
+  <link rel="stylesheet" href="assets/shell-polish.css" />
 </head>
 <body data-hub="tools">
 <div class="wrap holocron-shell">
@@ -1053,14 +1050,7 @@
     <h1 class="holocron-brand"><button class="brand-home-button" type="button" onclick="goHomeDashboard()" aria-label="HolocronHub Home" title="Back to dashboard"><span class="holocron-mark" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><polygon points="16,1.8 28.5,9 28.5,23 16,30.2 3.5,23 3.5,9" fill="#071a2c" stroke="#39d9f3" stroke-width="1.3"/><polygon points="16,6 24,10.6 24,21.4 16,26 8,21.4 8,10.6" fill="none" stroke="#62e9fb" stroke-width="1"/><circle cx="16" cy="16" r="4.2" fill="#67e8f9" opacity=".9"/></svg></span><span class="holocron-wordmark">HolocronHub</span></button></h1>
     <button class="shell-nav-toggle" id="shell-nav-toggle" onclick="toggleGlobalNav()" aria-label="Toggle navigation" aria-expanded="true" title="Hide navigation"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16M13 9l-2 3 2 3"/></svg></button>
     <button class="shell-search" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Search services, devices, or commands"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg><span>Search services, devices, or commands...</span><kbd>CTRL K</kbd></button>
-    <button class="mobile-search-trigger" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Open search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg></button>
-    <nav class="shell-topnav" aria-label="Primary workspace navigation">
-      <button class="shell-top-tab active" data-shell-tab="tools" onclick="showTab('tools',this)">Home</button>
-      <button class="shell-top-tab" data-shell-tab="learning" onclick="showTab('learning',this)">Learning</button>
-      <button class="shell-top-tab" data-shell-tab="f1" onclick="showTab('f1',this)">F1</button>
-      <button class="shell-top-tab" data-shell-tab="warframe" onclick="showTab('warframe',this)">Warframe</button>
-      <button class="shell-top-tab" data-shell-tab="markets" onclick="showTab('markets',this)">Markets</button>
-    </nav>
+    <button class="mobile-search-trigger" type="button" onclick="toggleToolSearchPanel();setTimeout(()=>document.getElementById('q')?.focus(),0)" aria-label="Search Hub" title="Search Hub (Ctrl/Cmd+K)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 4.6 4.6" stroke="currentColor" stroke-width="1.7"/></svg></button>
     <div class="shell-controls">
       <span id="shell-clock" class="shell-clock"></span>
       <button class="shell-back" onclick="goBackInHub()" title="Back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
@@ -1119,7 +1109,7 @@
   <div id="tab-tools">
     <div class="card">
       <section class="home-dashboard" aria-label="HolocronHub command center">
-        <header class="home-welcome">
+        <header class="home-welcome" data-dashboard-tile="welcome">
           <div class="home-hero-brand">
             <div class="home-holocron-mark" aria-hidden="true"><span></span></div>
             <div class="home-welcome-copy">
@@ -1148,7 +1138,9 @@
             <section class="home-panel home-jellyfin-panel" data-dashboard-tile="jellyfin" aria-label="Jellyfin continue watching" hidden><div id="home-jellyfin-content"></div></section>
           </div>
         </div>
+        <div class="home-build-footer"><button type="button" id="home-build-info" onclick="showTab('settings')" aria-label="Build details">Loading build information...</button></div>
       </section>
+      <section class="home-library-panel" data-dashboard-tile="library" aria-label="Tool library">
       <div class="tool-hub-top">
         <div class="home-welcome-copy">
           <h2>HolocronHub Tool Hub</h2>
@@ -1222,6 +1214,7 @@
       </div>
         </div>
       </details>
+      </section>
     </div>
     <div id="manage-tools-panel" class="card tool-manage-panel" hidden>
       <h2>Manage Tools</h2>
@@ -2002,7 +1995,7 @@
           <div class="settings-field"><label for="set-jellyfin-key">Jellyfin API key</label><input id="set-jellyfin-key" type="password" autocomplete="off" /></div>
           <div class="settings-field"><label for="set-jellyfin-user">Jellyfin user ID</label><input id="set-jellyfin-user" placeholder="User whose Continue Watching list to show" /></div>
         </div>
-        <p class="settings-hint">Optional and read-only. Set URL, API key and user ID, save, then show Jellyfin through Arrange dashboard. Credentials stay in your private settings backup; no embedded player.</p>
+        <p class="settings-hint">Optional and read-only: Continue Watching, not currently playing sessions. Set URL, API key and user ID, save, then show Jellyfin through Edit page. Credentials stay in your private settings backup; no embedded player.</p>
         <h3>Weather and monitoring</h3>
         <div class="settings-grid">
           <div class="settings-field"><label for="set-weather-location">Weather location</label><input id="set-weather-location" placeholder="Augsburg" /></div>
@@ -2050,6 +2043,7 @@
         </div>
         <div class="settings-hint">Connections are stored in the private local settings file and applied as backend environment variables. Credentials are never included in the Homelab API response.</div>
       </div>
+      <section class="build-info-settings" aria-label="Build details"><h2>Running Build</h2><div id="build-info-details" class="small-list">Loading build information...</div><button class="sm" type="button" onclick="HolocronBuildInfo.load()">Refresh build details</button></section>
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155">
         <h2>Provider Diagnostics</h2>
         <div class="row">
@@ -2096,6 +2090,7 @@
 <script src="assets/warframe-journal.js"></script>
 <script src="assets/warframe-drops.js"></script>
 <script src="assets/jellyfin-dashboard.js"></script>
+<script src="assets/build-info.js"></script>
 <script src="assets/warframe-chart.js"></script>
 <script>
 const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8787' : window.location.origin;
@@ -2392,7 +2387,6 @@ function showTab(name, btn, options = {}) {
   syncGlobalNavToggle();
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display='none');
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.getAttribute('onclick')?.includes(`showTab('${name}'`)));
-  document.querySelectorAll('[data-shell-tab]').forEach(b => b.classList.toggle('active', b.dataset.shellTab === name));
   if (name !== 'f1') { clearF1SessionPolling(); clearF1ClockTicker(); }
   if (name !== 'warframe') clearWarframeAutoRefresh();
   document.getElementById(`tab-${name}`).style.display='';
@@ -2574,6 +2568,7 @@ function applyToolSearch() {
   activeHomeGroup = '';
   document.querySelectorAll('#cat-tabs button').forEach((button, index) => button.classList.toggle('active', index === 0));
   showTab('tools');
+  window.HolocronDashboardLayout?.reveal('library');
   document.getElementById('tool-library').open = true;
   document.getElementById('home-tools-section').open = true;
   loadTools();
@@ -2586,6 +2581,7 @@ function clearToolSearch() {
   const sortEl = document.getElementById('tool-sort');
   if (qEl) qEl.value = '';
   _toolFilterQuery = '';
+  window.HolocronDashboardLayout?.reveal('library',false);
   if (sortEl) sortEl.value = '';
   loadTools();
   toggleToolSearchPanel(false);
@@ -4911,6 +4907,16 @@ function warframeSnapshotStatus(data, fallbackTime) {
   return `${state} | ${saved}${data.stale ? ' (stale)' : ''}`;
 }
 
+function updateWarframeHeroStatus(data, fallbackTime) {
+  const node = document.getElementById('wf-market-hero-status');
+  if (!node) return;
+  const available = hasWarframeMarketData(data.market);
+  node.dataset.state = data.refresh_error ? (available ? 'stale' : 'error')
+    : data.stale || (available && (data.refreshing || data.loading)) ? 'stale'
+    : data.loading ? 'loading' : available ? 'fresh' : 'unknown';
+  node.textContent = warframeSnapshotStatus(data, fallbackTime);
+}
+
 function mergeWarframeSnapshot(data, cached) {
   if (hasWarframeMarketData(data.market) || !hasWarframeMarketData(cached?.market)) return data;
   return { ...cached, ...data, market: cached.market, data_as_of: cached.data_as_of || cached.generated_at,
@@ -6917,8 +6923,7 @@ function renderWarframeOverview(data, item, platform, options = {}) {
     ? ` | saved ${relTime(options.cacheTimestamp) || 'locally'}${clientCacheAge > WARFRAME_OVERVIEW_STALE_MS ? ' (older snapshot)' : ''}`
     : '';
   metaEl.textContent = `${String(data.platform || platform || 'pc').toUpperCase()} | ${warframeSnapshotStatus(data, options.cacheTimestamp)}${cacheTag}${clientCacheTag}${worldStateTag}${errInfo}`;
-  const heroStatus = document.getElementById('wf-market-hero-status');
-  if (heroStatus) heroStatus.textContent = warframeSnapshotStatus(data, options.cacheTimestamp);
+  updateWarframeHeroStatus(data, options.cacheTimestamp);
   if (errEl) {
     const errs = [...new Set([...(data.errors || []), data.refresh_error].filter(Boolean).map(friendlyProviderError).filter(Boolean))].slice(0, 6);
     errEl.innerHTML = errs.map(e => `<span class="warn-item">${esc(e)}</span>`).join('');
@@ -7107,9 +7112,9 @@ async function loadWarframe(options = {}) {
       return;
     }
     if (metaEl) metaEl.textContent += ' | refreshing';
-    const heroStatus = document.getElementById('wf-market-hero-status');
-    if (heroStatus) heroStatus.textContent = `Saved snapshot ${relTime(cachedOverview.ts)} · refreshing`;
+    updateWarframeHeroStatus({...cachedOverview.data, refreshing:true}, cachedOverview.ts);
   } else {
+    updateWarframeHeroStatus({loading:true, market:{}});
     renderWarframeCommandDetail({ loading: true, market: { canonical_name: item, history: [] }, worldstate: {} }, item, platform);
     marketEl.innerHTML = '<div class="muted">No saved snapshot yet; fetching the latest market data…</div>';
     if (marketChartEl) marketChartEl.innerHTML = '<div class="muted">Loading price history…</div>';
@@ -7137,6 +7142,7 @@ async function loadWarframe(options = {}) {
   } catch (e) {
     if (!currentWarframeRefresh('overview', refreshJob)) return;
     const failed = { ...(cachedOverview?.data || {}), loading: false, refreshing: false, refresh_error: e.message || 'Request failed' };
+    updateWarframeHeroStatus(failed, cachedOverview?.ts);
     renderWarframeCommandDetail(failed, item, platform);
     if (!hasClientCache) {
       marketEl.innerHTML = `<div class="err-msg">Warframe API failed: ${esc(e.message)}</div>`;
@@ -7149,8 +7155,7 @@ async function loadWarframe(options = {}) {
       worldEl.innerHTML = '';
     } else {
       if (metaEl) metaEl.textContent += ' | refresh failed; showing saved data';
-      const heroStatus = document.getElementById('wf-market-hero-status');
-      if (heroStatus) heroStatus.textContent = `Saved snapshot ${relTime(cachedOverview.ts)} · refresh failed`;
+      updateWarframeHeroStatus(failed, cachedOverview.ts);
       if (errEl) errEl.innerHTML = `<span class="warn-item">Refresh failed; showing the last saved Warframe snapshot. ${esc(e.message)}</span>`;
       const overviewStatus = document.getElementById('wf-overview-status');
       if (overviewStatus) overviewStatus.textContent = warframeSnapshotStatus(failed, cachedOverview.ts);
@@ -8339,7 +8344,7 @@ const DEFAULT_SETTINGS = {
     theme: 'navy-neon',
     glow: true,
     compact: false,
-    dashboard_order: ['launch', 'weather', 'monitoring', 'favorites', 'jellyfin'],
+    dashboard_order: ['welcome', 'launch', 'weather', 'monitoring', 'favorites', 'jellyfin', 'library'],
     dashboard_hidden: ['jellyfin'],
   },
   feed: {
@@ -8598,6 +8603,7 @@ async function patchSettings(patch) {
 }
 
 async function loadSettingsPage() {
+  window.HolocronBuildInfo.load();
   const controls = [...document.querySelectorAll('#tab-settings input, #tab-settings select, #tab-settings textarea, #tab-settings button')];
   const disabled = controls.map(control => control.disabled);
   controls.forEach(control => { control.disabled = true; });
@@ -8758,6 +8764,7 @@ async function saveSettingsHomelab() {
 }
 
 // ══ init ═════════════════════════════════════════════════════
+window.HolocronBuildInfo.load();
 window.HolocronFarmJournal.mount(document.getElementById('wf-farm-journal'));
 document.getElementById('wf-journal-details').addEventListener('toggle', event => {
   if (event.target.open) window.HolocronFarmJournal.load();

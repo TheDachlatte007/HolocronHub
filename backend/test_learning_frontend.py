@@ -17,7 +17,7 @@ class LearningFrontendTests(unittest.TestCase):
 
     def test_shell_navigation_and_hash_context_register_learning(self):
         shell = self.source("frontend/index.html")
-        self.assertIn('data-shell-tab="learning"', shell)
+        self.assertNotIn('class="shell-topnav"', shell)
         self.assertRegex(shell, r'class="nav-tab"[^>]*showTab\(\'learning\'')
         self.assertRegex(shell, r"learning:\s*'Learning'")
         self.assertIn('id="tab-learning"', shell)

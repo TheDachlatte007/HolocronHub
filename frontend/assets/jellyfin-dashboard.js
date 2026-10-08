@@ -44,7 +44,9 @@
       ready: 'Your next watch, ready when you are.',
       stale: 'Jellyfin is unavailable. Showing the last saved snapshot.'
     };
-    ui.status.textContent = messages[state] || messages.unavailable;
+    ui.status.textContent = data.error_code === 'invalid_user_id'
+      ? 'Enter the Jellyfin user ID (UUID), not the username. Find it in Jellyfin Dashboard > Users.'
+      : messages[state] || messages.unavailable;
     if (data.stale || state === 'stale') ui.status.classList.add('jellyfin-stale');
     if (Number.isFinite(data.updated_at) && ['stale', 'ready', 'empty'].includes(state)) {
       const date = new Date(data.updated_at * 1000);
@@ -54,7 +56,7 @@
         })}`));
       }
     }
-    if (setup) {stopLive();liveController=livePending=null;liveData={state,items:[]};renderLive(liveData);updateBusy();}
+    if (setup) {stopLive();liveController=livePending=null;liveData={state,items:[],error_code:data.error_code};renderLive(liveData);updateBusy();}
     if (setup || state === 'unavailable') return;
     renderItems(ui.items, data.items, false);
   }
@@ -124,7 +126,8 @@
       stale:'Playback status is out of date. Waiting for a fresh check.',
       unavailable:'Playback status unavailable. Continue Watching is independent.',
       disabled:'Enable Jellyfin in Settings to see current playback.',unconfigured:'Configure Jellyfin in Settings to see current playback.'};
-    ui.liveStatus.textContent=data.error_code==='permission_denied'?'Jellyfin denied session access. Check API key permissions in Settings.'
+    ui.liveStatus.textContent=data.error_code==='invalid_user_id'?'Enter the Jellyfin user ID (UUID), not the username. Find it in Jellyfin Dashboard > Users.'
+      :data.error_code==='permission_denied'?'Jellyfin denied session access. Check API key permissions in Settings.'
       :data.error_code==='rate_limited'?'Jellyfin rate limit reached. Retrying later.':messages[data.state]||messages.unavailable;
     ui.liveStatus.classList.toggle('jellyfin-stale',['unavailable','stale'].includes(data.state));
     if(data.state==='ready')renderItems(ui.liveItems,data.items,true);

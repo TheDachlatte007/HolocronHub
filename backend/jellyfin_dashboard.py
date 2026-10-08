@@ -197,7 +197,9 @@ def _sessions(rows: list, config: _Config) -> list[dict]:
 def _read_remote(config: _Config, path: str, params: dict) -> tuple[bytes, str]:
     deadline = time.monotonic() + 8
     # Never follow even same-host redirects: auth headers must not travel elsewhere.
-    with requests.get(f"{config.url}/{path}", params=params, headers={"X-Emby-Token": config.key},
+    # Jellyfin 12 disables legacy token headers. Encode the quoted modern value.
+    headers = {'Authorization': f'MediaBrowser Token="{quote(config.key, safe="")}"'}
+    with requests.get(f"{config.url}/{path}", params=params, headers=headers,
                       timeout=_TIMEOUT, allow_redirects=False, stream=True) as response:
         if response.status_code != 200:
             raise _RemoteError(response.status_code, response.headers.get('Retry-After'))
@@ -320,9 +322,19 @@ def create_jellyfin_router(config_getter: Callable[[], dict], cache_path: str | 
                 "settings_url": "#settings", "web_url": f"{config.url}/web/index.html"}
 
     def inactive(state: str) -> dict:
+        error_code = None
+        message = "Jellyfin is disabled. Enable it in Settings." if state == 'disabled' else "Configure a Jellyfin server URL, API key and user ID in Settings."
+        if state == 'unconfigured':
+            try:
+                raw = config_getter()
+                if (isinstance(raw, dict) and raw.get('jellyfin_url') and raw.get('jellyfin_api_key')
+                        and not _item_id(raw.get('jellyfin_user_id'))):
+                    error_code = 'invalid_user_id'
+                    message = 'Enter the Jellyfin user ID (UUID), not the username. Find it in Jellyfin Dashboard > Users.'
+            except Exception:
+                pass
         return {"state": state, "enabled": state != "disabled", "configured": False,
-                "message": "Jellyfin is disabled. Enable it in Settings." if state == "disabled"
-                else "Configure a Jellyfin server URL, API key and user ID in Settings.",
+                "message": message, 'error_code': error_code,
                 "items": [], "cached": False, "stale": False, "updated_at": None,
                 "retry_after_seconds": 0, "settings_url": "#settings", "web_url": None}
 

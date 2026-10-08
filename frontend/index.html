@@ -1995,7 +1995,7 @@
           <div class="settings-field"><label class="settings-toggle"><input id="set-jellyfin-enabled" type="checkbox" /> Enable Jellyfin media widget</label></div>
           <div class="settings-field"><label for="set-jellyfin-url">Jellyfin URL</label><input id="set-jellyfin-url" type="url" placeholder="https://jellyfin.example.com" /></div>
           <div class="settings-field"><label for="set-jellyfin-key">Jellyfin API key</label><input id="set-jellyfin-key" type="password" autocomplete="off" /></div>
-          <div class="settings-field"><label for="set-jellyfin-user">Jellyfin user ID</label><input id="set-jellyfin-user" placeholder="User whose playback and Continue Watching list to show" /></div>
+          <div class="settings-field"><label for="set-jellyfin-user">Jellyfin user ID (not username)</label><input id="set-jellyfin-user" placeholder="32-character user ID or UUID" /><span class="settings-hint">Jellyfin Dashboard &gt; Users: open your user and copy userId from the URL.</span></div>
         </div>
         <p class="settings-hint">Optional and read-only: Now Playing for this user plus Continue Watching. Set URL, API key and user ID, save, then add Jellyfin through Edit page. Live checks run every 20 seconds while Home is visible. Session access depends on the API key permissions; no player or remote controls. Credentials stay in your private settings backup.</p>
         <h3>Weather and monitoring</h3>

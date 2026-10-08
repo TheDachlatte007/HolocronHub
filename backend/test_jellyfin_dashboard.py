@@ -11,6 +11,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import quote
 
 import requests
 from fastapi import FastAPI
@@ -110,7 +111,7 @@ class JellyfinDashboardTests(unittest.TestCase):
         self.assertNotIn('UserId', json.dumps(data))
         call = self.network.call_args
         self.assertEqual(call.args[0], 'http://jellyfin.test:8096/base/Sessions')
-        self.assertEqual(call.kwargs['headers']['X-Emby-Token'], KEY)
+        self.assertEqual(call.kwargs['headers'], {'Authorization': f'MediaBrowser Token="{KEY}"'})
         self.assertFalse(call.kwargs['allow_redirects'])
         self.assertFalse(self.cache.exists(), 'live sessions must never become persisted playback history')
 
@@ -260,6 +261,23 @@ class JellyfinDashboardTests(unittest.TestCase):
                 self.config[field] = old
         self.network.assert_not_called()
 
+    def test_username_is_not_an_id_and_has_a_specific_safe_setup_message(self):
+        self.config['jellyfin_user_id'] = 'Example user'
+        for result in (self.get(True), self.live(True)):
+            self.assertEqual(result['state'], 'unconfigured')
+            self.assertEqual(result.get('error_code'), 'invalid_user_id')
+            self.assertIn('username', result['message'])
+            self.assertNotIn('Example user', json.dumps(result))
+        self.network.assert_not_called()
+
+    def test_modern_authorization_url_encodes_tokens_without_injecting_fields(self):
+        key = 'quote",Token="other\\value'
+        self.config['jellyfin_api_key'] = key
+        self.get()
+        self.assertEqual(self.network.call_args.kwargs['headers'],
+                         {'Authorization': f'MediaBrowser Token="{quote(key, safe="")}"'})
+        self.assertNotIn(key, self.network.call_args.args[0])
+
     def test_resume_request_uses_header_auth_get_and_bounded_options(self):
         result = self.get()
         self.assertEqual(result["state"], "ready")
@@ -267,7 +285,7 @@ class JellyfinDashboardTests(unittest.TestCase):
         options = self.network.call_args.kwargs
         self.assertEqual(url, f"http://jellyfin.test:8096/base/Users/{USER}/Items/Resume")
         self.assertNotIn(KEY, url + json.dumps(options["params"]))
-        self.assertEqual(options["headers"]["X-Emby-Token"], KEY)
+        self.assertEqual(options['headers'], {'Authorization': f'MediaBrowser Token="{KEY}"'})
         self.assertFalse(options["allow_redirects"])
         self.assertTrue(options["stream"])
         self.assertEqual(options["params"]["Limit"], 6)
@@ -429,7 +447,7 @@ class JellyfinDashboardTests(unittest.TestCase):
         self.assertEqual(response.headers["cache-control"], "no-store")
         self.assertNotIn(KEY, str(response.headers))
         options = self.network.call_args.kwargs
-        self.assertEqual(options["headers"]["X-Emby-Token"], KEY)
+        self.assertEqual(options['headers'], {'Authorization': f'MediaBrowser Token="{KEY}"'})
         self.assertFalse(options["allow_redirects"])
         self.assertEqual(self.network.call_args.args[0], f"http://jellyfin.test:8096/base/Items/{ITEM}/Images/Primary")
         self.assertNotIn(KEY, self.network.call_args.args[0])
@@ -564,7 +582,7 @@ const {chromium} = require(process.env.JF_PLAYWRIGHT);
         if(fail) return route.fulfill({status:503,body:'bad'});
         return route.fulfill({contentType:'application/json',body:JSON.stringify({state:mode,
           items:['ready','stale'].includes(mode)?[item]:[],stale:mode==='stale',settings_url:'#settings',
-          message:mode==='disabled'?'Jellyfin is disabled.':'',updated_at:1800000000})});
+          message:mode==='disabled'?'Jellyfin is disabled.':'',error_code:mode==='unconfigured'?'invalid_user_id':null,updated_at:1800000000})});
       }
       if(url.pathname.includes('/thumbnail')) return route.fulfill({status:404,body:''});
       return route.fulfill({contentType:'text/html',body:'<div id="home-jellyfin-content"></div><div id="other"></div>'});
@@ -598,6 +616,8 @@ const {chromium} = require(process.env.JF_PLAYWRIGHT);
     assert.ok((await page.locator('#home-jellyfin-content').innerText()).includes(item.title),'saved items survive fetch error');
     fail=false; mode='unconfigured'; await page.evaluate(()=>window.HolocronJellyfinDashboard.load());
     assert.equal(await page.locator('a.jellyfin-item').count(),0);
+    assert.match(await page.locator('.jellyfin-now-status').innerText(),/user ID.*not the username/i);
+    assert.match(await page.locator('.jellyfin-status').innerText(),/user ID.*not the username/i);
     fail=true; await page.evaluate(()=>window.HolocronJellyfinDashboard.load());
     assert.equal(await page.locator('a.jellyfin-item').count(),0,'disabled settings clear previous data');
     assert.match(await page.locator('#home-jellyfin-content').innerText(),/unavailable/i);

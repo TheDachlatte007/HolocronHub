@@ -16,7 +16,7 @@ Local tests do not prove that every configured external provider works on the se
 
 ## Stabilization Before More Widgets
 
-1. Build identity is now shown on Home and in Settings, using verified build metadata/source fingerprints rather than assuming a Git revision. Provider diagnostics already show refresh information; clearer per-provider freshness remains a follow-up.
+1. Build identity is now shown on Home and in Settings General only, using verified build metadata/source fingerprints rather than assuming a Git revision. Provider diagnostics stay in General; clearer per-provider freshness remains a follow-up.
 2. Verify configured adapters individually after deployment; retain real unknown/stale/error states rather than fabricated telemetry.
 3. Revisit Beszel before promoting CPU/RAM/container cards. The existing adapter probes `/api/metrics` and `/api/containers`, whereas the [official REST documentation](https://beszel.dev/guide/rest-api) describes PocketBase collections and user authentication. This is a compatibility concern, not proof that the user's particular installation is broken. API structure can change in minor versions; use version-aware fixtures.
 4. Keep a browser regression matrix for Home, Warframe, F1 and Learning, with both sidebar states and mobile widths. The rounded hub frame is now covered as well.
@@ -39,9 +39,9 @@ Initial scope: manual logging and history, no screen capture, game-client hooks 
 
 ### 2. Personal Dashboard Layout
 
-Implemented baseline: whole-Home editing, including Welcome and the Tool Library; drag handles, accessible move buttons, hide/show, reset, save/cancel, persisted settings and all-hidden recovery. Presets and free-form resizing are not included.
+Implemented baseline: whole-Home editing, including Welcome and the Tool Library; whole-card mouse/touch drag previews, accessible move buttons, an Add widget catalog instead of visibility checkboxes, remove/hide, reset, save/cancel, persisted settings and all-hidden recovery. Presets, arbitrary new widget types and free-form resizing are not included.
 
-- Choose which existing areas are visible and their order through Settings.
+- Choose which existing areas are visible and their order through Home's Edit page mode.
 - Offer focused Home presets, such as Gaming, Learn and Home Lab, without creating additional top-level hubs.
 - Persist layout choices alongside existing theme/glow/density preferences.
 - Keep weather, Quick Launch and favorites compact; hide unused sections rather than populate empty widgets.

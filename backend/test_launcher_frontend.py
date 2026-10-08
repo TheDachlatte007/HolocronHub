@@ -10,6 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class LauncherFrontendTests(unittest.TestCase):
+    def test_build_details_belong_to_general_settings_only(self):
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup((ROOT / 'frontend/index.html').read_text(encoding='utf-8'), 'html.parser')
+        self.assertIsNotNone(soup.select_one('.build-info-settings').find_parent(id='settings-panel-general'))
     def test_brand_header_has_no_redundant_workspace_label(self):
         shell = (ROOT / "frontend/index.html").read_text(encoding="utf-8")
         self.assertFalse('id="shell-context"' in shell, "Redundant header label still exists")
@@ -87,6 +91,13 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
     await page.waitForFunction(() => _toolCache.length === 9, null, {timeout:5000}).catch(error => {throw Error(error.message + '\n' + errors.join('\n'));});
     assert.equal(await page.locator('.shell-topnav').count(),0,'duplicate workspace navigation removed');
     await page.locator('#home-build-info').getByText(/cccccccccccc/).waitFor();
+    await page.locator('#home-build-info').click();
+    await page.locator('#settings-panel-general.active .build-info-settings').waitFor();
+    for (const panel of ['appearance','feed','ingest','api','homelab']) {
+      await page.evaluate(name=>showSettingsPanel(name),panel);
+      assert.equal(await page.locator('.build-info-settings').isVisible(),false,'build details do not follow '+panel);
+    }
+    await page.evaluate(()=>showTab('tools'));
     await page.getByRole('button', {name: 'All services', exact: false}).first().click();
     await page.waitForFunction(() => document.querySelectorAll('#homelab-command-content .homelab-service-row').length === 9, null, {timeout: 5000});
     assert.equal(await page.locator('#shell-context').count(), 0);
@@ -184,21 +195,41 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
     assert.equal(mediaCalls,0,'hidden optional tile performs no requests');
     await page.getByRole('button',{name:'Edit page',exact:true}).click();
     if(process.env.LAUNCHER_QA_OUTPUT){
+      await page.setViewportSize({width:1440,height:1000});
+      const handle=page.getByRole('button',{name:'Drag Weather',exact:true});await handle.hover();
+      const from=await handle.boundingBox();
+      await page.mouse.move(from.x+30,from.y+20);await page.mouse.down();
+      await page.mouse.move(from.x+75,from.y+60,{steps:10});
+      await page.locator('.dashboard-tile-float').waitFor({state:'visible'});
+      await page.screenshot({path:path.join(process.env.LAUNCHER_QA_OUTPUT,'home-drag-preview.png'),fullPage:false});
+      await page.mouse.up();
+      await page.getByRole('button',{name:'Cancel layout changes',exact:true}).click();
+      await page.getByRole('button',{name:'Edit page',exact:true}).click();
       await page.setViewportSize({width:390,height:1000});
+      const bar=await page.locator('[data-dashboard-tile="welcome"] .dashboard-tile-controls').boundingBox();
+      const welcome=await page.locator('[data-dashboard-tile="welcome"]').boundingBox();
+      assert(bar.width>welcome.width-45,'welcome editor header uses the available mobile width');
       await page.screenshot({path:path.join(process.env.LAUNCHER_QA_OUTPUT,'home-editor-mobile.png'),fullPage:true});
     }
-    await page.getByRole('checkbox',{name:'Show Welcome',exact:true}).uncheck();
-    await page.getByRole('checkbox',{name:'Show Tool library',exact:true}).uncheck();
+    await page.getByRole('button',{name:'Remove Welcome',exact:true}).click();
+    await page.getByRole('button',{name:'Remove Tool library',exact:true}).click();
     await page.getByRole('button',{name:'Move Weather earlier',exact:true}).click();
-    await page.getByRole('checkbox',{name:'Show Monitoring',exact:true}).uncheck();
-    await page.getByRole('checkbox',{name:'Show Jellyfin',exact:true}).check();
+    await page.getByRole('button',{name:'Remove Monitoring',exact:true}).click();
+    await page.getByRole('button',{name:'Add widget',exact:true}).click();
+    if(process.env.LAUNCHER_QA_OUTPUT){
+      for(const width of [1440,390]){
+        await page.setViewportSize({width,height:1000});
+        await page.screenshot({path:path.join(process.env.LAUNCHER_QA_OUTPUT,'widget-catalog-'+width+'.png'),fullPage:false});
+      }
+    }
+    await page.getByRole('dialog',{name:'Add a dashboard widget'}).getByRole('button',{name:'Add Jellyfin',exact:true}).click();
     await page.getByRole('button',{name:'Save layout',exact:true}).click();
     await page.getByRole('button',{name:'Edit page',exact:true}).waitFor();
     await page.getByText('Jellyfin is disabled. Enable it in Settings.',{exact:true}).waitFor();
-    assert.equal(settings.ux.dashboard_order[1],'weather');
+    assert.equal(settings.ux.dashboard_order.filter(id=>id!=='welcome')[0],'weather');
     await page.reload();
     await page.getByRole('button',{name:'Edit page',exact:true}).waitFor();
-    await page.waitForFunction(()=>_appSettings?.ux.dashboard_order[1]==='weather');
+    await page.waitForFunction(()=>_appSettings?.ux.dashboard_order.filter(id=>id!=='welcome')[0]==='weather');
     await page.waitForFunction(()=>!document.querySelector('.home-arriving'));
     assert.equal(await page.locator('[data-dashboard-tile]').first().getAttribute('data-dashboard-tile'),'welcome');
     assert.equal(await page.locator('[data-dashboard-tile="welcome"]').isVisible(),false,'welcome can be hidden');

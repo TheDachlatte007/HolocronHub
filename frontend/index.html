@@ -1138,7 +1138,7 @@
             <section class="home-panel home-jellyfin-panel" data-dashboard-tile="jellyfin" aria-label="Jellyfin continue watching" hidden><div id="home-jellyfin-content"></div></section>
           </div>
         </div>
-        <div class="home-build-footer"><button type="button" id="home-build-info" onclick="showTab('settings')" aria-label="Build details">Loading build information...</button></div>
+        <div class="home-build-footer"><button type="button" id="home-build-info" onclick="openBuildSettings()" aria-label="Build details">Loading build information...</button></div>
       </section>
       <section class="home-library-panel" data-dashboard-tile="library" aria-label="Tool library">
       <div class="tool-hub-top">
@@ -1892,6 +1892,8 @@
           </div>
           <div class="settings-hint">The full migration backup is private and includes API keys plus TLDR/Gmail configuration for plug-and-play restoration. Store it securely and never share it.</div>
         </div>
+        <section class="build-info-settings" aria-label="Build details"><h2>Running Build</h2><div id="build-info-details" class="small-list">Loading build information...</div><button class="sm" type="button" onclick="HolocronBuildInfo.load()">Refresh build details</button></section>
+        <section class="provider-diagnostics-settings"><h2>Provider Diagnostics</h2><div class="row"><button onclick="loadProviderDiagnostics()">Refresh Diagnostics</button><span id="diag-meta" class="muted"></span></div><div id="diag-list" class="small-list"><div class="muted">Not loaded yet.</div></div></section>
       </div>
 
       <div id="settings-panel-feed" class="settings-panel">
@@ -2043,15 +2045,6 @@
         </div>
         <div class="settings-hint">Connections are stored in the private local settings file and applied as backend environment variables. Credentials are never included in the Homelab API response.</div>
       </div>
-      <section class="build-info-settings" aria-label="Build details"><h2>Running Build</h2><div id="build-info-details" class="small-list">Loading build information...</div><button class="sm" type="button" onclick="HolocronBuildInfo.load()">Refresh build details</button></section>
-      <div style="margin-top:16px;padding-top:12px;border-top:1px solid #334155">
-        <h2>Provider Diagnostics</h2>
-        <div class="row">
-          <button onclick="loadProviderDiagnostics()">Refresh Diagnostics</button>
-          <span id="diag-meta" class="muted"></span>
-        </div>
-        <div id="diag-list" class="small-list"><div class="muted">Not loaded yet.</div></div>
-      </div>
 
     </div>
   </div>
@@ -2085,6 +2078,7 @@
   </form>
 </dialog>
 <script src="assets/tool-icons.js"></script>
+<script src="assets/vendor/Sortable-1.15.7.min.js"></script>
 <script src="assets/dashboard-layout.js"></script>
 <script src="assets/learning.js"></script>
 <script src="assets/warframe-journal.js"></script>
@@ -2334,6 +2328,7 @@ window.matchMedia('(max-width: 900px)').addEventListener('change', () => {
   syncGlobalNavToggle();
 });
 window.addEventListener('resize', syncGlobalNavToggle);
+window.addEventListener('scroll', () => document.body.classList.toggle('shell-scrolled', window.scrollY > 8), {passive:true});
 
 function toggleGlobalNav() {
   if (window.matchMedia('(max-width: 900px)').matches) {
@@ -8316,6 +8311,11 @@ function resetAppearancePreview() {
   document.getElementById('set-ux-glow').checked = ux.glow !== false;
   document.getElementById('set-ux-compact').checked = ux.compact === true;
   setSettingsStatus('appearance', '');
+}
+
+function openBuildSettings() {
+  showTab('settings');
+  showSettingsPanel('general', document.querySelector('[data-settings-tab="general"]'));
 }
 
 function openAppearanceSettings() {

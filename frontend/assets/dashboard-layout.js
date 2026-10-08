@@ -2,7 +2,7 @@
   'use strict';
   const names = {welcome:'Welcome', launch:'Quick Launch', weather:'Weather', monitoring:'Monitoring', favorites:'Quick Access', jellyfin:'Jellyfin', library:'Tool library'};
   const defaults = {dashboard_order:Object.keys(names), dashboard_hidden:['jellyfin']};
-  const descriptions = {welcome:'Greeting, local time and date.',launch:'Your editable Home Lab service shortcuts.',weather:'Local weather and conditions.',monitoring:'Uptime Kuma snapshot and direct access.',favorites:'Pinned AI and web tools. Pin a tool to populate this widget.',jellyfin:'Continue Watching from your configured Jellyfin server.',library:'Curated AI directory, Home Lab groups and tool management.'};
+  const descriptions = {welcome:'Greeting, local time and date.',launch:'Your editable Home Lab service shortcuts.',weather:'Local weather and conditions.',monitoring:'Uptime Kuma snapshot and direct access.',favorites:'Pinned AI and web tools. Pin a tool to populate this widget.',jellyfin:'Now Playing and Continue Watching from your configured Jellyfin server.',library:'Curated AI directory, Home Lab groups and tool management.'};
   const icons = {welcome:'M12 3 20 7v10l-8 4-8-4V7z',launch:'M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z',weather:'M6 17a4 4 0 0 1 0-8 6 6 0 0 1 11-2 5 5 0 0 1 1 10z',monitoring:'M3 12h4l3-8 4 16 3-8h4',favorites:'m12 3 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z',jellyfin:'M4 4h16v16H4z M10 8l6 4-6 4z',library:'m12 3 9 5-9 5-9-5z M3 12l9 5 9-5 M3 16l9 5 9-5'};
   let root, grid, options, toolbar, status, panels, controls, catalog, catalogGrid, catalogTrigger, sortable;
   let editing = false, busy = false, draft, dragActive = false;
@@ -84,10 +84,10 @@
       controls.get(id).querySelectorAll('button').forEach(node=>node.disabled=busy);
     }
     toolbar.replaceChildren();
+    options.onVisibility?.(layout.dashboard_hidden);
     if (!editing) {
       toolbar.append(button(options.get()?.language === 'DE' ? 'Seite bearbeiten' : 'Edit page',start,'sm'));
       if(catalog.open)catalog.close();
-      options.onVisibility?.(layout.dashboard_hidden);
       return;
     }
     const save = button('Save layout',saveLayout,'primary');

@@ -10,7 +10,7 @@
 .jellyfin-dashboard .jellyfin-status { color: var(--hh-muted, #8fa4b8); font-size: 11px; line-height: 1.6; margin: 0 0 10px; }
 .jellyfin-dashboard .jellyfin-stale { border-left: 2px solid #d6ad66; padding-left: 9px; }
 .jellyfin-dashboard .jellyfin-saved { display: block; font-size: 10px; opacity: .85; }
-.jellyfin-dashboard .jellyfin-items { display: grid; gap: 7px; }
+.jellyfin-dashboard .jellyfin-items { display: grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 7px; }
 .jellyfin-dashboard .jellyfin-item { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 76px; padding: 10px; border: 1px solid var(--hh-border, #203b51); border-radius: 10px; background: linear-gradient(135deg, #0e243322, #08152044); color: inherit; text-decoration: none; }
 .jellyfin-dashboard a.jellyfin-item:hover { border-color: var(--jf-accent); }
 .jellyfin-dashboard .jellyfin-art { flex: 0 0 40px; width: 40px; height: 60px; object-fit: cover; border-radius: 5px; }
@@ -24,4 +24,15 @@
 .jellyfin-dashboard .jellyfin-progress::-moz-progress-bar { background: var(--jf-accent); }
 .jellyfin-dashboard .jellyfin-open { flex: 0 0 auto; color: var(--jf-accent); font-size: 10px; }
 .jellyfin-dashboard a:focus-visible, .jellyfin-dashboard button:focus-visible { outline: 2px solid var(--jf-accent); outline-offset: 3px; }
+.jellyfin-dashboard h4{font-size:12px;margin:0 0 8px;color:var(--hh-text,#e7f0f8);font-weight:650}
+.jellyfin-dashboard .jellyfin-now{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--hh-border,#203b51)}
+.jellyfin-dashboard .jellyfin-now-status{font-size:11px;line-height:1.6;color:var(--hh-muted,#8fa4b8);margin:0 0 10px}
+.jellyfin-dashboard .jellyfin-now-items{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:10px}
+.jellyfin-dashboard .jellyfin-playing-item{background:radial-gradient(ellipse at top left,color-mix(in srgb,var(--jf-accent) 8%,transparent),transparent 75%),var(--hh-surface-deep,#081520)}
+.jellyfin-dashboard .jellyfin-playing-item .jellyfin-art{width:56px;height:84px;flex-basis:56px;border-radius:7px}
+.jellyfin-dashboard .jellyfin-device{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:10px;color:var(--hh-muted,#8fa4b8);overflow-wrap:anywhere}
+.jellyfin-dashboard .jellyfin-playback-badge{display:inline-flex;align-items:center;gap:5px;border:1px solid color-mix(in srgb,var(--jf-accent) 30%,transparent);border-radius:20px;padding:2px 7px;color:var(--jf-accent)}
+.jellyfin-dashboard .jellyfin-playback-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.jellyfin-dashboard .jellyfin-playback-badge[data-state="paused"]{color:var(--hh-warning,#d6ad66);border-color:currentColor}
+.jellyfin-dashboard .jellyfin-client{opacity:.75}
 @media (max-width: 420px) { .jellyfin-dashboard .jellyfin-item { gap: 8px; padding: 9px; } .jellyfin-dashboard .jellyfin-open { display: none; } }

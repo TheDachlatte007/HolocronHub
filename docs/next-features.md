@@ -59,17 +59,17 @@ Implemented baseline: personal CRUD, custom deck/category filters, bounded CSV/J
 
 Initial scope: manual authoring/import. Automatic AI extraction is optional later and should never create paid background calls without a chosen provider and explicit settings.
 
-### 4. Optional Jellyfin Continue Watching
+### 4. Optional Jellyfin Media
 
 - A compact opt-in media list with artwork/progress and a link into Jellyfin.
 - No full embedded player or iframe-first strategy.
 - Keep user credentials/token on the backend, with bounded caching and unavailable states.
 - Jellyfin's [official Python API client](https://github.com/jellyfin/jellyfin-apiclient-python/blob/master/jellyfin_apiclient_python/api.py) includes resume-item retrieval. That supports feasibility, but the installed server version, user identity and authentication still need verification.
 
-The adapter, Settings fields and opt-in dashboard tile are implemented and covered by fixtures. A configured live Jellyfin server has not yet been verified. No credentials are needed to use the other new features.
+The adapter, Settings fields and opt-in dashboard tile are implemented and covered by fixtures. Now Playing is also implemented as a separate read-only session view, using the same connection and configured user. It polls only on visible Home, clears expired/error states, and never restores old sessions from disk. A configured live Jellyfin server has not yet been verified. No credentials are needed to use the other new features.
 
 ## Suggested Order
 
-Next: review the new shell and Home editing after redeployment, then version-aware Beszel verification and measured farm comparisons. Jellyfin remains optional, not another always-open dashboard panel. Active "Now Playing" is distinct from the implemented Continue Watching list and remains a follow-up. The detailed implementation record is in [dashboard-qol-implementation.md](dashboard-qol-implementation.md).
+Next: live-check Jellyfin Now Playing/Continue Watching after redeployment, then measured Warframe farm comparisons and version-aware Beszel verification. Jellyfin remains optional, not another always-open dashboard panel. The detailed implementation record is in [dashboard-qol-implementation.md](dashboard-qol-implementation.md).
 
 Avoid duplicate launchers, a second monitoring system, automatic AI-directory scraping, generic third-party iframes and new database infrastructure until a concrete need justifies them.

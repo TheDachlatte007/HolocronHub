@@ -32,6 +32,13 @@ def resume_item(item_id=ITEM, **extra):
             "Path": "/private/library/file.mkv", **extra}
 
 
+def playing_session(session_id='session-1', **extra):
+    return {'Id': session_id, 'UserId': USER, 'DeviceName': 'Living Room TV',
+            'Client': 'Jellyfin Web', 'RemoteEndPoint': 'private-address',
+            'NowPlayingItem': resume_item(),
+            'PlayState': {'IsPaused': False, 'PositionTicks': 18000000000}, **extra}
+
+
 def remote(payload=None, status=200, content_type="application/json", body=None):
     response = requests.Response()
     response.status_code = status
@@ -70,6 +77,161 @@ class JellyfinDashboardTests(unittest.TestCase):
         self.assertEqual(response.headers["cache-control"], "no-store")
         self.assertNotIn(KEY, response.text)
         return response.json()
+
+    def live(self, force=False, client=None):
+        response = (client or self.client).get(API + '/sessions', params={'force': str(force).lower()})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['cache-control'], 'no-store')
+        self.assertNotIn(KEY, response.text)
+        return response.json()
+
+    def test_now_playing_filters_own_user_and_keeps_separate_devices(self):
+        self.network.return_value = remote([
+            playing_session(), playing_session('session-2', DeviceName='Office',
+                PlayState={'IsPaused': True, 'PositionTicks': 9000000000}),
+            playing_session('other', UserId='c' * 32),
+            playing_session('idle', NowPlayingItem=None),
+            playing_session('unknown-user', UserId=None),
+            playing_session('inactive', IsActive=False),
+        ])
+        data = self.live()
+        self.assertEqual(data['state'], 'ready')
+        self.assertEqual(len(data['items']), 2)
+        first, second = data['items']
+        self.assertEqual(first['playback_state'], 'playing')
+        self.assertEqual(first['device'], 'Living Room TV')
+        self.assertEqual(first['position_seconds'], 1800)
+        self.assertEqual(first['progress_percent'], 50)
+        self.assertEqual(second['playback_state'], 'paused')
+        self.assertEqual(second['session_id'], 'session-2')
+        self.assertEqual(first['image_url'], f'{API}/items/{ITEM}/thumbnail')
+        self.assertNotIn('private-address', json.dumps(data))
+        self.assertNotIn('private/library', json.dumps(data))
+        self.assertNotIn('UserId', json.dumps(data))
+        call = self.network.call_args
+        self.assertEqual(call.args[0], 'http://jellyfin.test:8096/base/Sessions')
+        self.assertEqual(call.kwargs['headers']['X-Emby-Token'], KEY)
+        self.assertFalse(call.kwargs['allow_redirects'])
+        self.assertFalse(self.cache.exists(), 'live sessions must never become persisted playback history')
+
+    def test_now_playing_short_cache_and_failure_never_report_old_playback(self):
+        self.network.return_value = remote([playing_session()])
+        self.assertEqual(self.live()['state'], 'ready')
+        self.clock += 14
+        self.assertTrue(self.live()['cached'])
+        self.network.assert_called_once()
+        self.clock += 1
+        self.network.side_effect = requests.Timeout(KEY)
+        failed = self.live()
+        self.assertEqual(failed['state'], 'unavailable')
+        self.assertEqual(failed['items'], [])
+        self.assertEqual(failed['retry_after_seconds'], 60)
+        self.live(True)
+        self.assertEqual(self.network.call_count, 2, 'force cannot bypass failure backoff')
+        self.clock += 60
+        self.network.side_effect = None
+        self.network.return_value = remote([])
+        self.assertEqual(self.live()['state'], 'empty')
+
+    def test_now_playing_denied_and_malformed_are_not_empty(self):
+        for reply in [remote({}, 401), remote({}, 403), remote({}, 429), remote({}), remote(body=b'not-json')]:
+            with self.subTest(status=reply.status_code):
+                self.network.return_value = reply
+                data = self.live(True, self.make_client())
+                self.assertEqual(data['state'], 'unavailable')
+                self.assertEqual(data['items'], [])
+        self.network.return_value = remote([playing_session(NowPlayingItem={'Id': '../../file'})])
+        invalid = self.live(True, self.make_client())
+        self.assertEqual(invalid['items'], [])
+        self.assertEqual(invalid['state'], 'unavailable')
+        self.network.return_value = remote({}, 403)
+        self.assertEqual(self.live(True, self.make_client())['error_code'], 'permission_denied')
+
+    def test_now_playing_disabled_scope_change_and_inflight_changes(self):
+        self.config['jellyfin_enabled'] = False
+        self.assertEqual(self.live(True)['state'], 'disabled')
+        self.network.assert_not_called()
+        self.config['jellyfin_enabled'] = True
+        def fetch(*args, **kwargs):
+            self.config['jellyfin_user_id'] = 'c' * 32
+            return remote([playing_session()])
+        self.network.side_effect = fetch
+        self.assertEqual(self.live()['items'], [])
+        self.network.side_effect = None
+        self.network.return_value = remote([playing_session()])
+        self.assertEqual(self.live(True)['state'], 'empty')
+
+    def test_now_playing_artwork_is_allowlisted_cached_and_cleared_when_stopped(self):
+        self.network.return_value = remote([playing_session()])
+        self.live()
+        self.network.return_value = remote(body=b'\x89PNG\r\n\x1a\nfixture', content_type='image/png')
+        self.assertEqual(self.client.get(f'{API}/items/{ITEM}/thumbnail').status_code, 200)
+        self.assertEqual(self.client.get(f'{API}/items/{ITEM}/thumbnail').status_code, 200)
+        self.assertEqual(self.network.call_count, 2, 'polling must not re-download identical artwork')
+        self.network.return_value = remote([])
+        self.live(True)
+        self.assertEqual(self.client.get(f'{API}/items/{ITEM}/thumbnail').status_code, 404)
+
+    def test_now_playing_is_bounded_redacted_and_not_restored_from_resume_cache(self):
+        self.get()
+        stored = self.cache.read_bytes()
+        self.network.return_value = remote([playing_session(f'session-{i}', DeviceName=KEY,
+            NowPlayingItem=resume_item(Name=KEY, SeriesName=KEY)) for i in range(9)])
+        result = self.live()
+        self.assertEqual(len(result['items']), 6)
+        self.assertEqual(self.cache.read_bytes(), stored)
+        self.network.return_value = remote({})
+        self.assertEqual(self.live(client=self.make_client())['state'], 'unavailable')
+
+    def test_now_playing_episode_cover_can_use_series_artwork(self):
+        series_id = 'd' * 32
+        self.network.return_value = remote([playing_session(NowPlayingItem=resume_item(
+            ImageTags={}, SeriesId=series_id, SeriesPrimaryImageTag='series-cover'))])
+        item = self.live()['items'][0]
+        self.assertEqual(item['image_url'], f'{API}/items/{ITEM}/thumbnail')
+        self.network.return_value = remote(body=b'\x89PNG\r\n\x1a\nfixture', content_type='image/png')
+        self.assertEqual(self.client.get(item['image_url']).status_code, 200)
+        self.assertEqual(self.network.call_args.args[0], f'http://jellyfin.test:8096/base/Items/{series_id}/Images/Primary')
+
+    def test_now_playing_retry_after_is_respected_and_redirects_denied(self):
+        reply = remote({}, 429)
+        reply.headers['Retry-After'] = '120'
+        self.network.return_value = reply
+        result = self.live()
+        self.assertEqual(result['retry_after_seconds'], 120)
+        self.assertEqual(result['error_code'], 'rate_limited')
+        self.clock += 119
+        self.live(True)
+        self.network.assert_called_once()
+        self.clock += 1
+        self.network.return_value = remote({}, 302)
+        self.assertEqual(self.live()['state'], 'unavailable')
+        self.assertFalse(self.network.call_args.kwargs['allow_redirects'])
+
+    def test_now_playing_denied_does_not_replace_resume_cache(self):
+        first = self.get()
+        stored = self.cache.read_bytes()
+        self.network.return_value = remote({}, 403)
+        self.assertEqual(self.live()['state'], 'unavailable')
+        self.assertEqual(self.get()['items'], first['items'])
+        self.assertEqual(self.cache.read_bytes(), stored)
+
+    def test_concurrent_now_playing_refreshes_share_one_request(self):
+        entered, release = threading.Event(), threading.Event()
+        def fetch(*args, **kwargs):
+            entered.set()
+            self.assertTrue(release.wait(3))
+            return remote([playing_session()])
+        self.network.side_effect = fetch
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            futures = [pool.submit(self.live, True)]
+            self.assertTrue(entered.wait(2))
+            futures.extend(pool.submit(self.live, True) for _ in range(5))
+            time.sleep(.2)
+            release.set()
+            results = [future.result(timeout=5) for future in futures]
+        self.network.assert_called_once()
+        self.assertTrue(all(result['items'] == results[0]['items'] for result in results))
 
     def test_disabled_and_incomplete_make_no_calls_even_when_forced(self):
         for config, state in [({}, "disabled"), ({"jellyfin_enabled": "false"}, "disabled"),
@@ -292,15 +454,92 @@ class JellyfinDashboardTests(unittest.TestCase):
 
 
 class JellyfinFrontendTests(unittest.TestCase):
+    def test_now_playing_polling_visibility_errors_and_config_reset(self):
+        self.run_browser(BROWSER_LIVE)
+
     def test_real_browser_states_safety_idempotence_and_mobile(self):
+        self.run_browser(BROWSER_CONTRACT)
+
+    def run_browser(self, contract):
         node = shutil.which("node")
         modules = Path.home() / ".cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright"
         edge = Path(os.environ.get("PROGRAMFILES(X86)", "C:/Program Files (x86)")) / "Microsoft/Edge/Application/msedge.exe"
         if not node or not modules.is_dir() or not edge.is_file():
             self.skipTest("Bundled Playwright / Edge unavailable")
-        result = subprocess.run([node, "-e", BROWSER_CONTRACT], capture_output=True, text=True, timeout=90,
+        result = subprocess.run([node, "-e", contract], capture_output=True, text=True, timeout=90,
                                 env={**os.environ, "JF_ROOT": str(ROOT), "JF_PLAYWRIGHT": str(modules), "JF_BROWSER": str(edge)})
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+BROWSER_LIVE = r"""
+const assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
+const {chromium}=require(process.env.JF_PLAYWRIGHT);
+(async()=>{
+ const browser=await chromium.launch({executablePath:process.env.JF_BROWSER,headless:true});
+ try{
+  const page=await browser.newPage({viewport:{width:390,height:844}});page.setDefaultTimeout(5000);
+  await page.clock.install({time:new Date('2026-10-08T18:00:00Z')});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  let calls=0,resumeCalls=0,mode='ready',hold=false,release;
+  const item={id:'b'.repeat(32),session_id:'session-1',title:'Example Series',summary:'S02E03 - Arrival',
+    device:'Living Room TV',client:'Jellyfin Web',playback_state:'playing',position_seconds:900,duration_seconds:3600,progress_percent:25,
+    image_url:'/api/dashboard/jellyfin/items/'+'b'.repeat(32)+'/thumbnail',web_url:'http://jellyfin.test/web/index.html#!/details?id='+'b'.repeat(32)};
+  await page.route('http://hub.test/**',async route=>{
+   const url=new URL(route.request().url());
+   if(url.pathname.endsWith('/sessions')){
+    calls++;const data={state:mode,items:mode==='ready'?[{...item}]:[],fresh_for_seconds:30,
+      retry_after_seconds:mode==='unavailable'?60:0,error_code:mode==='unavailable'?'permission_denied':null};
+    if(hold)await new Promise(r=>release=r);
+    return route.fulfill({json:data}).catch(()=>{});
+   }
+   if(url.pathname==='/api/dashboard/jellyfin'){resumeCalls++;return route.fulfill({json:{state:'ready',items:[item]}});}
+   if(url.pathname.endsWith('/thumbnail'))return route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=','base64')});
+   return route.fulfill({contentType:'text/html',body:'<style>body{margin:16px;background:#06101b;color:#e7f0f8;font-family:Segoe UI}</style><section data-dashboard-tile="jellyfin"><div id="home-jellyfin-content"></div></section>'});
+  });
+  await page.goto('http://hub.test/');
+  await page.addStyleTag({path:path.join(process.env.JF_ROOT,'frontend/assets/jellyfin-dashboard.css')});
+  await page.addScriptTag({path:path.join(process.env.JF_ROOT,'frontend/assets/jellyfin-dashboard.js')});
+  await page.evaluate(()=>HolocronJellyfinDashboard.mount());assert.equal(calls,0);
+  await page.evaluate(()=>HolocronJellyfinDashboard.load());
+  await page.evaluate(()=>HolocronJellyfinDashboard.setActive(true));
+  await page.locator('.jellyfin-now-items .jellyfin-item').waitFor();
+  assert.match(await page.locator('.jellyfin-now-items').innerText(),/Playing|Living Room TV/);
+  assert.equal(await page.locator('.jellyfin-now-items progress').getAttribute('value'),'25');
+  assert.equal(await page.locator('iframe,video,audio').count(),0);
+  if(process.env.JF_QA_OUTPUT){fs.mkdirSync(process.env.JF_QA_OUTPUT,{recursive:true});await page.screenshot({path:path.join(process.env.JF_QA_OUTPUT,'jellyfin-mobile.png'),fullPage:true});}
+  item.playback_state='paused';await page.clock.runFor(20001);
+  await page.waitForFunction(()=>document.querySelector('.jellyfin-now-items')?.textContent.includes('Paused'));
+  assert.equal(resumeCalls,1,'live polling does not repeatedly load the resume list');
+  const before=calls;await page.evaluate(()=>HolocronJellyfinDashboard.setActive(false));await page.clock.runFor(60000);
+  assert.equal(calls,before,'leaving Home stops polling');
+  await page.evaluate(()=>HolocronJellyfinDashboard.setActive(true));
+  await page.waitForFunction(()=>document.querySelector('.jellyfin-now-items')?.textContent.includes('Paused'));
+  await page.evaluate(()=>{window.fakeHidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>fakeHidden});document.dispatchEvent(new Event('visibilitychange'));});
+  const hiddenCalls=calls;await page.clock.runFor(60000);assert.equal(calls,hiddenCalls,'hidden browser tabs stop polling');
+  mode='empty';await page.evaluate(()=>{fakeHidden=false;document.dispatchEvent(new Event('visibilitychange'));});
+  await page.waitForFunction(()=>document.querySelector('.jellyfin-now-status')?.textContent.includes('Nothing is playing'));
+  assert.equal(await page.locator('.jellyfin-now-items .jellyfin-item').count(),0);
+  mode='unavailable';await page.evaluate(()=>HolocronJellyfinDashboard.loadSessions(true));
+  assert.match(await page.locator('.jellyfin-now-status').innerText(),/permission/i);
+  assert.equal(await page.locator('.jellyfin-now-items .jellyfin-item').count(),0);
+  assert.equal(await page.locator('.jellyfin-items .jellyfin-item').count(),1,'resume remains independent');
+  const failedCalls=calls;await page.clock.runFor(20001);assert.equal(calls,failedCalls,'backend cooldown controls polling');
+  mode='ready';item.playback_state='playing';await page.evaluate(()=>HolocronJellyfinDashboard.loadSessions(true));
+  hold=true;await page.clock.runFor(20001);await page.waitForFunction(()=>document.querySelector('.jellyfin-now-items .jellyfin-item'));
+  await page.clock.runFor(10001);
+  assert.equal(await page.locator('.jellyfin-now-items .jellyfin-item').count(),0,'expired playback must not remain live during a slow request');
+  await page.evaluate(()=>HolocronJellyfinDashboard.reset());
+  release();hold=false;await page.waitForTimeout(100);
+  assert.equal(await page.locator('.jellyfin-now-items .jellyfin-item').count(),0,'configuration reset rejects previous in-flight playback');
+  assert.equal(await page.locator('.jellyfin-items .jellyfin-item').count(),0,'configuration reset clears old resume data too');
+  await page.setViewportSize({width:1200,height:800});
+  await page.evaluate(()=>HolocronJellyfinDashboard.loadSessions());
+  if(process.env.JF_QA_OUTPUT)await page.screenshot({path:path.join(process.env.JF_QA_OUTPUT,'jellyfin-desktop.png'),fullPage:true});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  assert.deepEqual(errors,[]);
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exit(1);});
+"""
 
 
 BROWSER_CONTRACT = r"""

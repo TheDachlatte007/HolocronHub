@@ -67,7 +67,12 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
         if (req.method() === 'PATCH') for (const [section, values] of Object.entries(req.postDataJSON())) settings[section]={...settings[section],...values};
         return route.fulfill({json:settings});
       }
-      if (url.pathname === '/api/dashboard/jellyfin') {mediaCalls++;return route.fulfill({json:{state:'disabled',items:[]}});}
+      if (url.pathname === '/api/dashboard/jellyfin') {mediaCalls++;return route.fulfill({json:{state:settings.homelab.jellyfin_enabled?'empty':'disabled',items:[]}});}
+      if (url.pathname === '/api/dashboard/jellyfin/sessions') return route.fulfill({json:{
+        state:settings.homelab.jellyfin_enabled?'ready':'disabled',fresh_for_seconds:30,items:settings.homelab.jellyfin_enabled?[{
+          id:'b'.repeat(32),title:'Fixture movie',session_id:'fixture-session',playback_state:'playing',device:'Fixture TV',
+          position_seconds:100,duration_seconds:1000,progress_percent:10,
+          web_url:'http://jellyfin.test/web/index.html#!/details?id='+'b'.repeat(32)}]:[]}});
       if (url.pathname === '/api/build-info') return route.fulfill({json:{version:'0.2.0',source_id:'c'.repeat(64),revision:null,built_at:'2026-10-08T12:00:00Z',source:'image-build'}});
       if (url.pathname === '/api/dashboard/weather') return route.fulfill({json:{location:'Augsburg',air_temperature:11,weather_code:45,is_day:true,feels_like:8,wind_speed:4,humidity:90,rainfall:0,date:'2026-10-08T12:00:00Z'}});
       if (url.pathname === '/api/dashboard/kuma') return route.fulfill({json:{configured:true,summary:{total:2,online:2,offline:0},services:[{name:'Fixture NAS',status:'online'},{name:'Fixture Media',status:'online'}],checked_at:'2026-10-08T12:00:00Z'}});
@@ -259,6 +264,24 @@ const {chromium} = require(process.env.LAUNCHER_PLAYWRIGHT);
     await page.evaluate(()=>setGlobalNavCollapsed(false));
     await page.evaluate(()=>updateWarframeHeroStatus({stale:true,market:{last_avg_price:78},data_as_of:'2026-10-08T12:00:00Z'}));
     if(process.env.LAUNCHER_QA_OUTPUT)await page.screenshot({path:path.join(process.env.LAUNCHER_QA_OUTPUT,'warframe-header.png'),fullPage:false});
+    await page.evaluate(()=>{showTab('settings');showSettingsPanel('homelab');});
+    await page.locator('#set-jellyfin-enabled').check();
+    await page.locator('#set-jellyfin-url').fill('http://jellyfin.test');
+    await page.locator('#set-jellyfin-user').fill('a'.repeat(32));
+    await page.locator('#set-jellyfin-key').fill('fixture-private-key');
+    await page.getByRole('button',{name:'Save Homelab Connections',exact:true}).click();
+    await page.waitForFunction(()=>_appSettings.homelab.jellyfin_enabled===true);
+    await page.evaluate(()=>showTab('tools'));
+    await page.locator('.jellyfin-now-items').getByText('Fixture movie',{exact:true}).waitFor();
+    await page.evaluate(()=>showTab('warframe'));
+    assert.equal(await page.locator('.jellyfin-now-items .jellyfin-item').count(),0,'leaving Home clears live presentation');
+    await page.evaluate(()=>showTab('tools'));
+    await page.locator('.jellyfin-now-items').getByText('Fixture movie',{exact:true}).waitFor();
+    await page.getByRole('button',{name:'Edit page',exact:true}).click();
+    await page.getByRole('button',{name:'Remove Jellyfin',exact:true}).click();
+    assert.equal(await page.locator('.jellyfin-now-items .jellyfin-item').count(),0,'hiding a draft widget stops its playback checks');
+    await page.getByRole('button',{name:'Cancel layout changes',exact:true}).click();
+    await page.locator('.jellyfin-now-items').getByText('Fixture movie',{exact:true}).waitFor();
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'journal integration fits mobile Warframe');
     assert.deepEqual(errors, []);
   } finally {releaseHealth(); await browser.close();}

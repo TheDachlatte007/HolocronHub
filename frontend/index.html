@@ -1135,7 +1135,7 @@
               <div id="home-kuma-content" aria-live="polite"><div class="home-widget-meta">Loading Kuma snapshot...</div></div>
               <a id="home-kuma-link" class="home-kuma-link" href="http://192.168.178.32:31050/dashboard" target="_blank" rel="noopener noreferrer">Open Uptime Kuma <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a>
             </section>
-            <section class="home-panel home-jellyfin-panel" data-dashboard-tile="jellyfin" aria-label="Jellyfin continue watching" hidden><div id="home-jellyfin-content"></div></section>
+            <section class="home-panel home-jellyfin-panel" data-dashboard-tile="jellyfin" aria-label="Jellyfin media" hidden><div id="home-jellyfin-content"></div></section>
           </div>
         </div>
         <div class="home-build-footer"><button type="button" id="home-build-info" onclick="openBuildSettings()" aria-label="Build details">Loading build information...</button></div>
@@ -1992,12 +1992,12 @@
       <div id="settings-panel-homelab" class="settings-panel">
         <h3>Jellyfin (optional)</h3>
         <div class="settings-grid">
-          <div class="settings-field"><label class="settings-toggle"><input id="set-jellyfin-enabled" type="checkbox" /> Enable Continue Watching</label></div>
+          <div class="settings-field"><label class="settings-toggle"><input id="set-jellyfin-enabled" type="checkbox" /> Enable Jellyfin media widget</label></div>
           <div class="settings-field"><label for="set-jellyfin-url">Jellyfin URL</label><input id="set-jellyfin-url" type="url" placeholder="https://jellyfin.example.com" /></div>
           <div class="settings-field"><label for="set-jellyfin-key">Jellyfin API key</label><input id="set-jellyfin-key" type="password" autocomplete="off" /></div>
-          <div class="settings-field"><label for="set-jellyfin-user">Jellyfin user ID</label><input id="set-jellyfin-user" placeholder="User whose Continue Watching list to show" /></div>
+          <div class="settings-field"><label for="set-jellyfin-user">Jellyfin user ID</label><input id="set-jellyfin-user" placeholder="User whose playback and Continue Watching list to show" /></div>
         </div>
-        <p class="settings-hint">Optional and read-only: Continue Watching, not currently playing sessions. Set URL, API key and user ID, save, then show Jellyfin through Edit page. Credentials stay in your private settings backup; no embedded player.</p>
+        <p class="settings-hint">Optional and read-only: Now Playing for this user plus Continue Watching. Set URL, API key and user ID, save, then add Jellyfin through Edit page. Live checks run every 20 seconds while Home is visible. Session access depends on the API key permissions; no player or remote controls. Credentials stay in your private settings backup.</p>
         <h3>Weather and monitoring</h3>
         <div class="settings-grid">
           <div class="settings-field"><label for="set-weather-location">Weather location</label><input id="set-weather-location" placeholder="Augsburg" /></div>
@@ -2385,7 +2385,7 @@ function showTab(name, btn, options = {}) {
   if (name !== 'f1') { clearF1SessionPolling(); clearF1ClockTicker(); }
   if (name !== 'warframe') clearWarframeAutoRefresh();
   document.getElementById(`tab-${name}`).style.display='';
-  if (name === 'tools' && !document.querySelector('[data-dashboard-tile="jellyfin"]')?.hidden) window.HolocronJellyfinDashboard?.load();
+  syncJellyfinDashboard();
   if (btn) btn.classList.add('active');
   if (name === 'learning') {
     window.HolocronLearning.mount(document.getElementById('tab-learning'));
@@ -8757,7 +8757,9 @@ async function saveSettingsHomelab() {
     setSettingsStatus('homelab', 'Saved. Refresh the Homelab view to check connections.');
     loadDashboardWeather(true);
     loadDashboardKuma(true);
-    if (!document.querySelector('[data-dashboard-tile="jellyfin"]')?.hidden) window.HolocronJellyfinDashboard?.load(true);
+    window.HolocronJellyfinDashboard?.reset();
+    _jellyfinTileVisible = false;
+    syncJellyfinDashboard();
   } catch (e) {
     setSettingsStatus('homelab', `Save failed: ${e.message}`, true);
   }
@@ -8772,14 +8774,16 @@ document.getElementById('wf-journal-details').addEventListener('toggle', event =
 window.HolocronWarframeDrops.mount(document.getElementById('wf-drop-routes'));
 window.HolocronJellyfinDashboard.mount();
 let _jellyfinTileVisible = false;
+function syncJellyfinDashboard() {
+  const visible = document.body.dataset.hub === 'tools' && !document.querySelector('[data-dashboard-tile="jellyfin"]')?.hidden;
+  window.HolocronJellyfinDashboard?.setActive(visible);
+  if (visible && !_jellyfinTileVisible) window.HolocronJellyfinDashboard?.load();
+  _jellyfinTileVisible = visible;
+}
 window.HolocronDashboardLayout.mount(document.querySelector('.home-dashboard'), {
   get: () => _appSettings?.ux || loadGlobalSettings(),
   save: async layout => { await patchSettings({ux:layout}); },
-  onVisibility: hidden => {
-    const visible = !hidden.includes('jellyfin');
-    if (visible && !_jellyfinTileVisible) window.HolocronJellyfinDashboard.load();
-    _jellyfinTileVisible = visible;
-  },
+  onVisibility: syncJellyfinDashboard,
 });
 applyAppearance(loadGlobalSettings());
 fetchSettings().catch(()=>{}).finally(() => {
